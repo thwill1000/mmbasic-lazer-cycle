@@ -29,6 +29,7 @@ Const HEIGHT% = (Mm.VRes - 20) \ 2
 Const X_OFFSET% = MM.HRes \ 2
 Const Y_OFFSET% = MM.VRes \ 2
 Const UP% = 5, DOWN% = 6, LEFT% = 7, RIGHT% = 8, FIRE% = 9
+Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
 
 ' These would be constants but MMBasic does not support constant arrays
@@ -37,8 +38,9 @@ Dim SOUNDFX_EAT%(1)     = (&hFFFFFFFFFF100C04, &hFFFFFFFFFFFFFFFF)
 Dim SOUNDFX_DIE%(2)     = (&h0F10111213141516, &h0708090A0B0C0D0E, &hFF00010203040506)
 Dim SOUNDFX_WIPE%(2)    = (&h0706050403020100, &h0F0E0D0C0B0A0908, &hFF16151413121110)
 Dim MUSIC%(68)
-Dim NEXT_DIR%(7)        = (1, -WIDTH%, -1, WIDTH%, 1, -WIDTH%, -1, WIDTH%)
+Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_POS%(3)       = (35, 105, 175, 245)
+Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 
 Dim score%
 Dim difficulty% = 1
@@ -217,10 +219,10 @@ Sub init_game()
     EndIf
   Next
 
-  cycle.dir%(0) = 1
-  cycle.dir%(1) = WIDTH%
-  cycle.dir%(2) = -1
-  cycle.dir%(3) = -WIDTH%
+  cycle.dir%(0) = EAST%
+  cycle.dir%(1) = SOUTH%
+  cycle.dir%(2) = WEST%
+  cycle.dir%(3) = NORTH%
 
   cycle.pos%(0) = WIDTH * (HEIGHT% \ 2) + 1
   cycle.pos%(1) = 1.5 * WIDTH%
@@ -229,7 +231,7 @@ Sub init_game()
 
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
-    cycle.nxt%(i%) = cycle.pos%(i%) + cycle.dir%(i%)
+    cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
     Poke Var collision%(), cycle.pos%(i%), i% + 1
     Poke Var collision%(), cycle.nxt%(i%), i% + 1
   Next
@@ -320,7 +322,7 @@ Sub cycle.steer(idx%)
 
   If idx% = 0 Then
     cycle.steer_player(idx%)
-    cycle.nxt%(idx%) = cycle.pos%(idx%) + cycle.dir%(idx%)
+    cycle.nxt%(idx%) = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
   Else
 
     ' Random element.
@@ -328,11 +330,11 @@ Sub cycle.steer(idx%)
     If i% < 4 Then cycle.dir%(idx%) = NEXT_DIR%(i% + idx%)
 
     ' Avoid collisions.
-    Local nxt% = cycle.pos%(idx%) + cycle.dir%(idx%)
+    Local nxt% = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
     For i% = 0 To 3
       If Not Peek(Var collision%(), nxt%)) Then Exit For
       cycle.dir%(idx%) = NEXT_DIR%(i% + idx%)
-      nxt% = cycle.pos%(idx%) + cycle.dir%(idx%)
+      nxt% = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
     Next
 
     cycle.nxt%(idx%) = nxt%
@@ -362,26 +364,18 @@ Sub cycle.steer_player(idx%)
   If game_type% = 1 Then
     Select Case cmd%
       Case LEFT%
-        Select Case d%
-          Case -WIDTH% : d% = -1
-          Case -1      : d% = WIDTH%
-          Case 1       : d% = -WIDTH%
-          Case WIDTH%  : d% = 1
-        End Select
+        Inc d%, -1
+        If d% < 0 Then d% = 3
       Case RIGHT%
-        Select Case d%
-          Case -WIDTH% : d% = 1
-          Case -1      : d% = -WIDTH%
-          Case 1       : d% = WIDTH%
-          Case WIDTH%  : d% = -1
-        End Select
+        Inc d%, 1
+        If d% > 3 Then d% = 0
     End Select
   Else
     Select Case cmd%
-      Case UP%    : d% = -WIDTH%
-      Case DOWN%  : d% = WIDTH%
-      Case LEFT%  : d% = -1
-      Case RIGHT% : d% = 1
+      Case UP%    : d% = NORTH%
+      Case DOWN%  : d% = SOUTH%
+      Case LEFT%  : d% = WEST%
+      Case RIGHT% : d% = EAST%
     End Select
   EndIf
   cycle.dir%(idx%) = d%
