@@ -28,7 +28,7 @@ Const WIDTH% = Mm.HRes \ 2
 Const HEIGHT% = (Mm.VRes - 20) \ 2
 Const X_OFFSET% = MM.HRes \ 2
 Const Y_OFFSET% = MM.VRes \ 2
-Const UP% = 5, DOWN% = 6, LEFT% = 7, RIGHT% = 8, FIRE% = 9
+Const CMD_NONE% = -1, UP% = 5, DOWN% = 6, LEFT% = 7, RIGHT% = 8, FIRE% = 9
 Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
 
@@ -46,7 +46,7 @@ Dim score%
 Dim difficulty% = 1
 Dim game_type% = 2
 Dim collision%(HEIGHT% * WIDTH% \ 8)
-Dim cmd%
+Dim cmd% = CMD_NONE%
 Dim frame_duration%
 Dim next_frame%
 
@@ -116,7 +116,7 @@ Sub clear_display()
 End Sub
 
 Sub wait(duration%)
-  cmd% = 0
+  cmd% = CMD_NONE%
   If duration% = 0 Then
     Do While cmd% <> FIRE% : Loop
   Else
@@ -144,7 +144,7 @@ Sub show_menu()
       Text x% - 10, Y_OFFSET% - 65 + item% * 20, Chr$(137), , 1, 1, RGB(Cyan)
       If IS_CMM2% Then Page Copy 1 To 0, B
       Pause 100
-      cmd% = 0
+      cmd% = CMD_NONE%
       update% = 0
     EndIf
 
@@ -192,7 +192,7 @@ Sub show_menu()
         End Select
 
       Case Else
-        cmd% = 0
+        cmd% = CMD_NONE%
 
     End Select
 
@@ -202,7 +202,7 @@ Sub show_menu()
 End Sub
 
 Sub init_game()
-  cmd% = 0
+  cmd% = CMD_NONE%
   frame_duration% = 3 * (5 + (6 - difficulty%))
   num_players% = MAX_CYCLE_IDX% + 1
   score% = 0
@@ -301,7 +301,7 @@ Sub show_game_over()
   For winner% = 0 To MAX_CYCLE_IDX%
     If cycle.score%(winner%) = score% Then Exit For
   Next
-  Local txt$ = "PLAYER " + Str$(winner%) + " WINS"
+  Local txt$ = "PLAYER " + Str$(winner% + 1) + " WINS"
   Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.col%(winner%)
   Do While (score% Mod 5) <> 0 : Inc score%, -1 : Loop
   Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(score%), "CM", 1, 2, cycle.col%(winner%)
@@ -379,7 +379,7 @@ Sub cycle.steer_player(idx%)
     End Select
   EndIf
   cycle.dir%(idx%) = d%
-  cmd% = 0
+  cmd% = CMD_NONE%
 End Sub
 
 Sub on_key()
