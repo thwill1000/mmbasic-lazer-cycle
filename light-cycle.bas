@@ -41,10 +41,11 @@ Dim MUSIC%(68)
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_POS%(3)       = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
+Dim CTRL_NAMES$(7)      = ("KEYS: AZ,.",  "KEYS: AZXC",  "KEYS: IKOP",  "CONTROLLER A", "CONTROLLER B", "JOYSTICK B",     "AI",       "NONE" )
+Dim CTRL_SUBS$(7)       = ("ctrl_keys1%", "ctrl_keys2%", "ctrl_keys3%", "ctrl_a%",      "ctrl_b%",      "ctrl_joystick%", "ctrl_ai%", "ctrl_none%")
 
 Dim score%
 Dim difficulty% = 1
-Dim game_type% = 2
 Dim collision%(HEIGHT% * WIDTH% \ 8)
 Dim cmd% = CMD_NONE%
 Dim frame_duration%
@@ -54,7 +55,8 @@ Dim cycle.score%(MAX_CYCLE_IDX%)
 Dim cycle.nxt%(MAX_CYCLE_IDX%)
 Dim cycle.pos%(MAX_CYCLE_IDX%)
 Dim cycle.dir%(MAX_CYCLE_IDX%)
-Dim cycle.col%(MAX_CYCLE_IDX%) = ( RGB(Red), RGB(Yellow), RGB(Cyan), RGB(Green) )
+Dim cycle.colour%(MAX_CYCLE_IDX%) = ( RGB(Red), RGB(Yellow), RGB(Cyan), RGB(Green) )
+Dim cycle.ctrl$(MAX_CYCLE_IDX%) = ("ctrl_keys2%", "ctrl_ai%", "ctrl_keys3%", "ctrl_ai%")
 
 Dim music_flag% = 1
 Dim music_ptr% = Peek(VarAddr MUSIC%()) + 4
@@ -62,6 +64,7 @@ Dim soundfx_flag% = 1
 Dim soundfx_ptr% = Peek(VarAddr SOUNDFX_NOTHING%())
 
 Dim num_players%
+Dim keys%(31)
 
 ' Music and sound effects are played on SetTick interrupts.
 SetTick 250, play_music, 1
@@ -81,13 +84,6 @@ Do
   init_game()
   draw_arena()
   game_loop()
-
-  ' Ensure display updated at end of game.
-  If IS_CMM2% Then Page Copy 1 To 0, B
-
-  ' Wait for any sound effect to complete.
-  Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
-
   show_game_over()
 Loop
 
@@ -102,7 +98,7 @@ Sub read_music()
 End Sub
 
 Sub show_title()
-  Text X_OFFSET%, Y_OFFSET% - 15, "LIGHT CYCLE", "CM", 1, 2, RGB(White)
+  Text X_OFFSET%, Y_OFFSET% - 15, "LAZER CYCLE", "CM", 1, 2, RGB(White)
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, RGB(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, RGB(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, "PRESS " + Choice(IS_CMM2%, "SPACE", "SELECT"), "CM", 1, 1, RGB(White)
@@ -126,22 +122,26 @@ Sub wait(duration%)
 End Sub
 
 Sub show_menu()
-  Const x% = X_OFFSET% - 45
+  Const x% = X_OFFSET% - 100
   Local item% = 0, update% = 1
+  Local sounds$(3) = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
+  Local sound_setting% = Choice(music_flag%, Choice(soundfx_flag%, 0, 1), Choice(soundfx_flag%, 2, 3))
 
-  Text X_OFFSET%, Y_OFFSET% + 70, "Music by Trevor Bailey", "CM", 7, 1, RGB(Cyan)
-  Text X_OFFSET%, Y_OFFSET% + 85, "Game Version " + VERSION$, "CM", 7, 1, RGB(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 75, "Music by Trevor Bailey", "CM", 7, 1, RGB(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, RGB(Cyan)
 
   Do
 
     If update% Then
-      Text x%, Y_OFFSET% - 65, "START GAME", , 1, 1, RGB(White)
-      Text x%, Y_OFFSET% - 45, "DIFFICULTY: " + Str$(difficulty%), , 1, 1, RGB(White)
-      Text x%, Y_OFFSET% - 25, "GAME TYPE:  " + Str$(game_type%), , 1, 1, RGB(White)
-      Text x%, Y_OFFSET%  - 5, "MUSIC:    " + Choice(music_flag%, " ON", "OFF"), , 1, 1, RGB(White)
-      Text x%, Y_OFFSET% + 15, "SOUND FX: " + Choice(soundfx_flag%, " ON", "OFF"), , 1, 1, RGB(White)
-      Text x%, Y_OFFSET% + 35, "QUIT", , 1, 1, RGB(White)
-      Text x% - 10, Y_OFFSET% - 65 + item% * 20, Chr$(137), , 1, 1, RGB(Cyan)
+      Text x%, Y_OFFSET% - 95, "START GAME", , 1, 1, RGB(White)
+      text_for_controller(x%, Y_OFFSET% - 75, 0)
+      text_for_controller(x%, Y_OFFSET% - 55, 1)
+      text_for_controller(x%, Y_OFFSET% - 35, 2)
+      text_for_controller(x%, Y_OFFSET% - 15, 3)
+      Text x%, Y_OFFSET% + 5,  "DIFFICULTY: " + Str$(difficulty%), , 1, 1, RGB(White)
+      Text x%, Y_OFFSET% + 25, "SOUND:      " + sounds$(sound_setting%), , 1, 1, RGB(White)
+      Text x%, Y_OFFSET% + 45, "QUIT", , 1, 1, RGB(White)
+      Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, RGB(Cyan)
       If IS_CMM2% Then Page Copy 1 To 0, B
       Pause 100
       cmd% = CMD_NONE%
@@ -151,14 +151,14 @@ Sub show_menu()
     Select Case cmd%
       Case UP%
         If item% > 0 Then
-          Text x% - 10, Y_OFFSET% - 65 + item% * 20, Chr$(137), , 1, 1, RGB(Black)
+          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, RGB(Black)
           Inc item%, -1
           update% = 1
         EndIf
 
       Case DOWN%
-        If item% < 5 Then
-          Text x% - 10, Y_OFFSET% - 65 + item% * 20, Chr$(137), , 1, 1, RGB(Black)
+        If item% < 7 Then
+          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, RGB(Black)
           Inc item%
           update% = 1
         EndIf
@@ -166,27 +166,27 @@ Sub show_menu()
       Case LEFT%, RIGHT%, FIRE%
         Select Case item%
           Case 0
-            If cmd% = FIRE% Then Exit
+            If cmd% = FIRE% Then Exit Do
 
-          Case 1 ' Difficulty
+          Case 1,2,3,4
+            If cmd% = LEFT% Then dec_controller(item% - 1) Else inc_controller(item% - 1)
+            update% = 1
+
+          Case 5 ' Difficulty
             Inc difficulty%, Choice(cmd% = LEFT%, -1, 1)
-            difficulty% = Min(5, Max(difficulty%, 1))
+            If difficulty% < 1 Then difficulty% = 5
+            If difficulty% > 5 Then difficulty% = 1
             update% = 1
 
-          Case 2 ' Game type
-            Inc game_type%, Choice(cmd% = LEFT%, -1, 1)
-            game_type% = Min(2, Max(game_type%, 1))
+          Case 6 ' Sound
+            Inc sound_setting%, Choice(cmd% = LEFT%, -1, 1)
+            If sound_setting% < 0 Then sound_setting% = 3
+            If sound_setting% > 3 Then sound_setting% = 0
+            music_flag% = (sound_setting% = 0 Or sound_setting% = 1) 
+            soundfx_flag% = (sound_setting% = 0 Or sound_setting% = 2) 
             update% = 1
 
-          Case 3 ' Music
-            music_flag% = Not music_flag%
-            update% = 1
-
-          Case 4 ' Sound FX
-            soundfx_flag% = Not soundfx_flag%
-            update% = 1
-
-          Case 5 ' Quit
+          Case 7 ' Quit
             If cmd% = FIRE% Then End
 
         End Select
@@ -201,11 +201,53 @@ Sub show_menu()
   Loop
 End Sub
 
+Sub text_for_controller(x%, y%, idx%)
+  Local txt$ = "PLAYER " + Str$(idx% + 1) + ":   " + get_controller_name$(idx%)
+  Text x%, y%, txt$, , 1, 1, cycle.colour%(idx%)
+End Sub
+
+Function get_controller_name$(idx%)
+  Local i%
+  For i% = 0 To Bound(CTRL_SUBS$(), 1)
+    If cycle.ctrl$(idx%) = CTRL_SUBS$(i%) Then
+      get_controller_name$ = CTRL_NAMES$(i%)
+      Do While Len(get_controller_name$) < 12 : Cat get_controller_name$, " " : Loop
+      Exit Function
+    Endif
+  Next
+  Error "Unknown controller: " + cycle.ctrl$(idx%)
+End Function
+
+Sub dec_controller(idx%)
+  Local i%
+  For i% = 0 To Bound(CTRL_SUBS$(), 1)
+    If cycle.ctrl$(idx%) <> CTRL_SUBS$(i%) Then Continue For
+    Inc i%, -1
+    If i% < 0 Then i% = Bound(CTRL_SUBS$(), 1)
+    cycle.ctrl$(idx%) = CTRL_SUBS$(i%)
+    Exit Sub
+  Next
+  Error "Unknown controller: " + cycle.ctrl$(idx%)
+End Sub
+
+Sub inc_controller(idx%)
+  Local i%
+  For i% = 0 To Bound(CTRL_SUBS$(), 1)
+    If cycle.ctrl$(idx%) <> CTRL_SUBS$(i%) Then Continue For
+    Inc i%, 1
+    If i% > Bound(CTRL_SUBS$(), 1) Then i% = 0
+    cycle.ctrl$(idx%) = CTRL_SUBS$(i%)
+    Exit Sub
+  Next
+  Error "Unknown controller: " + cycle.ctrl$(idx%)
+End Sub
+
 Sub init_game()
   cmd% = CMD_NONE%
   frame_duration% = 3 * (5 + (6 - difficulty%))
-  num_players% = MAX_CYCLE_IDX% + 1
+  num_players% = 0 ' Incremented later.
   score% = 0
+  Memory Set Peek(VarAddr keys%()), 0, 256
 
   ' Initialise the arena.
   Local i%, x%, y%
@@ -224,16 +266,22 @@ Sub init_game()
   cycle.dir%(2) = WEST%
   cycle.dir%(3) = NORTH%
 
-  cycle.pos%(0) = WIDTH * (HEIGHT% \ 2) + 1
-  cycle.pos%(1) = 1.5 * WIDTH%
-  cycle.pos%(2) = WIDTH% * (HEIGHT% \ 2) + WIDTH% - 2
-  cycle.pos%(3) = WIDTH% * (HEIGHT% - 2) + WIDTH% \ 2
+  cycle.pos%(0) = WIDTH * (HEIGHT% \ 2) + 5
+  cycle.pos%(1) = 5.5 * WIDTH%
+  cycle.pos%(2) = WIDTH% * (HEIGHT% \ 2) + WIDTH% - 6
+  cycle.pos%(3) = WIDTH% * (HEIGHT% - 6) + WIDTH% \ 2
 
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
-    cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
-    Poke Var collision%(), cycle.pos%(i%), i% + 1
-    Poke Var collision%(), cycle.nxt%(i%), i% + 1
+    If cycle.ctrl$(i%) = "ctrl_none%" Then
+      cycle.pos%(i%) = -1
+      cycle.nxt%(i%) = -1
+    Else
+      Inc num_players%
+      cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
+      Poke Var collision%(), cycle.pos%(i%), i% + 1
+      Poke Var collision%(), cycle.nxt%(i%), i% + 1
+    EndIf
   Next
 
 End Sub
@@ -254,14 +302,27 @@ Sub game_loop()
     For i% = 0 To MAX_CYCLE_IDX% : cycle.draw(i%) : Next
     If IS_CMM2% Then Page Copy 1 To 0, I
     For i% = 0 To MAX_CYCLE_IDX% : cycle.move(i%) : Next
-    For i% = 0 To MAX_CYCLE_IDX% : cycle.steer(i%) : Next
+    For i% = 0 To MAX_CYCLE_IDX%
+      If cycle.pos%(i%) < 0 Then Continue For
+      cycle.dir%(i%) = Call(cycle.ctrl$(i%), i%)
+      cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
+      cycle.check_collision(i%)
+    Next
+
     If num_players% = 0 Then Exit Do
+
     update_score()
 
     ' Wait for next "frame".
     Do While Timer < next_frame% : Loop
     Inc next_frame%, frame_duration%
   Loop
+
+  ' Ensure display updated at end of loop.
+  If IS_CMM2% Then Page Copy 1 To 0, B
+
+  ' Wait for any sound effect to complete.
+  Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
 End Sub
 
 Sub update_score()
@@ -270,7 +331,7 @@ Sub update_score()
     Local i%
     For i% = 0 To 3
       If cycle.pos%(i%) >= 0 Then
-        Text SCORE_POS%(i%), 2 * HEIGHT% + 4, Str$(score%, 5, 0, "0"), , 1, 1, cycle.col%(i%)
+        Text SCORE_POS%(i%), 2 * HEIGHT% + 4, Str$(score%, 5, 0, "0"), , 1, 1, cycle.colour%(i%)
       EndIf
     Next
  EndIf
@@ -293,7 +354,7 @@ Sub cycle.draw(idx%)
   Local y% = cycle.pos%(idx%) \ WIDTH%
   Local x2% = cycle.nxt%(idx%) Mod WIDTH%
   Local y2% = cycle.nxt%(idx%) \ WIDTH%
-  Line 2 * x%, 2 * y%, 2 * x2%, 2 * y2%, 1, cycle.col%(idx%)
+  Line 2 * x%, 2 * y%, 2 * x2%, 2 * y2%, 1, cycle.colour%(idx%)
 End Sub
 
 Sub show_game_over()
@@ -302,43 +363,101 @@ Sub show_game_over()
     If cycle.score%(winner%) = score% Then Exit For
   Next
   Local txt$ = "PLAYER " + Str$(winner% + 1) + " WINS"
-  Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.col%(winner%)
+  Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.colour%(winner%)
   Do While (score% Mod 5) <> 0 : Inc score%, -1 : Loop
-  Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(score%), "CM", 1, 2, cycle.col%(winner%)
+  Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(score%), "CM", 1, 2, cycle.colour%(winner%)
   If IS_CMM2% Then Page Copy 1 To 0, B
   wait(5000)
 End Sub
 
 Sub cycle.move(idx%)
-  If cycle.pos%(idx%) < 0 Then Exit Sub
-  cycle.pos%(idx%) = cycle.nxt%(idx%)
-  If cycle.pos%(idx%) < 0 Or cycle.pos%(idx%) >= WIDTH% * HEIGHT% Then Error "cycle.move: " + Str$(idx%) + " : " + Str$(cycle.pos%(idx%))
+  If cycle.pos%(idx%) >= 0 Then cycle.pos%(idx%) = cycle.nxt%(idx%)
 End Sub
 
-Sub cycle.steer(idx%)
-  If cycle.pos%(idx%) < 0 Then Exit Sub
+Function ctrl_ai%(idx%)
+  Local d% = cycle.dir%(idx%)
 
-  Local i%
+  ' Random element.
+  Local i% = Int(500 * Rnd)
+  If i% < 4 Then d% = NEXT_DIR%(i% + idx%)
 
-  If idx% = 0 Then
-    cycle.steer_player(idx%)
-    cycle.nxt%(idx%) = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
-  Else
+  ' Avoid collisions.
+  Local nxt%
+  For i% = 0 To 3
+    nxt% = cycle.pos%(idx%) + DIRECTIONS%(d%)
+    If Not Peek(Var collision%(), nxt%)) Then Exit For
+    d% = NEXT_DIR%(i% + idx%)
+  Next
 
-    ' Random element.
-    i% = Int(500 * Rnd)
-    If i% < 4 Then cycle.dir%(idx%) = NEXT_DIR%(i% + idx%)
+  ctrl_ai% = d%
+End Function
 
-    ' Avoid collisions.
-    Local nxt% = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
-    For i% = 0 To 3
-      If Not Peek(Var collision%(), nxt%)) Then Exit For
-      cycle.dir%(idx%) = NEXT_DIR%(i% + idx%)
-      nxt% = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
-    Next
+Function ctrl_keys1%(idx%)
+  Local d% = cycle.dir%(idx%)
 
-    cycle.nxt%(idx%) = nxt%
+  If Peek(Var keys%(), 97) Then       ' A
+    d% = NORTH%
+    Poke Var keys%(), 97, 0
+  ElseIf Peek(Var keys%(), 122) Then  ' Z
+    d% = SOUTH%
+    Poke Var keys%(), 122, 0
+  ElseIf Peek(Var keys%(), 44) Then   ' comma 
+    d% = WEST%
+    Poke Var keys%(), 44, 0
+  ElseIf Peek(Var keys%(), 46) Then   ' full-stop
+    d% = EAST%
+    Poke Var keys%(), 46, 0
   EndIf
+
+  ctrl_keys1% = d%
+End Function
+
+Function ctrl_keys2%(idx%)
+  Local d% = cycle.dir%(idx%)
+
+  If Peek(Var keys%(), 97) Then       ' A
+    d% = NORTH%
+    Poke Var keys%(), 97, 0
+  ElseIf Peek(Var keys%(), 122) Then  ' Z
+    d% = SOUTH%
+    Poke Var keys%(), 122, 0
+  ElseIf Peek(Var keys%(), 120) Then  ' X
+    d% = WEST%
+    Poke Var keys%(), 120, 0
+  ElseIf Peek(Var keys%(), 99) Then   ' C
+    d% = EAST%
+    Poke Var keys%(), 99, 0
+  EndIf
+
+  ctrl_keys2% = d%
+End Function
+
+Function ctrl_keys3%(idx%)
+  Local d% = cycle.dir%(idx%)
+
+  If Peek(Var keys%(), 105) Then      ' I
+    d% = NORTH%
+    Poke Var keys%(), 105, 0
+  ElseIf Peek(Var keys%(), 107) Then  ' K
+    d% = SOUTH%
+    Poke Var keys%(), 107, 0
+  ElseIf Peek(Var keys%(), 111) Then  ' O
+    d% = WEST%
+    Poke Var keys%(), 111, 0
+  ElseIf Peek(Var keys%(), 112) Then  ' P
+    d% = EAST%
+    Poke Var keys%(), 112, 0
+  EndIf
+
+  ctrl_keys3% = d%
+End Function
+
+Function ctrl_none%(idx%)
+  ' Do nothing.
+End Function
+
+Sub cycle.check_collision(idx%)
+  If cycle.pos%(idx%) < 0 Then Exit Sub
 
   ' No collision occurred.
   If Not Peek(Var collision%(), cycle.nxt%(idx%)) Then
@@ -347,49 +466,30 @@ Sub cycle.steer(idx%)
   EndIf
 
   ' Collision occurred.
+  Local i%
   For i% = 0 To WIDTH% * HEIGHT% - 1
     If Peek(Var collision%(), i%) = idx% + 1 Then
       Box 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), 2, 2, 1, Rgb(Black)
       Poke Var collision%(), i%, 0
     EndIf
   Next
+
   cycle.pos%(idx%) = -1
   cycle.score%(idx%) = score%
   Inc num_players%, -1
   start_soundfx(Peek(VarAddr soundfx_die%()))
-Exit Sub
-
-Sub cycle.steer_player(idx%)
-  Local d% = cycle.dir%(idx%)
-  If game_type% = 1 Then
-    Select Case cmd%
-      Case LEFT%
-        Inc d%, -1
-        If d% < 0 Then d% = 3
-      Case RIGHT%
-        Inc d%, 1
-        If d% > 3 Then d% = 0
-    End Select
-  Else
-    Select Case cmd%
-      Case UP%    : d% = NORTH%
-      Case DOWN%  : d% = SOUTH%
-      Case LEFT%  : d% = WEST%
-      Case RIGHT% : d% = EAST%
-    End Select
-  EndIf
-  cycle.dir%(idx%) = d%
-  cmd% = CMD_NONE%
 End Sub
 
 Sub on_key()
-  Select Case LCase$(Inkey$)
-    Case "a" : cmd% = UP%
-    Case "z" : cmd% = DOWN%
-    Case "," : cmd% = LEFT%
-    Case "." : cmd% = RIGHT%
-    Case " " : cmd% = FIRE%
+  Local k$ = Inkey$
+  Select Case Asc(k$)
+    Case 65,  97, 128 : cmd% = UP%    ' A
+    Case 90, 122, 129 : cmd% = DOWN%  ' Z
+    Case 44,  60, 130 : cmd% = LEFT%  ' <
+    Case 46,  62, 131 : cmd% = RIGHT% ' >
+    Case 32           : cmd% = FIRE%  ' [SPACE]
   End Select
+  Poke Var keys%(), Asc(LCase$(k$)), 1
 End Sub
 
 ' Called from interrupt to play next note of music.
