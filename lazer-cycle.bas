@@ -46,7 +46,7 @@ Dim CTRL_SUBS$(7)       = ("ctrl_keys1%", "ctrl_keys2%", "ctrl_keys3%", "ctrl_a%
 
 Dim score%
 Dim difficulty% = 1
-Dim collision%(HEIGHT% * WIDTH% \ 8)
+Dim arena%(HEIGHT% * WIDTH% \ 8)
 Dim cmd% = CMD_NONE%
 Dim frame_duration%
 Dim next_frame%
@@ -250,7 +250,7 @@ Sub init_game()
   Memory Set Peek(VarAddr keys%()), 0, 256
 
   ' Initialise the arena.
-  Local p_arena% = Peek(VarAddr collision%())
+  Local p_arena% = Peek(VarAddr arena%())
   Memory Set p_arena%, 0, HEIGHT% * WIDTH%
   Memory Set p_arena%, 255, WIDTH%
   Memory Set p_arena% + (HEIGHT% - 1) * WIDTH%, 255, WIDTH%
@@ -279,8 +279,8 @@ Sub init_game()
     Else
       Inc num_players%
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
-      Poke Var collision%(), cycle.pos%(i%), i% + 1
-      Poke Var collision%(), cycle.nxt%(i%), i% + 1
+      Poke Var arena%(), cycle.pos%(i%), i% + 1
+      Poke Var arena%(), cycle.nxt%(i%), i% + 1
     EndIf
   Next
 
@@ -289,7 +289,7 @@ End Sub
 Sub draw_arena()
   Local i%
   For i% = 0 To HEIGHT% * WIDTH% - 1
-    If Peek(Var collision%(), i%) = 255 Then
+    If Peek(Var arena%(), i%) = 255 Then
       Pixel 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), RGB(Grey)
     EndIf
   Next
@@ -385,7 +385,7 @@ Function ctrl_ai%(idx%)
   Local nxt%
   For i% = 0 To 3
     nxt% = cycle.pos%(idx%) + DIRECTIONS%(d%)
-    If Not Peek(Var collision%(), nxt%)) Then Exit For
+    If Not Peek(Var arena%(), nxt%)) Then Exit For
     d% = NEXT_DIR%(i% + idx%)
   Next
 
@@ -460,17 +460,17 @@ Sub cycle.check_collision(idx%)
   If cycle.pos%(idx%) < 0 Then Exit Sub
 
   ' No collision occurred.
-  If Not Peek(Var collision%(), cycle.nxt%(idx%)) Then
-    Poke Var collision%(), cycle.nxt%(idx%), idx% + 1
+  If Not Peek(Var arena%(), cycle.nxt%(idx%)) Then
+    Poke Var arena%(), cycle.nxt%(idx%), idx% + 1
     Exit Sub
   EndIf
 
   ' Collision occurred.
   Local i%
   For i% = 0 To WIDTH% * HEIGHT% - 1
-    If Peek(Var collision%(), i%) = idx% + 1 Then
+    If Peek(Var arena%(), i%) = idx% + 1 Then
       Box 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), 2, 2, 1, Rgb(Black)
-      Poke Var collision%(), i%, 0
+      Poke Var arena%(), i%, 0
     EndIf
   Next
 
