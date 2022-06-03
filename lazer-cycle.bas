@@ -250,15 +250,14 @@ Sub init_game()
   Memory Set Peek(VarAddr keys%()), 0, 256
 
   ' Initialise the arena.
-  Local i%, x%, y%
-  For i% = 0 To HEIGHT% * WIDTH% - 1
-    x% = i% Mod WIDTH%
-    y% = i% \ WIDTH%
-    If x% = 0 Or x% = WIDTH% - 1 Or y% = 0 Or y% = HEIGHT% - 1 Then
-      Poke Var collision%(), i%, 255
-    Else
-      Poke Var collision%(), i%, 0
-    EndIf
+  Local p_arena% = Peek(VarAddr collision%())
+  Memory Set p_arena%, 0, HEIGHT% * WIDTH%
+  Memory Set p_arena%, 255, WIDTH%
+  Memory Set p_arena% + (HEIGHT% - 1) * WIDTH%, 255, WIDTH%
+  Local y%
+  For y% = 1 To HEIGHT% - 2
+    Poke Byte p_arena% + y% * WIDTH%, 255
+    Poke Byte p_arena% + (y% + 1) * WIDTH% - 1, 255
   Next
 
   cycle.dir%(0) = EAST%
@@ -271,6 +270,7 @@ Sub init_game()
   cycle.pos%(2) = WIDTH% * (HEIGHT% \ 2) + WIDTH% - 6
   cycle.pos%(3) = WIDTH% * (HEIGHT% - 6) + WIDTH% \ 2
 
+  Local i%
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
     If cycle.ctrl$(i%) = "ctrl_none%" Then
