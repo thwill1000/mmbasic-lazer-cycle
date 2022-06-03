@@ -287,11 +287,10 @@ Sub init_game()
 End Sub
 
 Sub draw_arena()
-  Local i%
+  Local c% = RGB(Grey), i%
   For i% = 0 To HEIGHT% * WIDTH% - 1
-    If Peek(Var arena%(), i%) = 255 Then
-      Pixel 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), RGB(Grey)
-    EndIf
+    If Peek(Var arena%(), i%) <> 255 Then Continue For
+    Pixel 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), c%
   Next
 End Sub
 
