@@ -67,6 +67,13 @@ Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32 = ("ctrl_keys2%", "ctrl_ai%", "ctrl_keys3%", "ctrl_ai%")
 Dim cycle.dying%(MAX_CYCLE_IDX%)
 
+' Fudge factor; when a collision occurs this is incremented. The cycle doesn't
+' actually die until this reaches a threshold, it helps make the game playable
+' without lightning reactions and also compensates for timing issues reading
+' the keyboard.
+Const FUDGE_THRESHOLD% = 3
+Dim cycle.fudge%(MAX_CYCLE_IDX%)
+
 Dim music_flag% = 1
 Dim music_ptr% = Peek(VarAddr MUSIC%()) + 4
 Dim soundfx_flag% = 1
@@ -372,6 +379,7 @@ End Sub
 
 Sub cycle.draw(idx%)
   If cycle.pos%(idx%) < 0 Then Exit Sub
+  If cycle.fudge%(idx%) Then Exit Sub
   Local x% = cycle.pos%(idx%) Mod WIDTH%
   Local y% = cycle.pos%(idx%) \ WIDTH%
   Local x2% = cycle.nxt%(idx%) Mod WIDTH%
@@ -393,7 +401,9 @@ Sub show_game_over()
 End Sub
 
 Sub cycle.move(idx%)
-  If cycle.pos%(idx%) >= 0 Then cycle.pos%(idx%) = cycle.nxt%(idx%)
+  If cycle.pos%(idx%) < 0 Then Exit Sub
+  If cycle.fudge%(idx%) Then Exit Sub
+  cycle.pos%(idx%) = cycle.nxt%(idx%)
 End Sub
 
 Function ctrl_ai%(idx%)
@@ -419,63 +429,57 @@ Function ctrl_die%(idx%)
 End Function
 
 Function ctrl_keys1%(idx%)
-  Local d% = cycle.dir%(idx%)
+  ctrl_keys1% = cycle.dir%(idx%)
 
   If Peek(Var keys%(), 97) Then       ' A
-    d% = NORTH%
+    ctrl_keys1% = NORTH%
     Poke Var keys%(), 97, 0
   ElseIf Peek(Var keys%(), 122) Then  ' Z
-    d% = SOUTH%
+    ctrl_keys1% = SOUTH%
     Poke Var keys%(), 122, 0
   ElseIf Peek(Var keys%(), 44) Then   ' comma 
-    d% = WEST%
+    ctrl_keys1% = WEST%
     Poke Var keys%(), 44, 0
   ElseIf Peek(Var keys%(), 46) Then   ' full-stop
-    d% = EAST%
+    ctrl_keys1% = EAST%
     Poke Var keys%(), 46, 0
   EndIf
-
-  ctrl_keys1% = d%
 End Function
 
 Function ctrl_keys2%(idx%)
-  Local d% = cycle.dir%(idx%)
+  ctrl_keys2% = cycle.dir%(idx%)
 
   If Peek(Var keys%(), 97) Then       ' A
-    d% = NORTH%
+    ctrl_keys2% = NORTH%
     Poke Var keys%(), 97, 0
   ElseIf Peek(Var keys%(), 122) Then  ' Z
-    d% = SOUTH%
+    ctrl_keys2% = SOUTH%
     Poke Var keys%(), 122, 0
   ElseIf Peek(Var keys%(), 120) Then  ' X
-    d% = WEST%
+    ctrl_keys2% = WEST%
     Poke Var keys%(), 120, 0
   ElseIf Peek(Var keys%(), 99) Then   ' C
-    d% = EAST%
+    ctrl_keys2% = EAST%
     Poke Var keys%(), 99, 0
   EndIf
-
-  ctrl_keys2% = d%
 End Function
 
 Function ctrl_keys3%(idx%)
-  Local d% = cycle.dir%(idx%)
+  ctrl_keys3% = cycle.dir%(idx%)
 
   If Peek(Var keys%(), 105) Then      ' I
-    d% = NORTH%
+    ctrl_keys3% = NORTH%
     Poke Var keys%(), 105, 0
   ElseIf Peek(Var keys%(), 107) Then  ' K
-    d% = SOUTH%
+    ctrl_keys3% = SOUTH%
     Poke Var keys%(), 107, 0
   ElseIf Peek(Var keys%(), 111) Then  ' O
-    d% = WEST%
+    ctrl_keys3% = WEST%
     Poke Var keys%(), 111, 0
   ElseIf Peek(Var keys%(), 112) Then  ' P
-    d% = EAST%
+    ctrl_keys3% = EAST%
     Poke Var keys%(), 112, 0
   EndIf
-
-  ctrl_keys3% = d%
 End Function
 
 Function ctrl_none%(idx%)
@@ -485,7 +489,7 @@ End Function
 Sub cycle.check_collision(idx%)
   If cycle.pos%(idx%) < 0 Then Exit Sub
 
-  ' Handle dying cycle.
+  ' Handle dying.
   If cycle.dying%(idx%) Then
     Poke Var arena%(), cycle.pos%(idx%), 0
     Local mask% = (idx% << 1) + 1
@@ -500,13 +504,21 @@ Sub cycle.check_collision(idx%)
   ' No collision occurred.
   If Not Peek(Var arena%(), cycle.nxt%(idx%)) Then
     Poke Var arena%(), cycle.nxt%(idx%), (cycle.dir%(idx%) << 3) + (idx% << 1) + 1
+    cycle.fudge%(idx%) = 0
     Exit Sub
   EndIf
 
-  ' Collision occurred.
+  ' Collision occured - the player has a couple of frames to change direction.
+  If cycle.fudge%(idx%) < FUDGE_THRESHOLD% Then
+    Inc cycle.fudge%(idx%)
+    Exit Sub
+  End If
+
+  ' Time to die.
   Inc num_players%, -1
   cycle.ctrl$(idx%) = "ctrl_die%"
   cycle.dying%(idx%) = 1
+  cycle.fudge%(idx%) = 0
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
   start_soundfx(Peek(VarAddr soundfx_die%()), 0)
