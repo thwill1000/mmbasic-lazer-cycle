@@ -46,10 +46,17 @@ Dim CTRL_SUBS$(7)       = ("ctrl_keys1%", "ctrl_keys2%", "ctrl_keys3%", "ctrl_a%
 
 Dim score%
 Dim difficulty% = 1
-Dim arena%(HEIGHT% * WIDTH% \ 8)
 Dim cmd% = CMD_NONE%
 Dim frame_duration%
 Dim next_frame%
+
+' Each cell of the arena takes up 1 byte:
+'   bit  0    - occupied by cycle
+'   bits 1-2 - index of cycle
+'   bits 3-4 - direction cycle was going in when entered cycle
+'   bits 5-6 - unused
+'   bit  7   - arena wall (other bits will be 0)
+Dim arena%(HEIGHT% * WIDTH% \ 8)
 
 Dim cycle.score%(MAX_CYCLE_IDX%)
 Dim cycle.nxt%(MAX_CYCLE_IDX%)
@@ -252,12 +259,12 @@ Sub init_game()
   ' Initialise the arena.
   Local p_arena% = Peek(VarAddr arena%())
   Memory Set p_arena%, 0, HEIGHT% * WIDTH%
-  Memory Set p_arena%, 255, WIDTH%
-  Memory Set p_arena% + (HEIGHT% - 1) * WIDTH%, 255, WIDTH%
+  Memory Set p_arena%, 128, WIDTH%
+  Memory Set p_arena% + (HEIGHT% - 1) * WIDTH%, 128, WIDTH%
   Local y%
   For y% = 1 To HEIGHT% - 2
-    Poke Byte p_arena% + y% * WIDTH%, 255
-    Poke Byte p_arena% + (y% + 1) * WIDTH% - 1, 255
+    Poke Byte p_arena% + y% * WIDTH%, 128
+    Poke Byte p_arena% + (y% + 1) * WIDTH% - 1, 128
   Next
 
   cycle.dir%(0) = EAST%
@@ -279,8 +286,10 @@ Sub init_game()
     Else
       Inc num_players%
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
-      Poke Var arena%(), cycle.pos%(i%), i% + 1
-      Poke Var arena%(), cycle.nxt%(i%), i% + 1
+      Poke Byte p_arena% + cycle.pos%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
+      Poke Byte p_arena% + cycle.nxt%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
+'      Poke Var arena%(), cycle.pos%(i%), i% + 1
+'      Poke Var arena%(), cycle.nxt%(i%), i% + 1
     EndIf
   Next
 
@@ -289,7 +298,7 @@ End Sub
 Sub draw_arena()
   Local c% = RGB(Grey), i%
   For i% = 0 To HEIGHT% * WIDTH% - 1
-    If Peek(Var arena%(), i%) <> 255 Then Continue For
+    If Peek(Var arena%(), i%) <> 128 Then Continue For
     Pixel 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), c%
   Next
 End Sub
@@ -460,14 +469,15 @@ Sub cycle.check_collision(idx%)
 
   ' No collision occurred.
   If Not Peek(Var arena%(), cycle.nxt%(idx%)) Then
-    Poke Var arena%(), cycle.nxt%(idx%), idx% + 1
+'    Poke Var arena%(), cycle.nxt%(idx%), idx% + 1
+    Poke Var arena%(), cycle.nxt%(idx%), (cycle.dir%(idx%) << 3) + (idx% << 1) + 1
     Exit Sub
   EndIf
 
   ' Collision occurred.
   Local i%
   For i% = 0 To WIDTH% * HEIGHT% - 1
-    If Peek(Var arena%(), i%) = idx% + 1 Then
+    If (Peek(Var arena%(), i%) And &b111) = (idx% << 1) + 1 Then
       Box 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), 2, 2, 1, Rgb(Black)
       Poke Var arena%(), i%, 0
     EndIf
