@@ -63,7 +63,9 @@ Dim cycle.nxt%(MAX_CYCLE_IDX%)
 Dim cycle.pos%(MAX_CYCLE_IDX%)
 Dim cycle.dir%(MAX_CYCLE_IDX%)
 Dim cycle.colour%(MAX_CYCLE_IDX%) = ( RGB(Red), RGB(Yellow), RGB(Cyan), RGB(Green) )
-Dim cycle.ctrl$(MAX_CYCLE_IDX%) = ("ctrl_keys2%", "ctrl_ai%", "ctrl_keys3%", "ctrl_ai%")
+Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
+Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32 = ("ctrl_keys2%", "ctrl_ai%", "ctrl_keys3%", "ctrl_ai%")
+Dim cycle.dying%(MAX_CYCLE_IDX%)
 
 Dim music_flag% = 1
 Dim music_ptr% = Peek(VarAddr MUSIC%()) + 4
@@ -130,9 +132,11 @@ End Sub
 
 Sub show_menu()
   Const x% = X_OFFSET% - 100
-  Local item% = 0, update% = 1
+  Local i%, item% = 0, update% = 1
   Local sounds$(3) = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
   Local sound_setting% = Choice(music_flag%, Choice(soundfx_flag%, 0, 1), Choice(soundfx_flag%, 2, 3))
+
+  For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
 
   Text X_OFFSET%, Y_OFFSET% + 75, "Music by Trevor Bailey", "CM", 7, 1, RGB(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, RGB(Cyan)
@@ -203,9 +207,11 @@ Sub show_menu()
 
     End Select
 
-    If update% = 1 Then start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+    If update% = 1 Then start_soundfx(Peek(VarAddr SOUNDFX_EAT%()), 1)
 
   Loop
+
+  For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = cycle.ctrl$(i%) : Next
 End Sub
 
 Sub text_for_controller(x%, y%, idx%)
@@ -280,6 +286,7 @@ Sub init_game()
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
+    cycle.dying%(i%) = 0
     If cycle.ctrl$(i%) = "ctrl_none%" Then
       cycle.pos%(i%) = -1
       cycle.nxt%(i%) = -1
@@ -288,8 +295,6 @@ Sub init_game()
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       Poke Byte p_arena% + cycle.pos%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
       Poke Byte p_arena% + cycle.nxt%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
-'      Poke Var arena%(), cycle.pos%(i%), i% + 1
-'      Poke Var arena%(), cycle.nxt%(i%), i% + 1
     EndIf
   Next
 
@@ -307,11 +312,20 @@ Sub game_loop()
   Local i%
   next_frame% = Timer + frame_duration%
   Do
+    ' When dying the cycle trail deletes at twice the rate.
+    For i% = 0 To MAX_CYCLE_IDX%
+      If Not cycle.dying%(i%) Then Continue For
+      cycle.draw(i%)
+      cycle.move(i%)
+      cycle.dir%(i%) = ctrl_die%(i%)
+      cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
+      cycle.check_collision(i%)
+    Next
+
     For i% = 0 To MAX_CYCLE_IDX% : cycle.draw(i%) : Next
     If IS_CMM2% Then Page Copy 1 To 0, I
     For i% = 0 To MAX_CYCLE_IDX% : cycle.move(i%) : Next
     For i% = 0 To MAX_CYCLE_IDX%
-      If cycle.pos%(i%) < 0 Then Continue For
       cycle.dir%(i%) = Call(cycle.ctrl$(i%), i%)
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       cycle.check_collision(i%)
@@ -321,7 +335,7 @@ Sub game_loop()
 
     update_score()
 
-    ' Wait for next "frame".
+    ' Wait for next frame.
     Do While Timer < next_frame% : Loop
     Inc next_frame%, frame_duration%
   Loop
@@ -338,7 +352,7 @@ Sub update_score()
   If score% Mod 5 = 0 Then
     Local i%
     For i% = 0 To 3
-      If cycle.pos%(i%) >= 0 Then
+      If cycle.pos%(i%) >= 0 And Not cycle.dying%(i%) Then
         Text SCORE_POS%(i%), 2 * HEIGHT% + 4, Str$(score%, 5, 0, "0"), , 1, 1, cycle.colour%(i%)
       EndIf
     Next
@@ -347,7 +361,7 @@ End Sub
 
 Sub wipe()
   Local y%
-  start_soundfx(Peek(VarAddr soundfx_wipe%()))
+  start_soundfx(Peek(VarAddr soundfx_wipe%()), 1)
   For y% = 0 To Mm.VRes \ 2 Step 5
      Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, RGB(Cyan), RGB(Black)
      If IS_CMM2% Then Page Copy 1 To 0, B
@@ -362,7 +376,7 @@ Sub cycle.draw(idx%)
   Local y% = cycle.pos%(idx%) \ WIDTH%
   Local x2% = cycle.nxt%(idx%) Mod WIDTH%
   Local y2% = cycle.nxt%(idx%) \ WIDTH%
-  Line 2 * x%, 2 * y%, 2 * x2%, 2 * y2%, 1, cycle.colour%(idx%)
+  Line 2 * x%, 2 * y%, 2 * x2%, 2 * y2%, 1, Choice(cycle.dying%(idx%), Rgb(Black), cycle.colour%(idx%))
 End Sub
 
 Sub show_game_over()
@@ -398,6 +412,10 @@ Function ctrl_ai%(idx%)
   Next
 
   ctrl_ai% = d%
+End Function
+
+Function ctrl_die%(idx%)
+  ctrl_die% = ((Peek(Var arena%(), cycle.pos%(idx%)) >> 3) + 2) Mod 4
 End Function
 
 Function ctrl_keys1%(idx%)
@@ -467,26 +485,31 @@ End Function
 Sub cycle.check_collision(idx%)
   If cycle.pos%(idx%) < 0 Then Exit Sub
 
+  ' Handle dying cycle.
+  If cycle.dying%(idx%) Then
+    Poke Var arena%(), cycle.pos%(idx%), 0
+    Local mask% = (idx% << 1) + 1
+    If (Peek(Var arena%(), cycle.nxt%(idx%)) And mask%) <> mask% Then
+      cycle.ctrl$(idx%) = "ctrl_none%"
+      cycle.dying%(idx%) = 0
+      cycle.pos%(idx%) = -1
+    EndIf
+    Exit Sub
+  EndIf
+
   ' No collision occurred.
   If Not Peek(Var arena%(), cycle.nxt%(idx%)) Then
-'    Poke Var arena%(), cycle.nxt%(idx%), idx% + 1
     Poke Var arena%(), cycle.nxt%(idx%), (cycle.dir%(idx%) << 3) + (idx% << 1) + 1
     Exit Sub
   EndIf
 
   ' Collision occurred.
-  Local i%
-  For i% = 0 To WIDTH% * HEIGHT% - 1
-    If (Peek(Var arena%(), i%) And &b111) = (idx% << 1) + 1 Then
-      Box 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), 2, 2, 1, Rgb(Black)
-      Poke Var arena%(), i%, 0
-    EndIf
-  Next
-
-  cycle.pos%(idx%) = -1
-  cycle.score%(idx%) = score%
   Inc num_players%, -1
-  start_soundfx(Peek(VarAddr soundfx_die%()))
+  cycle.ctrl$(idx%) = "ctrl_die%"
+  cycle.dying%(idx%) = 1
+  cycle.nxt%(idx%) = cycle.pos%(idx%)
+  cycle.score%(idx%) = score%
+  start_soundfx(Peek(VarAddr soundfx_die%()), 0)
 End Sub
 
 Sub on_key()
@@ -517,11 +540,11 @@ Sub play_music()
 End Sub
 
 ' Start a new sound effect.
-Sub start_soundfx(ptr%)
+Sub start_soundfx(ptr%, wait_%)
   If Not soundfx_flag% Then Exit Sub
 
   ' Wait for current sound effect to end.
-  Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
+  If wait_% Then Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
 
   soundfx_ptr% = ptr%
 
