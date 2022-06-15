@@ -1,7 +1,6 @@
 ' Copyright (c) 2022 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.03
-' Music by Trevor Bailey
 
 Option Base 0
 Option Default None
@@ -9,7 +8,7 @@ Option Explicit On
 
 ' Save "light-bikes.bas"
 
-Const VERSION$ = "1.0.0"
+Const VERSION$ = "0.9.0"
 
 Select Case Mm.Device$
   Case "Colour Maximite 2", "Colour Maximite 2 G2", "MMBasic for Windows"
@@ -33,11 +32,12 @@ Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
 
 ' These would be constants but MMBasic does not support constant arrays
+Dim FREQUENCY!(127)
+Dim NO_MUSIC%(1)      = (&h0000000000000000, &hFFFFFFFF00000000)
 Dim SOUNDFX_NOTHING%(1) = (&hFFFFFFFFFFFFFFFF, &hFFFFFFFFFFFFFFFF)
 Dim SOUNDFX_EAT%(1)     = (&hFFFFFFFFFF100C04, &hFFFFFFFFFFFFFFFF)
 Dim SOUNDFX_DIE%(2)     = (&h0F10111213141516, &h0708090A0B0C0D0E, &hFF00010203040506)
 Dim SOUNDFX_WIPE%(2)    = (&h0706050403020100, &h0F0E0D0C0B0A0908, &hFF16151413121110)
-Dim MUSIC%(68)
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_POS%(3)       = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
@@ -74,25 +74,27 @@ Dim cycle.dying%(MAX_CYCLE_IDX%)
 Const FUDGE_THRESHOLD% = 3
 Dim cycle.fudge%(MAX_CYCLE_IDX%)
 
-Dim music_flag% = 1
-Dim music_ptr% = Peek(VarAddr MUSIC%()) + 4
+Dim music_start_ptr% = Peek(VarAddr NO_MUSIC%())
+Dim music_ptr% = music_start_ptr%
 Dim soundfx_flag% = 1
 Dim soundfx_ptr% = Peek(VarAddr SOUNDFX_NOTHING%())
-
 Dim num_players%
 Dim keys%(31)
 
 ' Music and sound effects are played on SetTick interrupts.
-SetTick 250, play_music, 1
+SetTick 200, play_music, 1
 SetTick 40, play_soundfx, 2
 
 On Key on_key()
 
+init_globals()
 read_music()
 clear_display()
+wipe()
+
+music_start_ptr% = Peek(VarAddr MUSIC%())
 
 Do
-  wipe()
   show_title()
   wipe()
   show_menu()
@@ -101,15 +103,33 @@ Do
   draw_arena()
   game_loop()
   show_game_over()
+  wipe()
 Loop
 
 End
 
-Sub read_music()
+' Initialises global variables.
+Sub init_globals()
   Local i%
+  ' FREQUENCY(0) - rest - 10 Hz, which should be inaudible.
+  ' FREQUENCY(1) - C0   - 16.35 Hz
+  FREQUENCY!(0) = 10.0
+  For i% = 1 To 127
+    FREQUENCY!(i%) = 440 * 2^((i% - 58) / 12.0)
+  Next
+End Sub
+
+Sub read_music()
   Restore music_data
-  For i% = 0 To Bound(MUSIC%(), 1)
-    Read MUSIC%(i%)
+  Local count%
+  Read count%
+  Local num_channels%
+  Read num_channels%
+  count% = count% \ 8
+  Dim MUSIC%(count%)
+  Local i%
+  For i% = 1 To count%
+    Read MUSIC%(i% - 1)
   Next
 End Sub
 
@@ -141,11 +161,11 @@ Sub show_menu()
   Const x% = X_OFFSET% - 100
   Local i%, item% = 0, update% = 1
   Local sounds$(3) = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
-  Local sound_setting% = Choice(music_flag%, Choice(soundfx_flag%, 0, 1), Choice(soundfx_flag%, 2, 3))
+  Local sound_setting% = Choice(music_start_ptr% = Peek(VarAddr MUSIC%()), 1, 3) - soundfx_flag%
 
   For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
 
-  Text X_OFFSET%, Y_OFFSET% + 75, "Music by Trevor Bailey", "CM", 7, 1, RGB(Cyan)
+  ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, RGB(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, RGB(Cyan)
 
   Do
@@ -200,8 +220,9 @@ Sub show_menu()
             Inc sound_setting%, Choice(cmd% = LEFT%, -1, 1)
             If sound_setting% < 0 Then sound_setting% = 3
             If sound_setting% > 3 Then sound_setting% = 0
-            music_flag% = (sound_setting% = 0 Or sound_setting% = 1) 
-            soundfx_flag% = (sound_setting% = 0 Or sound_setting% = 2) 
+            music_start_ptr% = Choice(sound_setting% And &b10, Peek(VarAddr NO_MUSIC%()), Peek(VarAddr MUSIC%()))
+            music_ptr% = music_start_ptr%
+            soundfx_flag% = Not (sound_setting% And &b01)
             update% = 1
 
           Case 7 ' Quit
@@ -363,7 +384,7 @@ Sub update_score()
         Text SCORE_POS%(i%), 2 * HEIGHT% + 4, Str$(score%, 5, 0, "0"), , 1, 1, cycle.colour%(i%)
       EndIf
     Next
- EndIf
+  EndIf
 End Sub
 
 Sub wipe()
@@ -415,7 +436,7 @@ Function ctrl_ai%(idx%)
 
   ' Avoid collisions.
   Local nxt%
-  For i% = 0 To 3
+  For i% = 0 To MAX_CYCLE_IDX%
     nxt% = cycle.pos%(idx%) + DIRECTIONS%(d%)
     If Not Peek(Var arena%(), nxt%)) Then Exit For
     d% = NEXT_DIR%(i% + idx%)
@@ -538,17 +559,12 @@ End Sub
 
 ' Called from interrupt to play next note of music.
 Sub play_music()
-  If music_flag% Then
-    Local note% = Peek(Byte music_ptr%)
-    If note% = &hFF Then
-      music_ptr% = Peek(VarAddr MUSIC%()) + 4
-      note% = Peek(Byte music_ptr%)
-    EndIf
-    Play Sound 1, B, s, 440 * 2 ^ ((note% - 2) / 12.0), 15
-    Inc music_ptr%
-  Else
-    Play Sound 1, B, O
-  EndIf
+  Local n% = Peek(Byte music_ptr%)
+  If n% = 255 Then music_ptr% = music_start_ptr% : Exit Sub
+  Play Sound 1, B, S, FREQUENCY!(n%), 15
+  Play Sound 2, B, S, FREQUENCY!(Peek(Byte music_ptr% + 1)), 15
+  Play Sound 3, B, S, FREQUENCY!(Peek(Byte music_ptr% + 2)), 15
+  Inc music_ptr%, 3
 End Sub
 
 ' Start a new sound effect.
@@ -569,33 +585,42 @@ Sub play_soundfx()
   If soundfx_flag% Then
     Local note% = Peek(Byte soundfx_ptr%)
     If note% < &hFF Then
-      Play Sound 2, B, s, 440 * 2 ^ ((note% - 2) / 12.0)
+      Play Sound 4, B, s, 440 * 2 ^ ((note% - 2) / 12.0)
       Inc soundfx_ptr%
     Else
-      Play Sound 2, B, O
+      Play Sound 4, B, O
     EndIf
   Else
-    Play Sound 2, B, O
+    Play Sound 4, B, O
   EndIf
 End Sub
 
 music_data:
 
-Data &h0900090500000220, &h0900090509000905, &h0900090509000905, &h0900090509000905
-Data &h1818181509000905, &h181818151818181A, &h151618161818181A, &h1516181613111516
-Data &h1818181513111516, &h181818151518151A, &h151618131818181A, &h0C0E0C1315131516
-Data &h181818150704000C, &h181818151818181A, &h151618161818181A, &h1516181613111516
-Data &h1818181513111516, &h181818151518151A, &h151618131818181A, &h091D051115131516
-Data &h1515150E0509051D, &h1515150E15151516, &h1013151315151516, &h1013151310131513
-Data &h1515150E00040013, &h1515150E15151516, &h1311101315151516, &h1615131615131115
-Data &h1818181500000C18, &h181818151818181A, &h151618161818181A, &h1516181613111516
-Data &h1818181513111516, &h181818151518151A, &h151618131818181A, &h0C0E0C1315131516
-Data &h181818150704000C, &h181818151818181A, &h151618161818181A, &h1516181613111516
-Data &h1818181513111516, &h181818151518151A, &h151618131818181A, &h091D051115131516
-Data &h1515150E0509051D, &h1515150E15151516, &h1013151315151516, &h1013151310131513
-Data &h1515150E00040013, &h1515150E15151516, &h1311101315151516, &h1615131615131115
-Data &h1818181500000C18, &h181818151818181A, &h151618161818181A, &h1516181613111516
-Data &h1818181513111516, &h181818151518151A, &h151618131818181A, &h0C0E0C1315131516
-Data &h181818150704000C, &h181818151818181A, &h151618161818181A, &h1516181613111516
-Data &h1818181513111516, &h181818151518151A, &h151618131818181A, &h091D051115131516
-Data &hFFFFFFFF0509051D
+Data 792   ' Number of bytes of music data.
+Data 3     ' Number of channels.
+Data &h3135000034000033, &h3500253D00313D00, &h00283D00283D0025, &h2A3D00293D002935
+Data &h3D002C3D002A3D00, &h002E3D002E00002C, &h314100304000303F, &h4100293F00313D00
+Data &h002A3C002A410029, &h253D002C3F002C3F, &h3D002C3D00253D00, &h00313D00313D002C
+Data &h3135000034003133, &h3500253D00313D00, &h00283D00283D0025, &h2A3D00293D002935
+Data &h3D002C3D002A3D00, &h002E3D002E3D002C, &h273700263800263A, &h41002B3D00273A00
+Data &h002E3F002E41002B, &h2C3F00273A00273D, &h3F002A3F002C3F00, &h00293F00293F002A
+Data &h2535002734002733, &h3500313D00253D00, &h00283D00283D0031, &h2A3D00293D002935
+Data &h3D002C3D002A3D00, &h002E3D002E00002C, &h314100304000303F, &h4100293F00313D00
+Data &h002A3C002A410029, &h313D002C3F002C3F, &h3D002C3D00313D00, &h00250000253D002C
+Data &h3D4100253F00253D, &h41313D3F00003D31, &h00003D2F3B410000, &h3A4100003D2F3B3F
+Data &h412E3A3F00003D2E, &h00003D2D39410000, &h384100003D2D393F, &h412C383F00003D2C
+Data &h2C383C2C38410000, &h003D00003F00003F, &h3D202C3D00003D00, &h00003525313D202C
+Data &h3538000037000036, &h3800363A31353831, &h2C00352C35380035, &h3538000037000036
+Data &h3800363A31353831, &h2C00412C35380035, &h003A00003800003D, &h3F2A003D2A003C2A
+Data &h2C003F2C00412A00, &h00382C003F2C003D, &h382C003825003825, &h3100353100382C00
+Data &h3538000037000036, &h3800363A31353831, &h2C00352C35380035, &h3538000037000036
+Data &h3800363A31353831, &h2C00382C35380035, &h003C32003B32003A, &h3C33000033003C33
+Data &h27003A27003C3300, &h0038270033270037, &h382C00380000382C, &h2E00352E00380000
+Data &h3538300037300036, &h3800363A31353831, &h2C00352C35380035, &h3538000037000036
+Data &h3800363A31353831, &h2C00412C35380035, &h003A00003800003D, &h3F2A003D2A003C2A
+Data &h2C003F2C00412A00, &h003D2C003F2C003D, &h3D2C003D25003D25, &h31003831003D2C00
+Data &h363D000038000037, &h3D2A363A00003D2A, &h00003A2B373D0000, &h383800003A2B373D
+Data &h442C384100003D2C, &h0000412935440000, &h363A00003829353D, &h3D2A363D00003A2A
+Data &h00003F2C38410000, &h3D3D00003F2C383F, &h3D2C383D313D3D31, &h25313D25313D2C38
+Data &hFFFF000000000000, &hFFFFFFFFFFFFFFFF, &hFFFFFFFFFFFFFFFF
