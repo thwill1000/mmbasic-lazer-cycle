@@ -327,6 +327,22 @@ Sub music.process()
     Loop
   Next
 
+  ' Convert repeated notes to &hFE.
+  ' Local n%, p%
+  ' For i% = 1 To NUM_CHANNELS%
+  '   n% = -1
+  '   p% = Eval("Peek(VarAddr channel" + Str$(i%) + "%())")
+  '   j% = p% + 8
+  '   Do While j% < p% + 8 * max_len%
+  '     If Peek(Byte j%) = n% Then
+  '       Poke Byte j%, &hFE
+  '     Else
+  '       n% = Peek(Byte j%)
+  '     EndIf
+  '     Inc j%
+  '   Loop
+  ' Next
+
   ' Pad each channel with &hFF until reach multiple of 8,
   ' always include at least one &hFF.
   Do
@@ -379,8 +395,10 @@ Sub music.play_interrupt()
       music_ptr% = 0
       Exit For
     EndIf
+    ' If n% < 254 Then
     Play Sound i%, B, S, FREQUENCY!(n%), 15
     Print Str$(i%) ": " Choice(n% = 0, "Rest", Str$(FREQUENCY!(n%)) + " hz")
+    ' EndIf
     Inc music_ptr%
   Next
   Inc int_time!, Timer - t!
