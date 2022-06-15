@@ -16,16 +16,22 @@ Const FILE$ = "entertainer"
 Const SZ% = 256
 ' Const NUM_CHANNELS% = music.prompt_for_num_channels%()
 Const NUM_CHANNELS% = 3
+Const OCTAVE_SHIFT% = 0
 
 Dim channel1%(SZ%), channel2%(SZ%), channel3%(SZ%), channel4%(SZ%)
 Dim err$
+Dim int_time!
+Dim FREQUENCY!(127)
 
 If InStr(MM.Device$, "PicoMite") Then Save FILE$ + ".bas"
 
+music.init_globals()
 music.compose()
 music.process()
 music.write_data()
 music.play()
+
+Print "Time in interrupt:" int_time!
 
 End
 
@@ -34,6 +40,17 @@ Sub on_break
   Play Stop
   Option Break 3
   End
+End Sub
+
+' Initialises global variables.
+Sub music.init_globals()
+  Local i%
+  ' FREQUENCY(0) - rest - 10 Hz, which should be inaudible.
+  ' FREQUENCY(1) - C0   - 16.35 Hz
+  FREQUENCY!(0) = 10.0
+  For i% = 1 To 127
+    FREQUENCY!(i%) = 440 * 2^((i% - 58) / 12.0)
+  Next
 End Sub
 
 ' Prompts user for number of channels to encode / play.
@@ -63,11 +80,11 @@ Sub music.compose()
 
   music.parse(channel1%(), "qE4,1C5,qE4,1C5,qE4,qC5")
   music.parse(channel1%(), "2C5,q-,qC5,qD5,qD#5")
-  music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qB5,1D5")
+  music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qB4,1D5")
   music.parse(channel1%(), "3C5,qD4,qD#4")
 
   music.parse(channel2%(), "1C4,1C3,1D#3,1E3")
-  music.parse(channel2%(), "1F3,1G3,1A4,1B4")
+  music.parse(channel2%(), "1F3,1G3,1A3,1B3")
   music.parse(channel2%(), "1C4,1E3,1F3,1G3")
   music.parse(channel2%(), "1C3,1G3,1C4,qC4,q-")
 
@@ -79,13 +96,13 @@ Sub music.compose()
   ' ---------- Line 2 ----------
 
   music.parse(channel1%(), "qE4,1C5,qE4,1C5,qE4,qC5")
-  music.parse(channel1%(), "3C5,qA5,qG4")
-  music.parse(channel1%(), "qF#4,qA5,qC5,qE5,qE5,qD5,qC5,qA5")
+  music.parse(channel1%(), "3C5,qA4,qG4")
+  music.parse(channel1%(), "qF#4,qA4,qC5,qE5,qE5,qD5,qC5,qA4")
   music.parse(channel1%(), "3D5,qD4,qD#4")
 
   music.parse(channel2%(), "1C4,1C3,1D#3,1E3")
-  music.parse(channel2%(), "1F3,1G3,1A4,1C#3")
-  music.parse(channel2%(), "1D3,1F#3,1A4,1D3")
+  music.parse(channel2%(), "1F3,1G3,1A3,1C#3")
+  music.parse(channel2%(), "1D3,1F#3,1A3,1D3")
   music.parse(channel2%(), "1G3,1F3,1E3,1D3")
 
   music.parse(channel3%(), "4-")
@@ -97,11 +114,11 @@ Sub music.compose()
 
   music.parse(channel1%(), "qE4,1C5,qE4,1C5,qE4,qC5")
   music.parse(channel1%(), "2C5,q-,qC5,qD5,qD#5")
-  music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qB5,1D5")
+  music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qB4,1D5")
   music.parse(channel1%(), "2C5,qC5,q-,qC5,qD5")
 
   music.parse(channel2%(), "1C3,1C4,1D#3,1E3")
-  music.parse(channel2%(), "1F3,1G3,1A4,1B4")
+  music.parse(channel2%(), "1F3,1G3,1A3,1B3")
   music.parse(channel2%(), "1C4,1E3,1F3,1G3")
   music.parse(channel2%(), "1C4,1G3,2C3")
 
@@ -114,24 +131,24 @@ Sub music.compose()
 
   music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qC5,qD5,qC5")
   music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qC5,qD5,qC5")
-  music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qB5,1D5")
+  music.parse(channel1%(), "qE5,qC5,qD5,qE5,qE5,qB4,1D5")
   music.parse(channel1%(), "2C5,qC5,qE4,qF4,qF#4")
 
-  music.parse(channel2%(), "qC5,q-,qC5,q-,qBb5,q-,qBb5,q-")
-  music.parse(channel2%(), "qA5,q-,qA5,q-,qAb5,q-,qAb5,q-")
+  music.parse(channel2%(), "qC5,q-,qC5,q-,qBb4,q-,qBb4,q-")
+  music.parse(channel2%(), "qA4,q-,qA4,q-,qAb4,q-,qAb4,q-")
   music.parse(channel2%(), "qG4,q-,qG4,q-,1G4,1-")
   music.parse(channel2%(), "1-,1G3,qC4,q-,1-")
 
-  music.parse(channel3%(), "qC4,q-,qC4,q-,qBb4,q-,qBb4,q-")
-  music.parse(channel3%(), "qA4,q-,qA4,q-,qAb4,q-,qAb4,q-")
+  music.parse(channel3%(), "qC4,q-,qC4,q-,qBb3,q-,qBb3,q-")
+  music.parse(channel3%(), "qA3,q-,qA3,q-,qAb3,q-,qAb3,q-")
   music.parse(channel3%(), "qG3,q-,qG3,q-,1G3,1-")
   music.parse(channel3%(), "1-,1G2,qC3,q-,1-")
 
   ' ---------- Line 5 ----------
 
-  music.parse(channel1%(), "1G4,qA5,qG4,qG4,qE4,qF4,qF#4")
-  music.parse(channel1%(), "1G4,qA5,qG4,qG4,qE5,qC5,qG4")
-  music.parse(channel1%(), "qA5,qB5,qC5,qD5,qE5,qD5,qC5,qD5")
+  music.parse(channel1%(), "1G4,qA4,qG4,qG4,qE4,qF4,qF#4")
+  music.parse(channel1%(), "1G4,qA4,qG4,qG4,qE5,qC5,qG4")
+  music.parse(channel1%(), "qA4,qB4,qC5,qD5,qE5,qD5,qC5,qD5")
   music.parse(channel1%(), "2G4,qG4,qE4,qF4,qF#4")
 
   music.parse(channel2%(), "1E4,qF4,qE4,qE4,q-,1-")
@@ -146,9 +163,9 @@ Sub music.compose()
 
   ' ---------- Line 6 ----------
 
-  music.parse(channel1%(), "1G4,qA5,qG4,qG4,qE4,qF4,qF#4")
-  music.parse(channel1%(), "1G4,qA5,qG4,qG4,qG4,qA5,qA#5")
-  music.parse(channel1%(), "1B5,q-,1B5,qA5,qF#4,qD4")
+  music.parse(channel1%(), "1G4,qA4,qG4,qG4,qE4,qF4,qF#4")
+  music.parse(channel1%(), "1G4,qA4,qG4,qG4,qG4,qA4,qA#4")
+  music.parse(channel1%(), "1B4,q-,1B4,qA4,qF#4,qD4")
   music.parse(channel1%(), "2G4,qG4,qE4,qF4,qF#4")
 
   music.parse(channel2%(), "1E4,qF4,qE4,qE4,q-,1-")
@@ -159,13 +176,13 @@ Sub music.compose()
   music.parse(channel3%(), "1C4,1-,1G3,1-")
   music.parse(channel3%(), "1C4,1-,1G3,1C#4")
   music.parse(channel3%(), "2D4,2D3")
-  music.parse(channel3%(), "qG3,q-,qG3,q-,1A4,1B4")
+  music.parse(channel3%(), "qG3,q-,qG3,q-,1A3,1B3")
 
   ' ---------- Line 7 ----------
 
-  music.parse(channel1%(), "1G4,qA5,qG4,qG4,qE4,qF4,qF#4")
-  music.parse(channel1%(), "1G4,qA5,qG4,qG4,qE5,qC5,qG4")
-  music.parse(channel1%(), "qA5,qB5,qC5,qD5,qE5,qD5,qC5,qD5")
+  music.parse(channel1%(), "1G4,qA4,qG4,qG4,qE4,qF4,qF#4")
+  music.parse(channel1%(), "1G4,qA4,qG4,qG4,qE5,qC5,qG4")
+  music.parse(channel1%(), "qA4,qB4,qC5,qD5,qE5,qD5,qC5,qD5")
   music.parse(channel1%(), "2C5,qC5,qG4,qF#4,qG4")
 
   music.parse(channel2%(), "1E4,qF4,qE4,qE4,q-,1-")
@@ -180,9 +197,9 @@ Sub music.compose()
 
   ' ---------- Line 8 ----------
 
-  music.parse(channel1%(), "1C5,qA5,qC5,qC5,qA5,qC5,qA5")
+  music.parse(channel1%(), "1C5,qA4,qC5,qC5,qA4,qC5,qA4")
   music.parse(channel1%(), "qG4,qC5,qE5,qG5,qG5,qE5,qC5,qG4")
-  music.parse(channel1%(), "1A5,1C5,qE5,1D5,qD5")
+  music.parse(channel1%(), "1A4,1C5,qE5,1D5,qD5")
   music.parse(channel1%(), "3C5,1-")
 
   music.parse(channel2%(), "qF4,q-,qF4,q-,qF#4,q-,qF#4,q-")
@@ -239,17 +256,17 @@ Function music.parse_note%(channel%(), s$, s_idx%)
   Inc s_idx%
   ch$ = Mid$(s$, s_idx%, 1)
 
-  ' Parse note.
-  Local n% = 0 ' 0 = Rest, 1 = A0
+  ' Parse note: 0 = Rest, 1 = C0, ...
+  Local n%
   Select Case ch$
-    Case "A" : n% = 1
-    Case "B" : n% = 3
-    Case "C" : n% = 4
-    Case "D" : n% = 6
-    Case "E" : n% = 8
-    Case "F" : n% = 9
-    Case "G" : n% = 11
-    Case "-" : ' Do nothing
+    Case "A" : n% = 10
+    Case "B" : n% = 12
+    Case "C" : n% = 1
+    Case "D" : n% = 3
+    Case "E" : n% = 5
+    Case "F" : n% = 6
+    Case "G" : n% = 8
+    Case "-" : n% = 0
     Case Else
       err$ = "Syntax error: expected note"
       Exit Function
@@ -283,7 +300,7 @@ Function music.parse_note%(channel%(), s$, s_idx%)
     err$ = "Syntax error: expected octave"
     Exit Function
   EndIf
-  Inc n%, 12 * Val(ch$)
+  Inc n%, 12 * (OCTAVE_SHIFT% + Val(ch$))
 
   ' Write note into buffer.
   For i% = 1 To duration%
@@ -295,22 +312,29 @@ End Function
 
 ' Combines the individual channels into a single global music%() array.
 Sub music.process()
-  ' Terminate each channel with 255 and determine the maximum length.
-  Local max_len% = 0, i%, j%
+  Local i%, j%
+
+  ' Determine the maximum channel length.
+  Local max_len% = 0
   For i% = 1 To NUM_CHANNELS%
-    Execute "LongString Append channel" + Str$(i%) + "%(), Chr$(&hFF)"
     max_len% = Max(max_len%, Eval("LLen(channel" + Str$(i%) + "%())"))
   Next
 
-  ' Pad max_len% to be a multiple of 8.
-  Do While max_len% Mod 8 > 0 : Inc max_len% : Loop
-
-  ' Pad each channel with 255 until all the same length.
+  ' Pad each channel with rests until they are all the maximum length.
   For i% = 1 To NUM_CHANNELS%
     Do While Eval("LLen(channel" + Str$(i%) + "%())") < max_len%
-      Execute "LongString Append channel" + Str$(i%) + "%(), Chr$(&hFF)"
+      Execute "LongString Append channel" + Str$(i%) + "%(), Chr$(0)"
     Loop
   Next
+
+  ' Pad each channel with &hFF until reach multiple of 8,
+  ' always include at least one &hFF.
+  Do
+    Inc max_len%
+    For i% = 1 To NUM_CHANNELS%
+      Execute "LongString Append channel" + Str$(i%) + "%(), Chr$(&hFF)"
+    Next
+  Loop Until max_len% Mod 8 = 0
 
   ' Combine the channels into a single music buffer.
   Dim music%(1 + (NUM_CHANNELS% * max_len% / 8))
@@ -342,26 +366,32 @@ Sub music.play()
   Dim music_ptr% = Peek(VarAddr music%()) + 8
   SetTick 200, music.play_interrupt, 1
   Do While music_ptr% <> 0 : Loop
+  Play Stop
 End Sub
 
 ' Interrupt routine playing a single half-beat (per channel) from the music%() array.
 Sub music.play_interrupt()
-  Local i%, n%, halted% = 0
+  Local i%, n%, t! = Timer
   For i% = 1 To NUM_CHANNELS%
     n% = Peek(Byte music_ptr%)
-    Select Case n%
-      Case 0
-        Play Sound i%, B, O
-        Print Str$(i%) ": Rest"
-      Case 1 To 254
-        Play Sound i%, B, S, 440 * 2^((n% - 49) / 12.0), 15
-        Print Str$(i%) ":" 440 * 2^((n% - 49) / 12.0) " hz"
-      Case 255
-        Play Sound i%, B, O
-        Print Str$(i%) ": Halted"
-        Inc halted%
-    End Select
+    If n% = 255 Then
+      Print Str$(i%) ": Halted"
+      music_ptr% = 0
+      Exit For
+    EndIf
+    Play Sound i%, B, S, FREQUENCY!(n%), 15
+    Print Str$(i%) ": " Choice(n% = 0, "Rest", Str$(FREQUENCY!(n%)) + " hz")
     Inc music_ptr%
   Next
-  If halted% = NUM_CHANNELS% Then music_ptr% = 0 ' Halt
+  Inc int_time!, Timer - t!
+End Sub
+
+Sub music.play_fast()
+  Local n% = Peek(Byte music_ptr%), t! = Timer
+  If n% = 255 Then music_ptr% = 0 : Exit Sub
+  Play Sound 1, B, S, FREQUENCY!(n%), 15
+  Play Sound 2, B, S, FREQUENCY!(Peek(Byte music_ptr% + 1)), 15
+  Play Sound 3, B, S, FREQUENCY!(Peek(Byte music_ptr% + 2)), 15
+  Inc music_ptr%, 3
+  Inc int_time!, Timer - t!
 End Sub
