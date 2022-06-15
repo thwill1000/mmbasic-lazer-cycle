@@ -30,6 +30,7 @@ Const Y_OFFSET% = MM.VRes \ 2
 Const CMD_NONE% = -1, UP% = 5, DOWN% = 6, LEFT% = 7, RIGHT% = 8, FIRE% = 9
 Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
+Const SCORE_Y% = 2 * HEIGHT% + 4
 
 ' These would be constants but MMBasic does not support constant arrays
 Dim FREQUENCY!(127)
@@ -39,7 +40,7 @@ Dim SOUNDFX_EAT%(1)     = (&hFFFFFFFFFF100C04, &hFFFFFFFFFFFFFFFF)
 Dim SOUNDFX_DIE%(2)     = (&h0F10111213141516, &h0708090A0B0C0D0E, &hFF00010203040506)
 Dim SOUNDFX_WIPE%(2)    = (&h0706050403020100, &h0F0E0D0C0B0A0908, &hFF16151413121110)
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
-Dim SCORE_POS%(3)       = (35, 105, 175, 245)
+Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 Dim CTRL_NAMES$(7)      = ("KEYS: AZ,.",  "KEYS: AZXC",  "KEYS: IKOP",  "CONTROLLER A", "CONTROLLER B", "JOYSTICK B",     "AI",       "NONE" )
 Dim CTRL_SUBS$(7)       = ("ctrl_keys1%", "ctrl_keys2%", "ctrl_keys3%", "ctrl_a%",      "ctrl_b%",      "ctrl_joystick%", "ctrl_ai%", "ctrl_none%")
@@ -361,7 +362,8 @@ Sub game_loop()
 
     If num_players% = 0 Then Exit Do
 
-    update_score()
+    Inc score%, 1
+    If score% Mod 5 = 0 Then draw_score()
 
     ' Wait for next frame.
     Do While Timer < next_frame% : Loop
@@ -375,16 +377,13 @@ Sub game_loop()
   Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
 End Sub
 
-Sub update_score()
-  Inc score%, 1
-  If score% Mod 5 = 0 Then
-    Local i%
-    For i% = 0 To 3
-      If cycle.pos%(i%) >= 0 And Not cycle.dying%(i%) Then
-        Text SCORE_POS%(i%), 2 * HEIGHT% + 4, Str$(score%, 5, 0, "0"), , 1, 1, cycle.colour%(i%)
-      EndIf
-    Next
-  EndIf
+Sub draw_score()
+  Local i%, s$ = Str$(score%, 5, 0, "0")
+  For i% = 0 To MAX_CYCLE_IDX%
+    If cycle.pos%(i%) >= 0 And Not cycle.dying%(i%) Then
+      Text SCORE_X%(i%), SCORE_Y%, s$, , 1, 1, cycle.colour%(i%)
+    EndIf
+  Next
 End Sub
 
 Sub wipe()
