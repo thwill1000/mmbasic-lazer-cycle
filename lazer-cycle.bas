@@ -31,6 +31,9 @@ Const CMD_NONE% = -1, UP% = 5, DOWN% = 6, LEFT% = 7, RIGHT% = 8, FIRE% = 9
 Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
 Const SCORE_Y% = 2 * HEIGHT% + 4
+Const STATE_OK%    = &b000 ' 0; values 1-3 are "imminent death"
+Const STATE_DYING% = &b100 ' 4
+Const STATE_DEAD%  = &b101 ' 5
 
 ' These would be constants but MMBasic does not support constant arrays
 Dim FREQUENCY!(127)
@@ -66,14 +69,7 @@ Dim cycle.dir%(MAX_CYCLE_IDX%)
 Dim cycle.colour%(MAX_CYCLE_IDX%) = ( RGB(Red), RGB(Yellow), RGB(Cyan), RGB(Green) )
 Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32 = ("ctrl_keys2%", "ctrl_ai%", "ctrl_keys3%", "ctrl_ai%")
-Dim cycle.dying%(MAX_CYCLE_IDX%)
-
-' Fudge factor; when a collision occurs this is incremented. The cycle doesn't
-' actually die until this reaches a threshold, it helps make the game playable
-' without lightning reactions and also compensates for timing issues reading
-' the keyboard.
-Const FUDGE_THRESHOLD% = 3
-Dim cycle.fudge%(MAX_CYCLE_IDX%)
+Dim cycle.state%(MAX_CYCLE_IDX%)
 
 Dim music_start_ptr% = Peek(VarAddr NO_MUSIC%())
 Dim music_ptr% = music_start_ptr%
@@ -315,15 +311,16 @@ Sub init_game()
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
-    cycle.dying%(i%) = 0
     If cycle.ctrl$(i%) = "ctrl_none%" Then
       cycle.pos%(i%) = -1
       cycle.nxt%(i%) = -1
+      cycle.state%(i%) = STATE_DEAD%
     Else
       Inc num_players%
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       Poke Byte p_arena% + cycle.pos%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
       Poke Byte p_arena% + cycle.nxt%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
+      cycle.state%(i%) = STATE_OK%
     EndIf
   Next
 
@@ -340,30 +337,33 @@ End Sub
 Sub game_loop()
   Local i%
   next_frame% = Timer + frame_duration%
-  Do
+  Do While num_players% > 0
+    Inc score%, 1
+    If score% Mod 5 = 0 Then draw_score()
+
     ' When dying the cycle trail deletes at twice the rate.
     For i% = 0 To MAX_CYCLE_IDX%
-      If Not cycle.dying%(i%) Then Continue For
-      cycle.draw(i%)
-      cycle.move(i%)
-      cycle.dir%(i%) = ctrl_die%(i%)
-      cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
-      cycle.check_collision(i%)
+      If cycle.state%(i%) = STATE_DYING% Then cycle.dying(i%)
     Next
 
-    For i% = 0 To MAX_CYCLE_IDX% : cycle.draw(i%) : Next
+    ' Draw cycles.
+    For i% = 0 To MAX_CYCLE_IDX%
+      If Not (cycle.state%(i%) And &b11) Then cycle.draw(i%)
+    Next
+
     If IS_CMM2% Then Page Copy 1 To 0, I
-    For i% = 0 To MAX_CYCLE_IDX% : cycle.move(i%) : Next
+
+    ' Move cycles.
+    For i% = 0 To MAX_CYCLE_IDX%
+      If Not (cycle.state%(i%) And &b11) Then cycle.pos%(i%) = cycle.nxt%(i%)
+    Next
+
+    ' Determine changes of direction and check for collisions.
     For i% = 0 To MAX_CYCLE_IDX%
       cycle.dir%(i%) = Call(cycle.ctrl$(i%), i%)
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
-      cycle.check_collision(i%)
+      If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
     Next
-
-    If num_players% = 0 Then Exit Do
-
-    Inc score%, 1
-    If score% Mod 5 = 0 Then draw_score()
 
     ' Wait for next frame.
     Do While Timer < next_frame% : Loop
@@ -380,7 +380,7 @@ End Sub
 Sub draw_score()
   Local i%, s$ = Str$(score%, 5, 0, "0")
   For i% = 0 To MAX_CYCLE_IDX%
-    If cycle.pos%(i%) >= 0 And Not cycle.dying%(i%) Then
+    If cycle.state%(i%) < STATE_DYING% Then
       Text SCORE_X%(i%), SCORE_Y%, s$, , 1, 1, cycle.colour%(i%)
     EndIf
   Next
@@ -397,14 +397,18 @@ Sub wipe()
   clear_display()
 End Sub
 
+' Draw cycle if STATE_OK% or STATE_DYING%.
 Sub cycle.draw(idx%)
-  If cycle.pos%(idx%) < 0 Then Exit Sub
-  If cycle.fudge%(idx%) Then Exit Sub
-  Local x% = cycle.pos%(idx%) Mod WIDTH%
-  Local y% = cycle.pos%(idx%) \ WIDTH%
-  Local x2% = cycle.nxt%(idx%) Mod WIDTH%
-  Local y2% = cycle.nxt%(idx%) \ WIDTH%
-  Line 2 * x%, 2 * y%, 2 * x2%, 2 * y2%, 1, Choice(cycle.dying%(idx%), Rgb(Black), cycle.colour%(idx%))
+  Local p% = cycle.pos%(idx%), n% = cycle.nxt%(idx%)
+  Line 2*(p% Mod WIDTH%), 2*(p%\WIDTH%), 2*(n% Mod WIDTH%), 2*(n%\WIDTH%), 1, cycle.colour%(idx%) * (cycle.state%(idx%) <> STATE_DYING%)
+End Sub
+
+Sub cycle.dying(idx%)
+  cycle.draw(idx%)
+  cycle.pos%(idx%) = cycle.nxt%(idx%) ' Move
+  cycle.dir%(idx%) = ctrl_die%(idx%)
+  cycle.nxt%(idx%) = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
+  cycle.check_collision(idx%)
 End Sub
 
 Sub show_game_over()
@@ -418,12 +422,6 @@ Sub show_game_over()
   Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(score%), "CM", 1, 2, cycle.colour%(winner%)
   If IS_CMM2% Then Page Copy 1 To 0, B
   wait(5000)
-End Sub
-
-Sub cycle.move(idx%)
-  If cycle.pos%(idx%) < 0 Then Exit Sub
-  If cycle.fudge%(idx%) Then Exit Sub
-  cycle.pos%(idx%) = cycle.nxt%(idx%)
 End Sub
 
 Function ctrl_ai%(idx%)
@@ -507,15 +505,13 @@ Function ctrl_none%(idx%)
 End Function
 
 Sub cycle.check_collision(idx%)
-  If cycle.pos%(idx%) < 0 Then Exit Sub
-
   ' Handle dying.
-  If cycle.dying%(idx%) Then
+  If cycle.state%(idx%) = STATE_DYING% Then
     Poke Var arena%(), cycle.pos%(idx%), 0
     Local mask% = (idx% << 1) + 1
     If (Peek(Var arena%(), cycle.nxt%(idx%)) And mask%) <> mask% Then
       cycle.ctrl$(idx%) = "ctrl_none%"
-      cycle.dying%(idx%) = 0
+      cycle.state%(idx%) = STATE_DEAD%
       cycle.pos%(idx%) = -1
     EndIf
     Exit Sub
@@ -524,21 +520,17 @@ Sub cycle.check_collision(idx%)
   ' No collision occurred.
   If Not Peek(Var arena%(), cycle.nxt%(idx%)) Then
     Poke Var arena%(), cycle.nxt%(idx%), (cycle.dir%(idx%) << 3) + (idx% << 1) + 1
-    cycle.fudge%(idx%) = 0
+    cycle.state%(idx%) = STATE_OK%
     Exit Sub
   EndIf
 
   ' Collision occured - the player has a couple of frames to change direction.
-  If cycle.fudge%(idx%) < FUDGE_THRESHOLD% Then
-    Inc cycle.fudge%(idx%)
-    Exit Sub
-  End If
+  Inc cycle.state%(idx%)
+  If cycle.state%(idx%) < STATE_DYING% Then Exit Sub
 
   ' Time to die.
   Inc num_players%, -1
   cycle.ctrl$(idx%) = "ctrl_die%"
-  cycle.dying%(idx%) = 1
-  cycle.fudge%(idx%) = 0
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
   start_soundfx(Peek(VarAddr soundfx_die%()), 0)
