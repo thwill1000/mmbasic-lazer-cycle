@@ -30,6 +30,7 @@ Const Y_OFFSET% = MM.VRes \ 2
 Const CMD_NONE% = -1, UP% = 5, DOWN% = 6, LEFT% = 7, RIGHT% = 8, FIRE% = 9
 Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
+Const MAX_NAME_LEN% = 8
 Const SCORE_Y% = 2 * HEIGHT% + 4
 Const STATE_OK%    = &b000 ' 0; values 1-3 are "imminent death"
 Const STATE_DYING% = &b100 ' 4
@@ -76,6 +77,7 @@ Dim music_ptr% = music_start_ptr%
 Dim soundfx_flag% = 1
 Dim soundfx_ptr% = Peek(VarAddr SOUNDFX_NOTHING%())
 Dim num_players%
+Dim high_scores$(9) Length MAX_NAME_LEN% + 7
 Dim keys%(31)
 
 ' Music and sound effects are played on SetTick interrupts.
@@ -93,6 +95,8 @@ music_start_ptr% = Peek(VarAddr MUSIC%())
 
 Do
   show_title()
+  wipe()
+  show_high_scores(0, 5000)
   wipe()
   show_menu()
   wipe()
@@ -114,6 +118,17 @@ Sub init_globals()
   For i% = 1 To 127
     FREQUENCY!(i%) = 440 * 2^((i% - 58) / 12.0)
   Next
+
+  high_scores$(0) = "TOM, 2000"
+  high_scores$(1) = "MICKEY, 1500"
+  high_scores$(2) = "MIKE, 1250"
+  high_scores$(3) = "PETER, 1000"
+  high_scores$(4) = "DAVEY, 800"
+  high_scores$(5) = "JOHN, 600"
+  high_scores$(6) = "PAUL, 400"
+  high_scores$(7) = "GEORGE, 200"
+  high_scores$(8) = "RINGO, 100"
+  high_scores$(9) = "MOOSE, 50"
 End Sub
 
 Sub read_music()
@@ -136,7 +151,7 @@ Sub show_title()
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, RGB(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, "PRESS " + Choice(IS_CMM2%, "SPACE", "SELECT"), "CM", 1, 1, RGB(White)
   If IS_CMM2% Then Page Copy 1 To 0, B
-  wait()
+  wait(5000)
 End Sub
 
 Sub clear_display()
@@ -153,6 +168,76 @@ Sub wait(duration%)
     Do While Timer < expires% And cmd% <> FIRE% : Loop
   EndIf
 End Sub
+
+Sub show_high_scores(edit%, idx%, player%)
+  Const x% = X_OFFSET% - 100
+  Local ch$, col%, col_idx%, i%, name$, offset%, score$, y%
+  Local expires% = Choice(edit%, &h7FFFFFFFFFFFFFFF, Timer + idx%)
+
+  ch$ = Chr$(205)
+  Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, RGB(White)
+
+  Do While Inkey$ <> "" : Loop
+
+  cmd% = 0
+  Do While Timer < expires% And cmd% <> FIRE%
+
+    ' Draw high-score table.
+    For i% = 0 To Bound(high_scores$(), 1) + 1
+      If i% <= Bound(high_scores$(), 1) Then
+        name$ = Field$(high_scores$(i%), 1)
+        If edit% And i% = idx% And col_idx% < 2 And Len(name$) < MAX_NAME_LEN% Then Cat name$, "_"
+        name$ = str.rpad$(name$, MAX_NAME_LEN%)
+        score$ = str.lpad$(Field$(high_scores$(i%), 2), 5)
+        y% = Y_OFFSET% - 75 + 15 * i%
+        If edit% Then
+          col% = Choice(i% = idx%, cycle.colour%(player%), Rgb(White))
+        Else
+          col% = cycle.colour%(col_idx%)
+        EndIf
+        Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, col%
+        Inc y%, 15
+      EndIf
+      col_idx% = (col_idx% + 1) Mod 4
+    Next
+
+    If IS_CMM2% Then Page Copy 1 To 0, B
+    Pause 200
+
+    ' Handle input when editing table.
+    ch$ = UCase$(Inkey$)
+    If edit% And ch$ <> "" Then
+      name$ = Field$(high_scores$(idx%), 1)
+      score$ = Field$(high_scores$(idx%), 2)
+      Select Case Asc(ch$)
+        Case &h0A, &h0D
+          start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+          Exit Do
+        Case &h08, &h7F
+          If Len(name$) > 0 Then
+            name$ = Left$(name$, Len(name$) - 1)
+            start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+          EndIf
+        Case &h20 To &h7E
+          If Len(name$) < 8 Then
+            Cat name$, ch$
+            start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+          EndIf
+      End Select
+      high_scores$(idx%) = name$ + ", " + score$
+    End If
+  Loop
+End Sub
+
+Function str.lpad$(s$, x%)
+  str.lpad$ = s$
+  If Len(s$) < x% Then str.lpad$ = Space$(x% - Len(s$)) + s$
+End Function
+
+Function str.rpad$(s$, x%)
+  str.rpad$ = s$
+  If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
+End Function
 
 Sub show_menu()
   Const x% = X_OFFSET% - 100
@@ -337,6 +422,14 @@ End Sub
 Sub game_loop()
   Local i%
   next_frame% = Timer + frame_duration%
+
+  ' num_players% = 0
+  ' cycle.score%(0) = 3175
+  ' cycle.score%(1) = 2175
+  ' cycle.score%(2) = 1175
+  ' cycle.score%(3) = 975
+  ' score% = 3175
+
   Do While num_players% > 0
     Inc score%, 1
     If score% Mod 5 = 0 Then draw_score()
@@ -412,16 +505,39 @@ Sub cycle.dying(idx%)
 End Sub
 
 Sub show_game_over()
-  Local winner%
-  For winner% = 0 To MAX_CYCLE_IDX%
-    If cycle.score%(winner%) = score% Then Exit For
+  ' Sort scores and then round down to nearest 5.
+  Local i%, idx%(MAX_CYCLE_IDX%), j%, k%, winner%
+  Sort cycle.score%(), idx%(), 1
+  For i% = 0 To MAX_CYCLE_IDX%
+    Do While (cycle.score%(i%) Mod 5) <> 0 : Inc cycle.score%(i%), -1 : Loop
   Next
+  winner% = idx%(0)
+
   Local txt$ = "PLAYER " + Str$(winner% + 1) + " WINS"
   Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.colour%(winner%)
-  Do While (score% Mod 5) <> 0 : Inc score%, -1 : Loop
-  Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(score%), "CM", 1, 2, cycle.colour%(winner%)
+  Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(cycle.score%(0)), "CM", 1, 2, cycle.colour%(winner%)
   If IS_CMM2% Then Page Copy 1 To 0, B
   wait(5000)
+
+  wipe()
+
+  On Key 0
+
+  ' Insert into high-score table.
+  For i% = 0 To MAX_CYCLE_IDX%
+    For j% = 0 To Bound(high_scores$())
+      If cycle.score%(i%) > Val(Field$(high_scores$(j%), 2)) Then
+        For k% = Bound(high_scores$(), 1) To j% Step -1
+          If k% <> 0 Then high_scores$(k%) = high_scores$(k% - 1)
+        Next
+        high_scores$(j%) = ", " + Str$(cycle.score%(i%))
+        show_high_scores(1, j%, idx%(i%))
+        Exit For
+      EndIf
+    Next
+  Next
+
+  On Key on_key()
 End Sub
 
 Function ctrl_ai%(idx%)
