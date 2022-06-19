@@ -49,9 +49,9 @@ Const STATE_DEAD%  = &b101 ' 5
 Dim FREQUENCY!(127)
 Dim NO_MUSIC%(1)        = (&h0000000000000000, &hFFFFFFFF00000000)
 Dim SOUNDFX_NOTHING%(1) = (&hFFFFFFFFFFFFFFFF, &hFFFFFFFFFFFFFFFF)
-Dim SOUNDFX_EAT%(1)     = (&hFFFFFFFFFF100C04, &hFFFFFFFFFFFFFFFF)
-Dim SOUNDFX_DIE%(2)     = (&h0F10111213141516, &h0708090A0B0C0D0E, &hFF00010203040506)
-Dim SOUNDFX_WIPE%(2)    = (&h0706050403020100, &h0F0E0D0C0B0A0908, &hFF16151413121110)
+Dim SOUNDFX_SELECT%(1)  = (&hFFFFFFFF0048443C, &hFFFFFFFFFFFFFFFF)
+Dim SOUNDFX_DIE%(3)     = (&h4748494A4B4C4D4E, &h3F40414243444546, &h0038393A3B3C3D3E, &hFFFFFFFFFFFFFFFF)
+Dim SOUNDFX_WIPE%(3)    = (&h3F3E3D3C3B3A3938, &h4746454443424140, &h004E4D4C4B4A4948, &hFFFFFFFFFFFFFFFF)
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
@@ -90,15 +90,15 @@ Dim num_players%
 Dim high_scores$(9) Length MAX_NAME_LEN% + 7
 Dim keys%(31)
 
-' Music and sound effects are played on SetTick interrupts.
-SetTick 200, play_music, 1
-SetTick 40, play_soundfx, 2
-
 init_globals()
 read_music()
 clear_display()
 
 music_start_ptr% = Peek(VarAddr MUSIC%())
+
+' Music and sound effects are played on SetTick interrupts.
+SetTick 200, play_music, 1
+SetTick 40, play_soundfx, 2
 
 Do
   If attract_mode% Then
@@ -265,17 +265,17 @@ Function show_high_scores%(edit%, idx%, player%)
       score$ = Field$(high_scores$(idx%), 2)
       Select Case key%
         Case &h0A, &h0D
-          start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+          start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
           Exit Do
         Case &h08, &h7F
           If Len(name$) > 0 Then
             name$ = Left$(name$, Len(name$) - 1)
-            start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+            start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
           EndIf
         Case &h20 To &h7E
           If Len(name$) < 8 Then
             Cat name$, Chr$(key%)
-            start_soundfx(Peek(VarAddr SOUNDFX_EAT%()))
+            start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
           EndIf
       End Select
       high_scores$(idx%) = name$ + ", " + score$
@@ -376,7 +376,7 @@ Sub show_menu()
 
     End Select
 
-    If update% = 1 Then start_soundfx(Peek(VarAddr SOUNDFX_EAT%()), 1)
+    If update% = 1 Then start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()), 1)
 
   Loop
 
@@ -563,7 +563,7 @@ End Sub
 
 Sub wipe()
   Local y%
-  start_soundfx(Peek(VarAddr soundfx_wipe%()), 1)
+  start_soundfx(Peek(VarAddr SOUNDFX_WIPE%()), 1)
   For y% = 0 To Mm.VRes \ 2 Step 5
      Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, COLOUR_CYAN%, COLOUR_BLACK%
      If IS_CMM2% Then Page Copy 1 To 0, B
@@ -728,7 +728,7 @@ Sub cycle.check_collision(idx%)
   cycle.ctrl$(idx%) = "ctrl_die%"
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
-  start_soundfx(Peek(VarAddr soundfx_die%()), 0)
+  start_soundfx(Peek(VarAddr SOUNDFX_DIE%()), 0)
 End Sub
 
 Sub on_key()
@@ -761,17 +761,10 @@ End Sub
 
 ' Called from interrupt to play next note of current sound effect.
 Sub play_soundfx()
-  If soundfx_flag% Then
-    Local note% = Peek(Byte soundfx_ptr%)
-    If note% < &hFF Then
-      Play Sound 4, B, s, 440 * 2 ^ ((note% - 2) / 12.0)
-      Inc soundfx_ptr%
-    Else
-      Play Sound 4, B, O
-    EndIf
-  Else
-    Play Sound 4, B, O
-  EndIf
+  Local n% = Peek(Byte soundfx_ptr%)
+  If n% = 255 Then Exit Sub
+  Play Sound 4, B, s, FREQUENCY!(n%), (n% <> 0) * 25
+  Inc soundfx_ptr%
 End Sub
 
 music_data:

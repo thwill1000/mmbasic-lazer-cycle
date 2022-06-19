@@ -66,6 +66,22 @@ Function music.prompt_for_num_channels%()
   music.prompt_for_num_channels% = Val(s$)
 End Function
 
+Sub music.compose_die()
+  music.parse(channel1%(), "qF6,qE6,qEb6,qD6,qC#6,qC6,qB5,qA#5")
+  music.parse(channel1%(), "qA5,qAb5,qG5,qF#5,qF5,qE5,qEb5,qD5")
+  music.parse(channel1%(), "qC#5,qC5,qB4,qA#4,qA4,qAb4,qG4,q-")
+End Sub
+
+Sub music.compose_select()
+  music.parse(channel1%(), "qB4,qG5,qB5,q-")
+End Sub
+
+Sub music.compose_wipe()
+  music.parse(channel1%(), "qG4,qAb4,qA4,qA#4,qB4,qC5,qC#5,qD5")
+  music.parse(channel1%(), "qEb5,qE5,qF5,qF#5,qG5,qAb5,qA5,qA#5")
+  music.parse(channel1%(), "qB5,qC6,qC#6,qD6,qEb6,qE6,qF6,q-")
+End Sub
+
 ' Fills channels{1-3}% with musical notes for "The Entertainer".
 Sub music.compose()
   ' ---------- Line 0 ----------
