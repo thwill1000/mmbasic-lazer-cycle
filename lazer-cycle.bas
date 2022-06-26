@@ -13,15 +13,14 @@ Const VERSION$ = "0.9.0"
 Select Case Mm.Device$
   Case "Colour Maximite 2", "Colour Maximite 2 G2", "MMBasic for Windows"
     Const IS_CMM2% = 1
-  Case Else
+    Mode 7
+    Page Write 1
+  Case "PicoMiteVGA"
     Const IS_CMM2% = 0
+    Mode 2
+  Case Else
+    Error "Unsupported platform: " + Mm.Device$
 End Select
-
-If IS_CMM2% Then
-  Option Console Serial
-  Mode 7
-  Page Write 1
-EndIf
 
 Const COLOUR_BLACK%  = Rgb(Black)
 Const COLOUR_BLUE%   = Rgb(Blue)
