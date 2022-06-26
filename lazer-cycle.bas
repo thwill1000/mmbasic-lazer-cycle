@@ -478,10 +478,14 @@ Sub init_game()
 End Sub
 
 Sub draw_arena()
-  Local i%
-  For i% = 0 To HEIGHT% * WIDTH% - 1
-    If Peek(Var arena%(), i%) <> 128 Then Continue For
-    Pixel 2 * (i% Mod WIDTH%), 2 * (i% \ WIDTH%), COLOUR_GREY%
+  Local a%, i%, j%
+  For i% = 0 To Bound(arena%(), 1) - 1
+    a% = arena%(i%)
+    If a% = 0 Then Continue For
+    For j% = 0 To 7
+      If Peek(Var a%, j%) <> 128 Then Continue For
+      Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), COLOUR_GREY%
+    Next
   Next
 End Sub
 
