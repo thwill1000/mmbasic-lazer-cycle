@@ -12,7 +12,7 @@ Option Explicit On
 Option Break 4
 On Key 3, on_break
 
-Const FILE$ = "entertainer"
+Const FILENAME$ = "entertainer"
 Const SZ% = 256
 ' Const NUM_CHANNELS% = music.prompt_for_num_channels%()
 Const NUM_CHANNELS% = 3
@@ -23,7 +23,7 @@ Dim err$
 Dim int_time!
 Dim FREQUENCY!(127)
 
-If InStr(MM.Device$, "PicoMite") Then Save FILE$ + ".bas"
+If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
 music.compose()
@@ -380,7 +380,7 @@ End Sub
 ' Writes music%() array into a file as DATA statements.
 Sub music.write_data()
   Local count% = 0, i%, p% = Peek(VarAddr music%()) + 8
-  Open FILE$ + ".inc" For Output As #1
+  Open FILENAME$ + ".inc" For Output As #1
   Print #1, "Data " Format$(LLen(music%()), "%-6g") "' Number of bytes of music data."
   Print #1, "Data " Format$(NUM_CHANNELS%,"%-6g") "' Number of channels."
   For i% = 0 To LLen(music%()) - 1 Step 8
