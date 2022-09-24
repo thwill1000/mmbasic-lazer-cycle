@@ -1,12 +1,14 @@
 ' Copyright (c) 2022 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.03
+' For MMBasic 5.07.05
 
 Option Base 0
 Option Default None
 Option Explicit On
 
-' Save "light-bikes.bas"
+' Option LcdPanel NoConsole
+
+#Include "PicoGAME.inc"
 
 Const VERSION$ = "0.9.0"
 
@@ -19,7 +21,7 @@ Select Case Mm.Device$
     Const IS_CMM2% = 0
     Mode 2
   Case Else
-    Error "Unsupported platform: " + Mm.Device$
+    Error "Unsupported device: " + Mm.Device$
 End Select
 
 Const COLOUR_BLACK%  = Rgb(Black)
@@ -30,7 +32,6 @@ Const COLOUR_GREY%   = Rgb(Grey)
 Const COLOUR_RED%    = Rgb(Red)
 Const COLOUR_YELLOW% = Rgb(Yellow)
 Const COLOUR_WHITE%  = Rgb(White)
-Const INT_MAX% = &h7FFFFFFFFFFFFFFF
 Const WIDTH% = Mm.HRes \ 2
 Const HEIGHT% = (Mm.VRes - 20) \ 2
 Const X_OFFSET% = MM.HRes \ 2
@@ -54,9 +55,10 @@ Dim SOUNDFX_WIPE%(3)    = (&h3F3E3D3C3B3A3938, &h4746454443424140, &h004E4D4C4B4
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
-Dim CTRL_NAMES$(7)      = ("KEYS: AZ,.",  "KEYS: AZXC",  "KEYS: IKOP",  "CONTROLLER A", "CONTROLLER B", "JOYSTICK B",     "AI",       "NONE" )
-Dim CTRL_SUBS$(7)       = ("ctrl_keys1%", "ctrl_keys2%", "ctrl_keys3%", "ctrl_a%",      "ctrl_b%",      "ctrl_joystick%", "ctrl_ai%", "ctrl_none%")
+Dim CTRL_NAMES$(8)
+Dim CTRL_SUBS$(8)
 
+Dim default_ctrl$ = ""
 Dim attract_mode% = 1
 Dim score%
 Dim difficulty% = 1
@@ -78,7 +80,7 @@ Dim cycle.pos%(MAX_CYCLE_IDX%)
 Dim cycle.dir%(MAX_CYCLE_IDX%)
 Dim cycle.colour%(MAX_CYCLE_IDX%) = (COLOUR_RED%, COLOUR_YELLOW%, COLOUR_CYAN%, COLOUR_GREEN%)
 Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
-Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32 = ("ctrl_keys2%", "ctrl_ai%", "ctrl_keys3%", "ctrl_ai%")
+Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.state%(MAX_CYCLE_IDX%)
 
 Dim music_start_ptr% = Peek(VarAddr NO_MUSIC%())
@@ -86,6 +88,7 @@ Dim music_ptr% = music_start_ptr%
 Dim soundfx_flag% = 1
 Dim soundfx_ptr% = Peek(VarAddr SOUNDFX_NOTHING%())
 Dim num_players%
+Dim num_humans%
 Dim high_scores$(9) Length MAX_NAME_LEN% + 7
 Dim keys%(31)
 
@@ -107,7 +110,7 @@ Do
 
   If attract_mode% Then
     wipe()
-    attract_mode% = Not show_high_scores%(0, 5000)
+    attract_mode% = Not show_high_scores%(5000)
   EndIf
 
   wipe()
@@ -125,7 +128,7 @@ Do
   Select Case game_loop%()
     Case 0
       show_game_over()
-      attract_mode% = Not show_high_scores%(0, 5000)
+      attract_mode% = Not show_high_scores%(5000)
     Case 1
       attract_mode% = 1
     Case 2
@@ -148,16 +151,15 @@ Sub init_globals()
     FREQUENCY!(i%) = 440 * 2^((i% - 58) / 12.0)
   Next
 
-  high_scores$(0) = "TOM, 2000"
-  high_scores$(1) = "MICKEY, 1500"
-  high_scores$(2) = "MIKE, 1250"
-  high_scores$(3) = "PETER, 1000"
-  high_scores$(4) = "DAVEY, 800"
-  high_scores$(5) = "JOHN, 600"
-  high_scores$(6) = "PAUL, 400"
-  high_scores$(7) = "GEORGE, 200"
-  high_scores$(8) = "RINGO, 100"
-  high_scores$(9) = "MOOSE, 50"
+  Restore controller_data
+  For i% = 0 To Bound(CTRL_NAMES$(), 1)
+    Read CTRL_NAMES$(i%), CTRL_SUBS$(i%)
+  Next
+
+  Restore high_score_data
+  For i% = 0 To Bound(high_scores$(), 1)
+    Read high_scores$(i%)
+  Next
 End Sub
 
 Sub read_music()
@@ -174,17 +176,18 @@ Sub read_music()
   Next
 End Sub
 
-' Displays the title screen for a specified duration of until the user
-' presses space/file.
+' Displays the title screen for a specified duration or until the user presses
+' START/FIRE/SPACE.
 '
 ' @param duration%  duration in milliseconds; if 0 then indefinite.
-' @return           1 if the user pressed space/fire,
+' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_title%(duration%)
   Text X_OFFSET%, Y_OFFSET% - 15, "LAZER CYCLE", "CM", 1, 2, COLOUR_WHITE%
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, COLOUR_CYAN%
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, COLOUR_CYAN%
-  Text X_OFFSET%, Y_OFFSET% + 40, "PRESS " + Choice(IS_CMM2%, "SPACE", "FIRE"), "CM", 1, 1, COLOUR_WHITE%
+  Local text$ = Choice(Mm.Device$ = "PicoMiteVGA", "Press START, FIRE or SPACE", "Press SPACE")
+  Text X_OFFSET%, Y_OFFSET% + 40, text$, "CM", 1, 1, COLOUR_WHITE%
   If IS_CMM2% Then Page Copy 1 To 0, B
   show_title% = wait%(duration%)
 End Function
@@ -194,96 +197,192 @@ Sub clear_display()
    If IS_CMM2% Then Page Copy 1 To 0, B
 End Sub
 
-' Waits a specified duration for the user to press space/fire.
+' Waits a specified duration for the user to press START on a (S)NES gamepad
+' connected to Port A, or FIRE on an ATARI joystick connected to Port A or
+' SPACE on the keyboard.
 '
 ' @param duration%  duration in milliseconds; if 0 then indefinite.
-' @return           1 if the user pressed space/fire,
+' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function wait%(duration%)
-  Local expires% = Choice(duration%, Timer + duration%, INT_MAX%)
-  clear_keys()
-  Do While Timer < expires%
-    If get_key%() = FIRE% Then
-      wait% = 1
-      Exit Do
-    EndIf
-  Loop
+  keyboard_init()
+  Local ctrl$ = poll_for_controller$(duration%)
+  wait% = ctrl$ <> ""
+  default_ctrl$ = Choice(default_ctrl$ = "", ctrl$, default_ctrl$)
 End Function
 
-' Clears the keyboard/controller buffer.
-Sub clear_keys()
-  Do While Inkey$ <> "" : Loop
-End Sub
-
-' Gets a key/controller button press.
+' Shows the high-score table for a specified duration or until the user presses
+' START/FIRE/SPACE.
 '
-' @return 0  no key is pressed, or
-'            ASCII key code, for letters this is always the code for the upper-case letter.
-Function get_key%()
-  Local ch$ = Inkey$
-  get_key% = Choice(ch$ = "", 0, Asc(UCase$(ch$)))
-End Function
-
-Function show_high_scores%(edit%, idx%, player%)
-  Const x% = X_OFFSET% - 100
-  Local ch$, col%, col_idx%, i%, key%, name$, offset%, score$, y%
-  Local expires% = Choice(edit%, INT_MAX%, Timer + idx%)
-
-  ch$ = Chr$(205)
+' @param duration%  duration in milliseconds; if 0 then indefinite.
+' @return           1 if the user pressed button/key,
+'                   0 if the duration expired.
+Function show_high_scores%(duration%)
+  Const ch$ = Chr$(205)
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, COLOUR_WHITE%
 
-  clear_keys()
-  Do While Timer < expires%
+  Local col_idx%, ctrl$, i%, name$, score$, y%
+  Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
 
-    ' Draw high-score table.
+  keyboard_init()
+  Do While Timer < expires% And ctrl$ = ""
+
     For i% = 0 To Bound(high_scores$(), 1) + 1
       If i% <= Bound(high_scores$(), 1) Then
-        name$ = Field$(high_scores$(i%), 1)
-        If edit% And i% = idx% And col_idx% < 2 And Len(name$) < MAX_NAME_LEN% Then Cat name$, "_"
-        name$ = str.rpad$(name$, MAX_NAME_LEN%)
+        name$ = str.rpad$(Field$(high_scores$(i%), 1), MAX_NAME_LEN%)
         score$ = str.lpad$(Field$(high_scores$(i%), 2), 5)
         y% = Y_OFFSET% - 75 + 15 * i%
-        If edit% Then
-          col% = Choice(i% = idx%, cycle.colour%(player%), COLOUR_BLUE%)
-        Else
-          col% = cycle.colour%(col_idx%)
-        EndIf
-        Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, col%
-        Inc y%, 15
+        Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, cycle.colour%(col_idx%)
       EndIf
       col_idx% = (col_idx% + 1) Mod 4
     Next
 
     If IS_CMM2% Then Page Copy 1 To 0, B
-    Pause 200
 
-    ' Handle input when editing table.
-    key% = get_key%()
-    If edit% And (key% > 0) Then
-      name$ = Field$(high_scores$(idx%), 1)
-      score$ = Field$(high_scores$(idx%), 2)
+    ctrl$ = poll_for_controller$(200)
+  Loop
+
+  show_high_scores% = ctrl$ <> ""
+End Function
+
+' Provides UI for editing an entry in the high-score table.
+'
+' @param  idx%     index of entry in the high_scores$ array.
+' @param  player%  player number/index.
+Sub edit_high_score(idx%, player%)
+  ' 256-bit map of characters that can be entered into the high-score table
+  ' via gamepad or joystick. For each character 0-255 the character is allowed
+  ' if the corresponding bit is set.
+'  Static ALLOWED_CHARS%(3) = (&h03FF440100000000, &h000000007FFFFFF, &h0000020080001E00, &h8000000000000000)
+  Static ALLOWED_CHARS%(3) = (&h03FF440100000000, &h000000007FFFFFF, &h0000020080001E00, &h0)
+
+  Local ch$ = Chr$(205)
+  Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, COLOUR_WHITE%
+
+  ' Draw current high-score table.
+  Local i%, name$, score$, x%, y%
+  For i% = 0 To Bound(high_scores$(), 1)
+    name$ = str.rpad$(Field$(high_scores$(i%), 1), MAX_NAME_LEN%)
+    score$ = str.lpad$(Field$(high_scores$(i%), 2), 5)
+    y% = Y_OFFSET% - 75 + 15 * i%
+    Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, COLOUR_RED%, COLOUR_BLUE%)
+  Next
+
+  Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, play_sound%
+  y% = Y_OFFSET% - 75 + 15 * idx%
+  name$ = ""
+
+  ' Re-initialise controllers as earlier call to poll_for_controller$() will
+  ' have reset pins.
+  keyboard_init()
+  For i% = 0 To MAX_CYCLE_IDX%
+    Select Case cycle.ctrl_backup$(i%)
+      Case "ctrl_nes_a%"   : nes_init(PORT_A%)
+      Case "ctrl_nes_b%"   : nes_init(PORT_B%)
+      Case "ctrl_atari_a%" : atari_init(PORT_A%)
+      Case "ctrl_atari_b%" : atari_init(PORT_B%)
+    End Select
+  Next
+
+  Local font_width% = Peek(Byte Mm.Info(Font Address 1))
+  Do
+    If Timer > t% + 500 Then
+      cursor% = Not cursor%
+      t% = Timer
+    EndIf
+
+    For i% = 1 To MAX_NAME_LEN%
+      bg% = Choice((i% = p%) And cursor%, COLOUR_RED%, COLOUR_BLACK%)
+      fg% = Choice((i% = p%) And cursor%, COLOUR_BLACK%, COLOUR_RED%)
+      ch$ = Choice(i% <= Len(name$), Mid$(name$, i%, 1), " ")
+      x% = X_OFFSET% + (i% - 1.5) * font_width%
+      Text x%, y%, ch$, , 1, 1, fg%, bg%
+    Next
+
+    ' Display green check mark if next right/fire will OK the name.
+    Inc x%, 2 * font_width%
+    Text x%, y%, Chr$(129), , 1, 1, Choice(p% = MAX_NAME_LEN%, COLOUR_GREEN%, COLOUR_BLACK%)
+
+    If IS_CMM2% Then Page Copy 1 To 0, B
+    Pause 100
+
+    key% = get_high_score_input%(player%)
+    If key% > 0 Then
+      play_sound% = 1
       Select Case key%
-        Case &h0A, &h0D
-          start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
-          Exit Do
-        Case &h08, &h7F
-          If Len(name$) > 0 Then
-            name$ = Left$(name$, Len(name$) - 1)
-            start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
+        Case &h08 ' Backspace
+          If p% > 1 Then
+            name$ = Left$(name$, p% - 2) + Mid$(name$, p%)
+            Inc p%, -1
           EndIf
+        Case &h7F ' Delete
+          name$ = Left$(name$, p% - 1) + Mid$(name$, p% + 1)
+        Case &h0A, &h0D ' LF and CR
+          key% = -1 ' So we exit the DO LOOP.
         Case &h20 To &h7E
-          If Len(name$) < 8 Then
-            Cat name$, Chr$(key%)
-            start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
-          EndIf
+          Do While p% > Len(name$) : Cat name$, " " : Loop
+          name$ = Left$(Left$(name$, p% - 1) + Chr$(key%) + Mid$(name$, p%), MAX_NAME_LEN%)
+          If p% < MAX_NAME_LEN% Then Inc p%, 1
+        Case &h80, &h81 ' Up and down arrows
+          i% = Asc(Mid$(name$, p%, 1))
+          If i% = 0 Then i% = 64 ' @
+          Do
+            Inc i%, Choice(key% = &h80, 1, -1)
+            If i% < 0 Then i% = 255
+            If i% > 255 Then i% = 0
+          Loop Until bits.get%(ALLOWED_CHARS%(i% \ 64), i% Mod 64)
+          Do While p% > Len(name$) : Cat name$, " " : Loop
+          name$ = Left$(name$, p% - 1) + Chr$(i%) + Mid$(name$, p% + 1)
+        Case &h82 ' Left arrow
+          If p% > 1 Then Inc p%, -1
+        Case &h83 ' Right arrow
+          If p% < MAX_NAME_LEN% Then Inc p%, 1 Else key% = -1
+        Case Else
+          play_sound% = 0
       End Select
-      high_scores$(idx%) = name$ + ", " + score$
-    Else If key% = FIRE% Then
-      show_high_scores% = 1
-      Exit Do
     End If
 
-  Loop
+    If play_sound% Then
+      start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
+      play_sound% = 0
+    EndIf
+
+  Loop While key% <> -1
+
+  Text x%, y%, Chr$(129), , 1, 1, COLOUR_BLACK%
+  high_scores$(idx%) = name$ + ", " + Field$(high_scores$(idx%), 2)
+End Sub
+
+' Gets player input to edit entry in the high-score table.
+'
+' @param  player%  player index.
+' @return          ASCII code of key pressed, or negative of value read
+'                  from player's configured controller port.
+Function get_high_score_input%(player%)
+  get_high_score_input% = Asc(UCase$(Inkey$))
+  If get_high_score_input% > 0 Then Exit Function
+
+  Local p%, s$
+  Select Case cycle.ctrl_backup$(player%)
+    Case "ctrl_nes_a%"   : p% = PORT_A% : s$ = "nes"
+    Case "ctrl_nes_b%"   : p% = PORT_B% : s$ = "nes"
+    Case "ctrl_atari_a%" : p% = PORT_A% : s$ = "atari"
+    Case "ctrl_atari_b%" : p% = PORT_B% : s$ = "atari"
+    Case Else            : Exit Function
+  End Select
+
+  ' Note that port initialisation should have already occurred earlier.
+  Local k% = Call(s$ + "_read%", p%)
+  Select Case k%
+    Case NES_A%     : k% = &h83 ' Right arrow
+    Case NES_START% : k% = &h0A ' Line feed \n
+    Case NES_UP%    : k% = &h80 ' Up arrow
+    Case NES_DOWN%  : k% = &h81 ' Down arrow
+    Case NES_LEFT%  : k% = &h82 ' Left arrow
+    Case NES_RIGHT% : k% = &h83 ' Right arrow
+    Case Else       : k% = 0
+  End Select
+  get_high_score_input% = k%
 End Function
 
 Function str.lpad$(s$, x%)
@@ -302,10 +401,22 @@ Sub show_menu()
   Local sounds$(3) = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
   Local sound_setting% = Choice(music_start_ptr% = Peek(VarAddr MUSIC%()), 1, 3) - soundfx_flag%
 
+  ' Initialise cycle.ctrl_backup$() on first entry to this subroutine,
+  ' subsequent calls use the previously stored state.
+  If default_ctrl$ = "" Then default_ctrl$ = "keyboard"
+  If cycle.ctrl_backup$(0) = "" Then
+    cycle.ctrl_backup$(0) = "ctrl_" + default_ctrl$ + "_a%"
+    If cycle.ctrl_backup$(0) = "ctrl_keyboard_a%" Then cycle.ctrl_backup$(0) = "ctrl_keys1%"
+    For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ctrl_ai%" : Next
+  EndIf
+
   For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
 
   ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, COLOUR_CYAN%
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, COLOUR_CYAN%
+
+  keyboard_init()
+  Call default_ctrl$ + "_init", PORT_A%
 
   Do
 
@@ -321,43 +432,44 @@ Sub show_menu()
       Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_CYAN%
       If IS_CMM2% Then Page Copy 1 To 0, B
       Pause 100
-      clear_keys()
+      keyboard_init()
       update% = 0
     EndIf
 
-    key% = get_key%()
+    key% = Call(default_ctrl$ + "_read%", PORT_A%)
+    If key% = 0 Then key% = keyboard_read%(PORT_A%) ' Always respond to the keyboard.
     Select Case key%
-      Case UP%
+      Case NES_UP%
         If item% > 0 Then
           Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
           Inc item%, -1
           update% = 1
         EndIf
 
-      Case DOWN%
+      Case NES_DOWN%
         If item% < 7 Then
           Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
           Inc item%
           update% = 1
         EndIf
 
-      Case LEFT%, RIGHT%, FIRE%
+      Case NES_LEFT%, NES_RIGHT%, NES_A%
         Select Case item%
           Case 0
-            If key% = FIRE% Then Exit Do
+            If key% = NES_A% Then Exit Do
 
           Case 1,2,3,4
-            If key% = LEFT% Then dec_controller(item% - 1) Else inc_controller(item% - 1)
+            update_controller(item% - 1, Choice(key% = NES_LEFT%, -1, +1))
             update% = 1
 
           Case 5 ' Difficulty
-            Inc difficulty%, Choice(key% = LEFT%, -1, 1)
+            Inc difficulty%, Choice(key% = NES_LEFT%, -1, 1)
             If difficulty% < 1 Then difficulty% = 5
             If difficulty% > 5 Then difficulty% = 1
             update% = 1
 
           Case 6 ' Sound
-            Inc sound_setting%, Choice(key% = LEFT%, -1, 1)
+            Inc sound_setting%, Choice(key% = NES_LEFT%, -1, 1)
             If sound_setting% < 0 Then sound_setting% = 3
             If sound_setting% > 3 Then sound_setting% = 0
             music_start_ptr% = Choice(sound_setting% And &b10, Peek(VarAddr NO_MUSIC%()), Peek(VarAddr MUSIC%()))
@@ -366,12 +478,9 @@ Sub show_menu()
             update% = 1
 
           Case 7 ' Quit
-            If key% = FIRE% Then End
+            If key% = NES_A% Then End
 
         End Select
-
-      ' Case Else
-      '   key% = NO_KEY%
 
     End Select
 
@@ -399,29 +508,47 @@ Function get_controller_name$(idx%)
   Error "Unknown controller: " + cycle.ctrl$(idx%)
 End Function
 
-Sub dec_controller(idx%)
+Sub update_controller(idx%, delta%)
+  ' Find index of currently selected controller.
   Local i%
   For i% = 0 To Bound(CTRL_SUBS$(), 1)
-    If cycle.ctrl$(idx%) <> CTRL_SUBS$(i%) Then Continue For
-    Inc i%, -1
-    If i% < 0 Then i% = Bound(CTRL_SUBS$(), 1)
-    cycle.ctrl$(idx%) = CTRL_SUBS$(i%)
-    Exit Sub
+    If cycle.ctrl$(idx%) = CTRL_SUBS$(i%) Then Exit For
   Next
-  Error "Unknown controller: " + cycle.ctrl$(idx%)
+  If i% = Bound(CTRL_SUBS$(), 1) + 1 Then Error "Unknown controller: " + cycle.ctrl$(idx%)
+
+  Local ok% = 1
+  Do
+    Inc i%, delta%
+    If i% < 0 Then i% = Bound(CTRL_SUBS$(), 1)
+    If i% > Bound(CTRL_SUBS$(), 1) Then i% = 0
+
+    ' Check there is no conflict with other player's controller choice.
+    Select Case CTRL_SUBS$(i%)
+      Case "ctrl_atari_a%", "ctrl_nes_a%"
+        ok% = Not has_controller%(idx%, "ctrl_atari_a%")
+        ok% = ok% And (Not has_controller%(idx%, "ctrl_nes_a%"))
+      Case "ctrl_atari_b%", "ctrl_nes_b%"
+        ok% = Not has_controller%(idx%, "ctrl_atari_b%")
+        ok% = ok% And (Not has_controller%(idx%, "ctrl_nes_b%"))
+      Case "ctrl_keys1%", "ctrl_keys2%"
+        ok% = Not has_controller%(idx%, "ctrl_keys1%")
+        ok% = ok% And (Not has_controller%(idx%, "ctrl_keys2%"))
+      Case "ctrl_keys3%"
+        ok% = Not has_controller%(idx%, "ctrl_keys3%")
+    End Select
+  Loop Until ok%
+
+  cycle.ctrl$(idx%) = CTRL_SUBS$(i%)
 End Sub
 
-Sub inc_controller(idx%)
+' Is any player other than idx% using the specified controller ?
+Function has_controller%(idx%, ctrl$)
   Local i%
-  For i% = 0 To Bound(CTRL_SUBS$(), 1)
-    If cycle.ctrl$(idx%) <> CTRL_SUBS$(i%) Then Continue For
-    Inc i%, 1
-    If i% > Bound(CTRL_SUBS$(), 1) Then i% = 0
-    cycle.ctrl$(idx%) = CTRL_SUBS$(i%)
-    Exit Sub
+  For i% = 0 To MAX_CYCLE_IDX%
+    If i% = idx% Then Continue For
+    If cycle.ctrl$(i%) = ctrl$ Then has_controller% = 1
   Next
-  Error "Unknown controller: " + cycle.ctrl$(idx%)
-End Sub
+End Function
 
 Sub init_attract_mode()
   Local i%
@@ -434,6 +561,7 @@ End Sub
 Sub init_game()
   frame_duration% = 3 * (5 + (6 - difficulty%))
   num_players% = 0 ' Incremented later.
+  num_humans% = 0
   score% = 0
   Memory Set Peek(VarAddr keys%()), 0, 256
 
@@ -449,13 +577,13 @@ Sub init_game()
   Next
 
   cycle.dir%(0) = EAST%
-  cycle.dir%(1) = SOUTH%
-  cycle.dir%(2) = WEST%
+  cycle.dir%(1) = WEST%
+  cycle.dir%(2) = SOUTH%
   cycle.dir%(3) = NORTH%
 
   cycle.pos%(0) = WIDTH * (HEIGHT% \ 2) + 5
-  cycle.pos%(1) = 5.5 * WIDTH%
-  cycle.pos%(2) = WIDTH% * (HEIGHT% \ 2) + WIDTH% - 6
+  cycle.pos%(1) = WIDTH% * (HEIGHT% \ 2) + WIDTH% - 6
+  cycle.pos%(2) = 5.5 * WIDTH%
   cycle.pos%(3) = WIDTH% * (HEIGHT% - 6) + WIDTH% \ 2
 
   Local i%
@@ -468,11 +596,22 @@ Sub init_game()
       cycle.state%(i%) = STATE_DEAD%
     Else
       Inc num_players%
+      If cycle.ctrl$(i%) <> "ctrl_ai%" Then Inc num_humans%
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       Poke Byte p_arena% + cycle.pos%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
       Poke Byte p_arena% + cycle.nxt%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
       cycle.state%(i%) = STATE_OK%
     EndIf
+  Next
+
+  ' Initialise game ports.
+  For i% = 0 To MAX_CYCLE_IDX%
+    Select Case cycle.ctrl$(i%)
+      Case "ctrl_nes_a%"   : nes_init(PORT_A%)
+      Case "ctrl_nes_b%"   : nes_init(PORT_B%)
+      Case "ctrl_atari_a%" : atari_init(PORT_A%)
+      Case "ctrl_atari_b%" : atari_init(PORT_B%)
+    End Select
   Next
 
 End Sub
@@ -493,7 +632,7 @@ End Sub
 '          1 - attract mode game over
 '          2 - attract mode interrupted
 Function game_loop%()
-  Local i%
+  Local ctrl$, i%
   game_loop% = attract_mode%
   next_frame% = Timer + frame_duration%
 
@@ -504,7 +643,8 @@ Function game_loop%()
   ' cycle.score%(3) = 975
   ' score% = 3175
 
-  On Key on_key()
+  keyboard_init()
+  If Not attract_mode% Then On Key on_key()
 
   Do While num_players% > 0
     Inc score%, 1
@@ -538,11 +678,13 @@ Function game_loop%()
     Do While Timer < next_frame% : Loop
     Inc next_frame%, frame_duration%
 
-    If attract_mode% Then
-      If Peek(Var keys%(), FIRE%) Then
-        num_players% = 0
-        game_loop% = 2
-      EndIf
+    If Not attract_mode% Then Continue Do
+
+    ' Check for "attract mode" being interrupted.
+    ctrl$ = poll_for_controller$(1)
+    If ctrl$ <> "" Then
+      num_players% = 0
+      game_loop% = 2
     EndIf
   Loop
 
@@ -552,7 +694,7 @@ Function game_loop%()
   ' Wait for any sound effect to complete.
   Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
 
-  On Key 0
+  If Not attract_mode% Then On Key 0
 End Function
 
 Sub draw_score()
@@ -615,7 +757,7 @@ Sub show_game_over()
           If k% <> 0 Then high_scores$(k%) = high_scores$(k% - 1)
         Next
         high_scores$(j%) = ", " + Str$(cycle.score%(i%))
-        dummy% = show_high_scores%(1, j%, idx%(i%))
+        edit_high_score(j%, idx%(i%))
         Exit For
       EndIf
     Next
@@ -642,6 +784,46 @@ End Function
 
 Function ctrl_die%(idx%)
   ctrl_die% = ((Peek(Var arena%(), cycle.pos%(idx%)) >> 3) + 2) Mod 4
+End Function
+
+Function ctrl_nes_a%(idx%)
+  Select Case nes_read%(PORT_A%)
+    Case NES_UP%:    ctrl_nes_a% = NORTH%
+    Case NES_DOWN%:  ctrl_nes_a% = SOUTH%
+    Case NES_LEFT%:  ctrl_nes_a% = WEST%
+    Case NES_RIGHT%: ctrl_nes_a% = EAST%
+    Case Else: ctrl_nes_a% = cycle.dir%(idx%)
+  End Select
+End Function
+
+Function ctrl_nes_b%(idx%)
+  Select Case nes_read%(PORT_B%)
+    Case NES_UP%:    ctrl_nes_b% = NORTH%
+    Case NES_DOWN%:  ctrl_nes_b% = SOUTH%
+    Case NES_LEFT%:  ctrl_nes_b% = WEST%
+    Case NES_RIGHT%: ctrl_nes_b% = EAST%
+    Case Else: ctrl_nes_b% = cycle.dir%(idx%)
+  End Select
+End Function
+
+Function ctrl_atari_a%(idx%)
+  Select Case atari_read%(PORT_A%)
+    Case NES_UP%:    ctrl_atari_a% = NORTH%
+    Case NES_DOWN%:  ctrl_atari_a% = SOUTH%
+    Case NES_LEFT%:  ctrl_atari_a% = WEST%
+    Case NES_RIGHT%: ctrl_atari_a% = EAST%
+    Case Else: ctrl_atari_a% = cycle.dir%(idx%)
+  End Select
+End Function
+
+Function ctrl_atari_b%(idx%)
+  Select Case atari_read%(PORT_B%)
+    Case NES_UP%:    ctrl_atari_b% = NORTH%
+    Case NES_DOWN%:  ctrl_atari_b% = SOUTH%
+    Case NES_LEFT%:  ctrl_atari_b% = WEST%
+    Case NES_RIGHT%: ctrl_atari_b% = EAST%
+    Case Else: ctrl_atari_b% = cycle.dir%(idx%)
+  End Select
 End Function
 
 Function ctrl_keys1%(idx%)
@@ -728,6 +910,13 @@ Sub cycle.check_collision(idx%)
 
   ' Time to die.
   Inc num_players%, -1
+  If cycle.ctrl$(idx%) <> "ctrl_ai%" Then
+    Inc num_humans%, -1
+    If num_humans% = 0 Then
+      On Key 0
+      attract_mode% = 1
+    EndIf
+  EndIf
   cycle.ctrl$(idx%) = "ctrl_die%"
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
@@ -770,6 +959,12 @@ Sub play_soundfx()
   Inc soundfx_ptr%
 End Sub
 
+' Gets bit i% of x%.
+Function bits.get%(x%, i%)
+  If i% < 0 Or i% > 63 Then Error "i% out of 0 .. 63 range"
+  bits.get% = (x% And 1 << i%) <> 0
+End Function
+
 music_data:
 
 Data 792   ' Number of bytes of music data.
@@ -799,3 +994,28 @@ Data &h363D000038000037, &h3D2A363A00003D2A, &h00003A2B373D0000, &h383800003A2B3
 Data &h442C384100003D2C, &h0000412935440000, &h363A00003829353D, &h3D2A363D00003A2A
 Data &h00003F2C38410000, &h3D3D00003F2C383F, &h3D2C383D313D3D31, &h25313D25313D2C38
 Data &hFFFF000000000000, &hFFFFFFFFFFFFFFFF, &hFFFFFFFFFFFFFFFF
+
+controller_data:
+
+Data "KEYS: AZ,.", "ctrl_keys1%"
+Data "KEYS: AZXC", "ctrl_keys2%"
+Data "KEYS: IKOP", "ctrl_keys3%"
+Data "GAMEPAD A",  "ctrl_nes_a%"
+Data "GAMEPAD B",  "ctrl_nes_b%"
+Data "JOYSTICK A", "ctrl_atari_a%"
+Data "JOYSTICK B", "ctrl_atari_b%"
+Data "AI",         "ctrl_ai%"
+Data "NONE",       "ctrl_none%"
+
+high_score_data:
+
+Data "TOM, 2000"
+Data "MICKEY, 1500"
+Data "MIKE, 1250"
+Data "PETER, 1000"
+Data "DAVEY, 800"
+Data "JOHN, 600"
+Data "PAUL, 400"
+Data "GEORGE, 200"
+Data "RINGO, 100"
+Data "MOOSE, 50"
