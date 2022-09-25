@@ -19,6 +19,7 @@ Select Case Mm.Device$
     Mode 7
     Page Write 1
   Case "PicoMiteVGA"
+    Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
     Const IS_CMM2% = 0
     Mode 2
   Case Else
@@ -155,9 +156,11 @@ Sub init_globals()
   Next
 
   Restore highscore_data
-  For i% = 0 To Bound(highscore.values$(), 1)
-    Read highscore.values$(i%)
+  Local defaults$(Bound(highscore.values$(), 1))
+  For i% = 0 To Bound(defaults$(), 1)
+    Read defaults$(i%)
   Next
+  highscore.load(HIGHSCORE_FILENAME$, defaults$())
 End Sub
 
 Sub read_music()
@@ -573,7 +576,7 @@ Sub show_game_over()
   wipe()
 
   ' Insert into high-score table.
-  Local player%
+  Local new_highscore%, player%
   For i% = 0 To MAX_CYCLE_IDX%
     player% = idx%(i%)
     If cycle.is_ai%(player%) Then Continue For
@@ -584,10 +587,12 @@ Sub show_game_over()
         Next
         highscore.values$(j%) = ", " + Str$(cycle.score%(i%))
         highscore.edit(j%, player%, cycle.ctrl_backup$(player%))
+        new_highscore% = 1
         Exit For
       EndIf
     Next
   Next
+  If new_highscore% Then highscore.save(HIGHSCORE_FILENAME$)
 End Sub
 
 Function ctrl_ai%(idx%)

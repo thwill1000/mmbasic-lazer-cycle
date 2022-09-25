@@ -6,6 +6,78 @@ Const highscore.MAX_NAME_LEN% = 8
 
 Dim highscore.values$(9) Length highscore.MAX_NAME_LEN% + 7
 
+Sub highscore.load(filename$, defaults$())
+  ' It is convenient to always fill with the defaults
+  ' even if we end up overwriting them immediately.
+  If Bound(highscore.values$(), 1) <> Bound(defaults$()) Then
+    Error "Invalid number of high-score defaults"
+  EndIf
+  Local i%
+  For i% = 0 To Bound(highscore.values$())
+    highscore.values$(i%) = defaults$(i%)
+  Next
+
+  ' If there is no SD Card then do not load high-scores.
+  Local has_sdcard% = UCase$(Mm.Info$(SdCard)) = "READY"
+  If Not has_sdcard% Then Exit Sub
+
+  ' Check filename$ is absolute.
+  Local ok% = 0
+  Select Case Left$(filename$, 1)
+    Case "/", "\" : ok% = 1
+    Case "A", "a" : If Mid$(filename$, 2, 1) = ":" Then ok% = 1
+  End Select
+  If Not ok% Then Error "Expected absolute file path '" + filename$ + "'"
+
+  ' Create any parent directories for filename$ if they do not exist.
+  Local ch$, parent$
+  For i% = 1 To Len(filename$)
+    ch$ = Mid$(filename$, i%, 1)
+    Select Case ch$
+      Case "/", "\"
+        If parent$ = "" Or UCase$(parent$) = "A:" Then Continue For
+        Select Case Mm.Info(FileSize parent$)
+          Case -2   : ' Is a directory, do nothing.
+          Case -1   : MkDir parent$
+          Case Else : Error "Expected directory but found file '" + parent$ + "'"
+        End Select
+      Case Else
+        Cat parent$, ch$
+    End Select
+  Next
+
+  ' Check file exists and is not a directory.
+  Select Case Mm.Info(FileSize filename$)
+    Case -2: Error "Expected file but found directory '" + parent$ + "'"
+    Case -1: Exit Sub ' File does not exist.
+  End Select
+
+  ' Read the file.
+  Open filename$ For Input As #1
+  For i% = 0 To Bound(highscore.values$())
+    Line Input #1, highscore.values$(i%)
+    ok% = ok% And Field$(highscore.values$(i%), 1) <> ""
+    ok% = ok% And Field$(highscore.values$(i%), 2) <> ""
+    ok% = ok% And Val(Field$(highscore.values$(i%), 2)) > 0
+    If Not ok% Then Error "Invalid high-score file '" + filename$ + "'"
+  Next
+  Close #1
+End Sub
+
+' Assumes parent directory of filename$ already exists.
+Sub highscore.save(filename$)
+  ' If there is no SD Card then do not save high-scores.
+  Local has_sdcard% = UCase$(Mm.Info$(SdCard)) = "READY"
+  If Not has_sdcard% Then Exit Sub
+
+  Open filename$ For Output As #1
+  Local i%
+  For i% = 0 To Bound(highscore.values$())
+    Print #1, highscore.values$(i%)
+  Next
+  Close #1
+End Sub
+
 ' Shows the high-score table for a specified duration or until the user presses
 ' START/FIRE/SPACE.
 '
