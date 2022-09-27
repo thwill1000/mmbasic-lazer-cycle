@@ -115,10 +115,10 @@ End Function
 
 ' Provides UI for editing an entry in the high-score table.
 '
-' @param  idx%     index of entry in the highscore.values$ array.
-' @param  player%  player index.
-' @param  ctrl$    controller for given player.
-Sub highscore.edit(idx%, player%, ctrl$)
+' @param  idx%      index of entry in the highscore.values$ array.
+' @param  colour_%  player colour.
+' @param  ctrl$     controller for given player.
+Sub highscore.edit(idx%, colour_%, ctrl$)
   ' 256-bit map of characters that can be entered into the high-score table
   ' via gamepad or joystick. For each character 0-255 the character is allowed
   ' if the corresponding bit is set.
@@ -134,7 +134,7 @@ Sub highscore.edit(idx%, player%, ctrl$)
     name$ = str.rpad$(Field$(highscore.values$(i%), 1), highscore.MAX_NAME_LEN%)
     score$ = str.lpad$(Field$(highscore.values$(i%), 2), 5)
     y% = Y_OFFSET% - 75 + 15 * i%
-    Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, Rgb(Red), Rgb(Blue))
+    Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, colour_%, Rgb(Blue))
   Next
 
   Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, play_sound%
@@ -159,8 +159,8 @@ Sub highscore.edit(idx%, player%, ctrl$)
     EndIf
 
     For i% = 1 To highscore.MAX_NAME_LEN%
-      bg% = Choice((i% = p%) And cursor%, Rgb(Red), Rgb(Black))
-      fg% = Choice((i% = p%) And cursor%, Rgb(Black), Rgb(Red))
+      bg% = Choice((i% = p%) And cursor%, colour_%, Rgb(Black))
+      fg% = Choice((i% = p%) And cursor%, Rgb(Black), colour_%)
       ch$ = Choice(i% <= Len(name$), Mid$(name$, i%, 1), " ")
       x% = X_OFFSET% + (i% - 1.5) * font_width%
       Text x%, y%, ch$, , 1, 1, fg%, bg%

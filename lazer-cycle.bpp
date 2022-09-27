@@ -597,7 +597,7 @@ Sub show_game_over()
           If k% <> 0 Then highscore.values$(k%) = highscore.values$(k% - 1)
         Next
         highscore.values$(j%) = ", " + Str$(cycle.score%(i%))
-        highscore.edit(j%, player%, cycle.ctrl_backup$(player%))
+        highscore.edit(j%, cycle.colour%(player%), cycle.ctrl_backup$(player%))
         new_highscore% = 1
         Exit For
       EndIf
