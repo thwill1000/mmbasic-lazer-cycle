@@ -55,6 +55,7 @@ Dim SOUNDFX_WIPE%(3)    = (&h3F3E3D3C3B3A3938, &h4746454443424140, &h004E4D4C4B4
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
+Dim COMPASS_TO_CTRL%(3) = (NES_UP%, NES_RIGHT%, NES_DOWN%, NES_LEFT%)
 Dim CTRL_NAMES$(8)
 Dim CTRL_SUBS$(8)
 
@@ -507,7 +508,12 @@ Function game_loop%()
 
     ' Determine changes of direction and check for collisions.
     For i% = 0 To MAX_CYCLE_IDX%
-      cycle.dir%(i%) = Call(cycle.ctrl$(i%), i%)
+      Select Case Call(cycle.ctrl$(i%), i%)
+        Case NES_UP%:    cycle.dir%(i%) = NORTH%
+        Case NES_DOWN%:  cycle.dir%(i%) = SOUTH%
+        Case NES_LEFT%:  cycle.dir%(i%) = WEST%
+        Case NES_RIGHT%: cycle.dir%(i%) = EAST%
+      End Select
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
     Next
@@ -564,7 +570,12 @@ End Sub
 Sub cycle.dying(idx%)
   cycle.draw(idx%)
   cycle.pos%(idx%) = cycle.nxt%(idx%) ' Move
-  cycle.dir%(idx%) = ctrl_die%(idx%)
+  Select Case ctrl_die%(idx%)
+    Case NES_UP%:    cycle.dir%(idx%) = NORTH%
+    Case NES_DOWN%:  cycle.dir%(idx%) = SOUTH%
+    Case NES_LEFT%:  cycle.dir%(idx%) = WEST%
+    Case NES_RIGHT%: cycle.dir%(idx%) = EAST%
+  End Select
   cycle.nxt%(idx%) = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
   cycle.check_collision(idx%)
 End Sub
@@ -621,104 +632,74 @@ Function ctrl_ai%(idx%)
     d% = NEXT_DIR%(i% + idx%)
   Next
 
-  ctrl_ai% = d%
+  ctrl_ai% = COMPASS_TO_CTRL%(d%)
 End Function
 
 Function ctrl_die%(idx%)
-  ctrl_die% = ((Peek(Var arena%(), cycle.pos%(idx%)) >> 3) + 2) Mod 4
+  ctrl_die% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(idx%)) >> 3) + 2) Mod 4)
 End Function
 
 Function ctrl_nes_a%(idx%)
-  Select Case nes_read%(PORT_A%)
-    Case NES_UP%:    ctrl_nes_a% = NORTH%
-    Case NES_DOWN%:  ctrl_nes_a% = SOUTH%
-    Case NES_LEFT%:  ctrl_nes_a% = WEST%
-    Case NES_RIGHT%: ctrl_nes_a% = EAST%
-    Case Else: ctrl_nes_a% = cycle.dir%(idx%)
-  End Select
+  ctrl_nes_a% = nes_read%(PORT_A%)
 End Function
 
 Function ctrl_nes_b%(idx%)
-  Select Case nes_read%(PORT_B%)
-    Case NES_UP%:    ctrl_nes_b% = NORTH%
-    Case NES_DOWN%:  ctrl_nes_b% = SOUTH%
-    Case NES_LEFT%:  ctrl_nes_b% = WEST%
-    Case NES_RIGHT%: ctrl_nes_b% = EAST%
-    Case Else: ctrl_nes_b% = cycle.dir%(idx%)
-  End Select
+  ctrl_nes_b% = nes_read%(PORT_B%)
 End Function
 
 Function ctrl_atari_a%(idx%)
-  Select Case atari_read%(PORT_A%)
-    Case NES_UP%:    ctrl_atari_a% = NORTH%
-    Case NES_DOWN%:  ctrl_atari_a% = SOUTH%
-    Case NES_LEFT%:  ctrl_atari_a% = WEST%
-    Case NES_RIGHT%: ctrl_atari_a% = EAST%
-    Case Else: ctrl_atari_a% = cycle.dir%(idx%)
-  End Select
+  ctrl_atari_a% = atari_read%(PORT_A%)
 End Function
 
 Function ctrl_atari_b%(idx%)
-  Select Case atari_read%(PORT_B%)
-    Case NES_UP%:    ctrl_atari_b% = NORTH%
-    Case NES_DOWN%:  ctrl_atari_b% = SOUTH%
-    Case NES_LEFT%:  ctrl_atari_b% = WEST%
-    Case NES_RIGHT%: ctrl_atari_b% = EAST%
-    Case Else: ctrl_atari_b% = cycle.dir%(idx%)
-  End Select
+  ctrl_atari_b% = atari_read%(PORT_B%)
 End Function
 
 Function ctrl_keys1%(idx%)
-  ctrl_keys1% = cycle.dir%(idx%)
-
   If Peek(Var keys%(), 65) Then      ' A
-    ctrl_keys1% = NORTH%
+    ctrl_keys1% = NES_UP%
     Poke Var keys%(), 65, 0
   ElseIf Peek(Var keys%(), 90) Then  ' Z
-    ctrl_keys1% = SOUTH%
+    ctrl_keys1% = NES_DOWN%
     Poke Var keys%(), 90, 0
-  ElseIf Peek(Var keys%(), 44) Then   ' comma 
-    ctrl_keys1% = WEST%
-    Poke Var keys%(), 44, 0
   ElseIf Peek(Var keys%(), 46) Then   ' full-stop
-    ctrl_keys1% = EAST%
+    ctrl_keys1% = NES_RIGHT%
     Poke Var keys%(), 46, 0
+  ElseIf Peek(Var keys%(), 44) Then   ' comma
+    ctrl_keys1% = NES_LEFT%
+    Poke Var keys%(), 44, 0
   EndIf
 End Function
 
 Function ctrl_keys2%(idx%)
-  ctrl_keys2% = cycle.dir%(idx%)
-
   If Peek(Var keys%(), 65) Then      ' A
-    ctrl_keys2% = NORTH%
+    ctrl_keys2% = NES_UP%
     Poke Var keys%(), 65, 0
   ElseIf Peek(Var keys%(), 90) Then  ' Z
-    ctrl_keys2% = SOUTH%
+    ctrl_keys2% = NES_DOWN%
     Poke Var keys%(), 90, 0
-  ElseIf Peek(Var keys%(), 88) Then  ' X
-    ctrl_keys2% = WEST%
-    Poke Var keys%(), 88, 0
   ElseIf Peek(Var keys%(), 67) Then  ' C
-    ctrl_keys2% = EAST%
+    ctrl_keys2% = NES_RIGHT%
     Poke Var keys%(), 67, 0
+  ElseIf Peek(Var keys%(), 88) Then  ' X
+    ctrl_keys2% = NES_LEFT%
+    Poke Var keys%(), 88, 0
   EndIf
 End Function
 
 Function ctrl_keys3%(idx%)
-  ctrl_keys3% = cycle.dir%(idx%)
-
   If Peek(Var keys%(), 73) Then      ' I
-    ctrl_keys3% = NORTH%
+    ctrl_keys3% = NES_UP%
     Poke Var keys%(), 73, 0
   ElseIf Peek(Var keys%(), 75) Then  ' K
-    ctrl_keys3% = SOUTH%
+    ctrl_keys3% = NES_DOWN%
     Poke Var keys%(), 75, 0
-  ElseIf Peek(Var keys%(), 79) Then  ' O
-    ctrl_keys3% = WEST%
-    Poke Var keys%(), 79, 0
   ElseIf Peek(Var keys%(), 80) Then  ' P
-    ctrl_keys3% = EAST%
+    ctrl_keys3% = NES_RIGHT%
     Poke Var keys%(), 80, 0
+  ElseIf Peek(Var keys%(), 79) Then  ' O
+    ctrl_keys3% = NES_LEFT%
+    Poke Var keys%(), 79, 0
   EndIf
 End Function
 
