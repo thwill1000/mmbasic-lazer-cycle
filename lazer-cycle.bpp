@@ -74,6 +74,7 @@ Dim next_frame%
 '   bit  7   - arena wall (other bits will be 0)
 Dim arena%(HEIGHT% * WIDTH% \ 8)
 
+Dim cycle.current% ' Current cycle index, set before calling ctrl_xxx() functions.
 Dim cycle.is_ai%(MAX_CYCLE_IDX%)
 Dim cycle.score%(MAX_CYCLE_IDX%)
 Dim cycle.nxt%(MAX_CYCLE_IDX%)
@@ -508,7 +509,8 @@ Function game_loop%()
 
     ' Determine changes of direction and check for collisions.
     For i% = 0 To MAX_CYCLE_IDX%
-      Select Case Call(cycle.ctrl$(i%), i%)
+      cycle.current% = i%
+      Select Case Call(cycle.ctrl$(i%))
         Case NES_UP%:    cycle.dir%(i%) = NORTH%
         Case NES_DOWN%:  cycle.dir%(i%) = SOUTH%
         Case NES_LEFT%:  cycle.dir%(i%) = WEST%
@@ -570,7 +572,8 @@ End Sub
 Sub cycle.dying(idx%)
   cycle.draw(idx%)
   cycle.pos%(idx%) = cycle.nxt%(idx%) ' Move
-  Select Case ctrl_die%(idx%)
+  cycle.current% = idx%
+  Select Case ctrl_die%()
     Case NES_UP%:    cycle.dir%(idx%) = NORTH%
     Case NES_DOWN%:  cycle.dir%(idx%) = SOUTH%
     Case NES_LEFT%:  cycle.dir%(idx%) = WEST%
@@ -617,7 +620,8 @@ Sub show_game_over()
   If new_highscore% Then highscore.save(HIGHSCORE_FILENAME$)
 End Sub
 
-Function ctrl_ai%(idx%)
+Function ctrl_ai%()
+  Local idx% = cycle.current%
   Local d% = cycle.dir%(idx%)
 
   ' Random element.
@@ -635,27 +639,27 @@ Function ctrl_ai%(idx%)
   ctrl_ai% = COMPASS_TO_CTRL%(d%)
 End Function
 
-Function ctrl_die%(idx%)
-  ctrl_die% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(idx%)) >> 3) + 2) Mod 4)
+Function ctrl_die%()
+  ctrl_die% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 3) + 2) Mod 4)
 End Function
 
-Function ctrl_nes_a%(idx%)
+Function ctrl_nes_a%()
   ctrl_nes_a% = nes_read%(PORT_A%)
 End Function
 
-Function ctrl_nes_b%(idx%)
+Function ctrl_nes_b%()
   ctrl_nes_b% = nes_read%(PORT_B%)
 End Function
 
-Function ctrl_atari_a%(idx%)
+Function ctrl_atari_a%()
   ctrl_atari_a% = atari_read%(PORT_A%)
 End Function
 
-Function ctrl_atari_b%(idx%)
+Function ctrl_atari_b%()
   ctrl_atari_b% = atari_read%(PORT_B%)
 End Function
 
-Function ctrl_keys1%(idx%)
+Function ctrl_keys1%()
   If Peek(Var keys%(), 65) Then      ' A
     ctrl_keys1% = NES_UP%
     Poke Var keys%(), 65, 0
@@ -671,7 +675,7 @@ Function ctrl_keys1%(idx%)
   EndIf
 End Function
 
-Function ctrl_keys2%(idx%)
+Function ctrl_keys2%()
   If Peek(Var keys%(), 65) Then      ' A
     ctrl_keys2% = NES_UP%
     Poke Var keys%(), 65, 0
@@ -687,7 +691,7 @@ Function ctrl_keys2%(idx%)
   EndIf
 End Function
 
-Function ctrl_keys3%(idx%)
+Function ctrl_keys3%()
   If Peek(Var keys%(), 73) Then      ' I
     ctrl_keys3% = NES_UP%
     Poke Var keys%(), 73, 0
@@ -703,7 +707,7 @@ Function ctrl_keys3%(idx%)
   EndIf
 End Function
 
-Function ctrl_none%(idx%)
+Function ctrl_none%()
   ' Do nothing.
 End Function
 
