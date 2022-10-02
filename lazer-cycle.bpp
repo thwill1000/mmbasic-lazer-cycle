@@ -19,6 +19,7 @@ Select Case Mm.Device$
     Mode 7
     Page Write 1
   Case "PicoMiteVGA"
+    If Val(Mm.Info(CpuSpeed)) < 252000000 Then Error "Requires OPTION CPUSPEED 252000 or 378000"
     Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
     Const IS_CMM2% = 0
     Mode 2
