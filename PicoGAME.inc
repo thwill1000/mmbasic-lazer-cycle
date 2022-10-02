@@ -55,17 +55,41 @@ EndIf
 ' I've tested work with 1 micro-second, and possibly less.
 Const BTN_PULSE_DURATION! = 0.001 ' 1 micro-second
 
-Dim CONTROLLER_IDS$(3) Length 8 = ( "keys_cursor%", "atari%", "nes%", "snes%" )
-Dim CONTROLLER_NAMES$(3) Length 15 = ( "Cursor Keys", "Atari Joystick", "NES Gamepad" , "SNES Gamepad" )
+Dim CONTROLLER_IDS$(3) Length 8 = ("keys_cursor%", "atari%", "nes%", "snes%")
+Dim CONTROLLER_NAMES$(3) Length 15 = ("Cursor Keys", "Atari Joystick", "NES Gamepad" , "SNES Gamepad")
+
+' When a key is pressed ctrl.on_key() sets the corresponding byte of this
+' 256-byte map to 1. When ctrl.keydown(i%) is called the corresponding
+' byte is read and set to 0. Note that a 256-bit map could be used but would
+' be slower.
+Dim ctrl.key_map%(31)
 
 ' +----------------------------------------------------------------------------+
 ' |                         READING GAME CONTROLLERS                           |
 ' +----------------------------------------------------------------------------+
 
-' Clears the keyboard input buffer.
-Sub ctrl.clear_keys()
-  Do While Inkey$ <> "" : Loop
+' Initialises keyboard reading via ON KEY.
+Sub ctrl.init_keys()
+  ctrl.term_keys()
+  On Key ctrl.on_key()
 End Sub
+
+' Terminates keyboard reading via ON_KEY.
+Sub ctrl.term_keys()
+  On Key 0
+  Do While Inkey$ <> "" : Loop
+  Memory Set Peek(VarAddr ctrl.key_map%()), 0, 256
+End Sub
+
+Sub ctrl.on_key()
+  Local ch$ = Inkey$
+  If ch$ <> "" Then Poke Var ctrl.key_map%(), Asc(ch$), 1
+End Sub
+
+Function ctrl.keydown%(i%)
+  ctrl.keydown% = Peek(Var ctrl.key_map%(), i%)
+  Poke Var ctrl.key_map%(), i%, 0
+End Function
 
 ' Calls xxx_open() subroutine for the named controller if it exists.
 Sub ctrl.open(ctrl$)
@@ -197,13 +221,11 @@ End Function
 '            | +-------------- Left
 '            +---------------- Right
 Function keys_cursor%()
-  Select Case Asc(Inkey$)
-    Case 32  : keys_cursor% = BTN_A%
-    Case 128 : keys_cursor% = BTN_UP%
-    Case 129 : keys_cursor% = BTN_DOWN%
-    Case 130 : keys_cursor% = BTN_LEFT%
-    Case 131 : keys_cursor% = BTN_RIGHT%
-  End Select
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(32)  * BTN_A%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(128) * BTN_UP%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(129) * BTN_DOWN%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(130) * BTN_LEFT%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(131) * BTN_RIGHT%
 End Function
 
 ' Opens port A connected to a SNES gamepad.

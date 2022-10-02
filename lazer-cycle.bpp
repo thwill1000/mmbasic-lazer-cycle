@@ -91,7 +91,6 @@ Dim soundfx_flag% = 1
 Dim soundfx_ptr% = Peek(VarAddr SOUNDFX_NOTHING%())
 Dim num_players%
 Dim num_humans%
-Dim keys%(31)
 
 Option Break 4
 On Key 3, break_handler
@@ -219,7 +218,7 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function wait%(duration%)
-  ctrl.clear_keys()
+  ctrl.init_keys()
   Local ctrl$ = poll_for_controller$(duration%)
   wait% = ctrl$ <> ""
   default_ctrl$ = Choice(default_ctrl$ = "", ctrl$, default_ctrl$)
@@ -255,7 +254,7 @@ Sub show_menu()
   ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, COLOUR_CYAN%
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, COLOUR_CYAN%
 
-  ctrl.clear_keys()
+  ctrl.init_keys()
   ctrl.open(default_ctrl$)
 
   Do
@@ -272,7 +271,6 @@ Sub show_menu()
       Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_CYAN%
       If IS_CMM2% Then Page Copy 1 To 0, B
       Pause 100
-      ctrl.clear_keys()
       update% = 0
     EndIf
 
@@ -403,7 +401,6 @@ Sub init_game()
   num_players% = 0 ' Incremented later.
   num_humans% = 0
   score% = 0
-  Memory Set Peek(VarAddr keys%()), 0, 256
 
   ' Initialise the arena.
   Local p_arena% = Peek(VarAddr arena%())
@@ -444,11 +441,9 @@ Sub init_game()
     EndIf
   Next
 
-  ' Initialise game ports.
-  For i% = 0 To MAX_CYCLE_IDX%
-    ctrl.open(cycle.ctrl$(i%))
-  Next
-
+  ' Initialise game ports and keyboard routines.
+  For i% = 0 To MAX_CYCLE_IDX% : ctrl.open(cycle.ctrl$(i%)) : Next
+  ctrl.init_keys()
 End Sub
 
 Sub draw_arena()
@@ -477,9 +472,6 @@ Function game_loop%()
   ' cycle.score%(2) = 1175
   ' cycle.score%(3) = 975
   ' score% = 3175
-
-  ctrl.clear_keys()
-  If Not attract_mode% Then On Key on_key()
 
   Do While num_players% > 0
     Inc score%, 1
@@ -639,51 +631,24 @@ Function ctrl_die%()
 End Function
 
 Function keys_cegg%()
-  If Peek(Var keys%(), 65) Then      ' A
-    keys_cegg% = BTN_UP%
-    Poke Var keys%(), 65, 0
-  ElseIf Peek(Var keys%(), 90) Then  ' Z
-    keys_cegg% = BTN_DOWN%
-    Poke Var keys%(), 90, 0
-  ElseIf Peek(Var keys%(), 46) Then   ' full-stop
-    keys_cegg% = BTN_RIGHT%
-    Poke Var keys%(), 46, 0
-  ElseIf Peek(Var keys%(), 44) Then   ' comma
-    keys_cegg% = BTN_LEFT%
-    Poke Var keys%(), 44, 0
-  EndIf
+  keys_cegg% = keys_cegg% Or ctrl.keydown%(97)  * BTN_UP%    ' A
+  keys_cegg% = keys_cegg% Or ctrl.keydown%(122) * BTN_DOWN%  ' Z
+  keys_cegg% = keys_cegg% Or ctrl.keydown%(44)  * BTN_LEFT%  ' comma
+  keys_cegg% = keys_cegg% Or ctrl.keydown%(46)  * BTN_RIGHT% ' full-stop
 End Function
 
 Function keys_azxc%()
-  If Peek(Var keys%(), 65) Then      ' A
-    keys_azxc% = BTN_UP%
-    Poke Var keys%(), 65, 0
-  ElseIf Peek(Var keys%(), 90) Then  ' Z
-    keys_azxc% = BTN_DOWN%
-    Poke Var keys%(), 90, 0
-  ElseIf Peek(Var keys%(), 67) Then  ' C
-    keys_azxc% = BTN_RIGHT%
-    Poke Var keys%(), 67, 0
-  ElseIf Peek(Var keys%(), 88) Then  ' X
-    keys_azxc% = BTN_LEFT%
-    Poke Var keys%(), 88, 0
-  EndIf
+  keys_azxc% = keys_azxc% Or ctrl.keydown%(97)  * BTN_UP%    ' A
+  keys_azxc% = keys_azxc% Or ctrl.keydown%(122) * BTN_DOWN%  ' Z
+  keys_azxc% = keys_azxc% Or ctrl.keydown%(120) * BTN_LEFT%  ' X
+  keys_azxc% = keys_azxc% Or ctrl.keydown%(99)  * BTN_RIGHT% ' C
 End Function
 
 Function keys_ikop%()
-  If Peek(Var keys%(), 73) Then      ' I
-    keys_ikop% = BTN_UP%
-    Poke Var keys%(), 73, 0
-  ElseIf Peek(Var keys%(), 75) Then  ' K
-    keys_ikop% = BTN_DOWN%
-    Poke Var keys%(), 75, 0
-  ElseIf Peek(Var keys%(), 80) Then  ' P
-    keys_ikop% = BTN_RIGHT%
-    Poke Var keys%(), 80, 0
-  ElseIf Peek(Var keys%(), 79) Then  ' O
-    keys_ikop% = BTN_LEFT%
-    Poke Var keys%(), 79, 0
-  EndIf
+  keys_ikop% = keys_ikop% Or ctrl.keydown%(105) * BTN_UP%    ' I
+  keys_ikop% = keys_ikop% Or ctrl.keydown%(107) * BTN_DOWN%  ' K
+  keys_ikop% = keys_ikop% Or ctrl.keydown%(111) * BTN_LEFT%  ' O
+  keys_ikop% = keys_ikop% Or ctrl.keydown%(112) * BTN_RIGHT% ' P
 End Function
 
 Function ctrl_none%()
@@ -727,11 +692,6 @@ Sub cycle.check_collision(idx%)
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
   start_soundfx(Peek(VarAddr SOUNDFX_DIE%()), 0)
-End Sub
-
-Sub on_key()
-  Local ch$ = Inkey$
-  If ch$ <> "" Then Poke Var keys%(), Asc(UCase$(ch$)), 1
 End Sub
 
 ' Called from interrupt to play next note of music.

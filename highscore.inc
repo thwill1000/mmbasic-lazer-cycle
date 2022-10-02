@@ -92,7 +92,7 @@ Function highscore.show_table%(duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
   Local colours%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 
-  ctrl.clear_keys()
+  ctrl.init_keys()
   Do While Timer < expires% And ctrl$ = ""
 
     For i% = 0 To Bound(highscore.values$(), 1) + 1
@@ -141,9 +141,7 @@ Sub highscore.edit(idx%, colour_%, ctrl$)
   y% = Y_OFFSET% - 75 + 15 * idx%
   name$ = ""
 
-  ' Re-initialise controller as earlier call to poll_for_controller$() will
-  ' have reset pins.
-  ctrl.clear_keys()
+  ctrl.term_keys()
   ctrl.open(ctrl$)
 
   Local font_width% = Peek(Byte Mm.Info(Font Address 1))
