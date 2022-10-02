@@ -355,7 +355,7 @@ Sub update_controller(idx%, delta%)
   Next
   If i% = Bound(CTRL_SUBS$(), 1) + 1 Then Error "Unknown controller: " + cycle.ctrl$(idx%)
 
-  Local ok% = 1
+  Local ok%
   Do
     Inc i%, delta%
     If i% < 0 Then i% = Bound(CTRL_SUBS$(), 1)
@@ -374,6 +374,8 @@ Sub update_controller(idx%, delta%)
         ok% = ok% And (Not has_controller%(idx%, "keys_azxc%"))
       Case "keys_ikop%"
         ok% = Not has_controller%(idx%, "keys_ikop%")
+      Case Else
+        ok% = 1
     End Select
   Loop Until ok%
 
