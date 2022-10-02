@@ -115,10 +115,11 @@ End Function
 
 ' Provides UI for editing an entry in the high-score table.
 '
+' @param  player%   player id, counting from 1.
 ' @param  idx%      index of entry in the highscore.values$ array.
 ' @param  colour_%  player colour.
 ' @param  ctrl$     controller for given player.
-Sub highscore.edit(idx%, colour_%, ctrl$)
+Sub highscore.edit(player%, idx%, colour_%, ctrl$)
   ' 256-bit map of characters that can be entered into the high-score table
   ' via gamepad or joystick. For each character 0-255 the character is allowed
   ' if the corresponding bit is set.
@@ -210,6 +211,14 @@ Sub highscore.edit(idx%, colour_%, ctrl$)
   Loop While key% <> -1
 
   Text x%, y%, Chr$(129), , 1, 1, Rgb(Black)
+
+  ' Don't allow empty names.
+  Local anon% = 1
+  For i% = 1 To Len(name$)
+    If Mid$(name$, i%, 1) <> " " Then anon% = 0
+  Next
+  If anon% Then name$ = "PLAYER " + Str$(player%)
+
   highscore.values$(idx%) = name$ + ", " + Field$(highscore.values$(idx%), 2)
 End Sub
 
