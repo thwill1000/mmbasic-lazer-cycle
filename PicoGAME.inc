@@ -11,7 +11,7 @@
 '    - shortening variable names.
 '    - using different functions to read ports A and B so that pin numbers
 '      can be hard-coded.
-'    - in extremis inlining the xxx_read%() functions to avoid the overhead
+'    - in extremis inlining the controller read functions to avoid the overhead
 '      of a subroutine call.
 '
 ' Note 2:
@@ -21,22 +21,19 @@
 
 If Mm.Info(Option Base) <> 0 Then Error "OPTION BASE 0 required"
 
-Const PORT_A% = 0
-Const PORT_B% = 1
-
-' Button values as returned by xxx_read%() functions.
-Const NES_A%      = 1  ' FIRE on joystick and "B" on SNES.
-Const NES_B%      = 2  ' "Y" on SNES.
-Const NES_SELECT% = 4
-Const NES_START%  = 8
-Const NES_UP%     = 16
-Const NES_DOWN%   = 32
-Const NES_LEFT%   = 64
-Const NES_RIGHT%  = 128
-Const SNES_A%     = 256
-Const SNES_X%     = 512
-Const SNES_LB%    = 1204
-Const SNES_RB%    = 2048
+' Button values as returned by controller read functions.
+Const BTN_A%      = 1  ' FIRE on joystick and "B" on SNES.
+Const BTN_B%      = 2  ' "Y" on SNES.
+Const BTN_SELECT% = 4
+Const BTN_START%  = 8
+Const BTN_UP%     = 16
+Const BTN_DOWN%   = 32
+Const BTN_LEFT%   = 64
+Const BTN_RIGHT%  = 128
+Const BTN_C%      = 256 ' "A" on SNES.
+Const BTN_D%      = 512 ' "X" on SENS.
+Const BTN_E%      = 1204 ' Left-Bumper on SNES.
+Const BTN_F%      = 2048 ' Right-Bumper on SNES.
 
 If InStr(Mm.Device$, "PicoMite") > 0 Then
 
@@ -48,22 +45,49 @@ Dim ATARI_LEFT_PIN%(1)  = ( Mm.Info(PinNo  GP2), Mm.Info(PinNo  GP2) )
 Dim ATARI_RIGHT_PIN%(1) = ( Mm.Info(PinNo  GP3), Mm.Info(PinNo  GP3) )
 
 ' Pin mappings for NES/SNES gamepad.
-Dim NES_CLOCK_PIN%(1) = ( Mm.Info(PinNo  GP3), Mm.Info(PinNo GP22) )
-Dim NES_DATA_PIN%(1)  = ( Mm.Info(PinNo  GP1), Mm.Info(PinNo  GP4) )
-Dim NES_LATCH_PIN%(1) = ( Mm.Info(PinNo  GP2), Mm.Info(PinNo  GP5) )
+Dim BTN_CLOCK_PIN%(1) = ( Mm.Info(PinNo  GP3), Mm.Info(PinNo GP22) )
+Dim BTN_DATA_PIN%(1)  = ( Mm.Info(PinNo  GP1), Mm.Info(PinNo  GP4) )
+Dim BTN_LATCH_PIN%(1) = ( Mm.Info(PinNo  GP2), Mm.Info(PinNo  GP5) )
 
 EndIf
 
 ' The NES standard specifies a 12 micro-second pulse, but all the controllers
 ' I've tested work with 1 micro-second, and possibly less.
-Const NES_PULSE_DURATION! = 0.001 ' 1 micro-second
+Const BTN_PULSE_DURATION! = 0.001 ' 1 micro-second
 
-Dim CONTROLLER_IDS$(3) Length 8 = ( "keyboard", "atari", "nes", "snes" )
-Dim CONTROLLER_NAMES$(3) Length 15 = ( "Keyboard", "Atari Joystick", "NES Gamepad" , "SNES Gamepad" )
+Dim CONTROLLER_IDS$(3) Length 8 = ( "keys_cursor%", "atari%", "nes%", "snes%" )
+Dim CONTROLLER_NAMES$(3) Length 15 = ( "Cursor Keys", "Atari Joystick", "NES Gamepad" , "SNES Gamepad" )
 
 ' +----------------------------------------------------------------------------+
 ' |                         READING GAME CONTROLLERS                           |
 ' +----------------------------------------------------------------------------+
+
+' Clears the keyboard input buffer.
+Sub ctrl.clear_keys()
+  Do While Inkey$ <> "" : Loop
+End Sub
+
+' Calls xxx_open() subroutine for the named controller if it exists.
+Sub ctrl.open(ctrl$)
+  Local open_fn$ = Choice(Mid$(ctrl$, Len(ctrl$)) = "%", Left$(ctrl$, Len(ctrl$) - 1), ctrl$)
+  Cat open_fn$, "_open"
+  On Error Skip 1
+  Call open_fn$
+  If Mm.ErrMsg$ <> "" Then
+    If Mm.ErrMsg$ <> "Unknown user subroutine" Then Error Mm.ErrMsg$
+  EndIf
+End Sub
+
+' Calls xxx_close() subroutine for the named controller if it exists.
+Sub ctrl.close(ctrl$)
+  Local open_fn$ = Choice(Mid$(ctrl$, Len(ctrl$)) = "%", Left$(ctrl$, Len(ctrl$) - 1), ctrl$)
+  Cat open_fn$, "_close"
+  On Error Skip 1
+  Call open_fn$
+  If Mm.ErrMsg$ <> "" Then
+    If Mm.ErrMsg$ <> "Unknown user subroutine" Then Error Mm.ErrMsg$
+  EndIf
+End Sub
 
 ' Waits a specified duration for the user to press START on a (S)NES gamepad
 ' connected to Port A, or FIRE on an ATARI joystick connected to Port A or
@@ -71,76 +95,89 @@ Dim CONTROLLER_NAMES$(3) Length 15 = ( "Keyboard", "Atari Joystick", "NES Gamepa
 '
 ' Note that this function deliberately does not clear the keyboard buffer before
 ' checking to see if SPACE has been pressed; if desired this can be done by
-' calling keyboard_init().
+' calling ctrl.clear_keys().
 '
 ' @param   duration%  duration in milliseconds; if 0 then indefinite.
-' @return             "nes" if the (S)NES START button is pressed,
-'                     or "atari" if the ATARI FIRE button is pressed,
-'                     or "keyboard" if the SPACE key is pressed,
+' @return             "nes_a%" if the (S)NES START button is pressed,
+'                     or "atari_a%" if the ATARI FIRE button is pressed,
+'                     or "keys_cursor%" if the SPACE key is pressed,
 '                     or "" if none of the above before the duration expires.
 Function poll_for_controller$(duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
 
-  ' Short-circuit if we are not on a PicoMite.
+  ' Just check the keyboard if we are not on a PicoMite.
   If InStr(Mm.Device$, "PicoMite") = 0 Then
     Do While poll_for_controller$ = "" And Timer < expires%)
-      poll_for_controller$ = Choice(keyboard_read%(PORT_A%) = NES_A%, "keyboard", "")
+      poll_for_controller$ = Choice(keys_cursor%() = BTN_A%, "keys_cursor%", "")
     Loop
     Exit Function
   EndIf
 
-  Do While poll_for_controller$ = "" And Timer < expires%)
-    If poll_for_controller$ = "" Then
-      nes_init(PORT_A%)
-      poll_for_controller$ = Choice(nes_read%(PORT_A%) = NES_START%, "nes", "")
-    EndIf
-    If poll_for_controller$ = "" Then
-      atari_init(PORT_A%)
-      poll_for_controller$ = Choice(atari_read%(PORT_A%) = NES_A%, "atari", "")
-    EndIf
-    If poll_for_controller$ = "" Then
-      poll_for_controller$ = Choice(keyboard_read%(PORT_A%) = NES_A%, "keyboard", "")
-    EndIf
+  Local read_fn$(2) = ("nes_a%", "atari_a%", "keys_cursor%")
+  Local expected%(2) = (BTN_START%, BTN_A%, BTN_A%)
+  Local i%, t%
+  Do While Timer < expires%
+    For i% = 0 To Bound(read_fn$(), 1)
+      ctrl.open(read_fn$(i%))
+      t% = Min(expires%, Timer + 100)
+      ' Try to read the controller multiple times within a 100ms window.
+      Do
+        If Call(read_fn$(i%)) = expected%(i%) Then
+          poll_for_controller$ = read_fn$(i%)
+          Exit Function
+        EndIf
+      Loop Until Timer >= t%
+    Next
   Loop
 End Function
 
-' Initialises a port connected to an ATARI 1-button joystick.
-'
-' @param idx%   controller port: only port A = 0 is supported.
-Sub atari_init(idx%)
-  SetPin ATARI_UP_PIN%(idx%), DIn
-  SetPin ATARI_DOWN_PIN%(idx%), DIn
-  SetPin ATARI_LEFT_PIN%(idx%), DIn
-  SetPin ATARI_RIGHT_PIN%(idx%), DIn
-  SetPin ATARI_FIRE_PIN%(idx%), DIn
+' Opens port A connected to an ATARI 1-button joystick.
+Sub atari_a_open()
+  SetPin ATARI_UP_PIN%(0), DIn
+  SetPin ATARI_DOWN_PIN%(0), DIn
+  SetPin ATARI_LEFT_PIN%(0), DIn
+  SetPin ATARI_RIGHT_PIN%(0), DIn
+  SetPin ATARI_FIRE_PIN%(0), DIn
 End Sub
 
-' Reads a port connected to an ATARI 1-button joystick.
+' Opens port B connected to an ATARI 1-button joystick.
+Sub atari_b_open()
+  SetPin ATARI_UP_PIN%(1), DIn
+  SetPin ATARI_DOWN_PIN%(1), DIn
+  SetPin ATARI_LEFT_PIN%(1), DIn
+  SetPin ATARI_RIGHT_PIN%(1), DIn
+  SetPin ATARI_FIRE_PIN%(1), DIn
+End Sub
+
+' Reads port A connected to an ATARI 1-button joystick.
 '
-' @param idx%   controller port: only port A = 0 is supported.
-' @return       bitmap corresponding to current controller state:
-'                 7 6 5 4 3 2 1 0
-'                 | | | | | | | |
-'                 | | | | | | | +-- Fire Button
-'                 | | | | | | +---- unused
-'                 | | | | | +------ unused
-'                 | | | | +-------- unused
-'                 | | | +---------- Up
-'                 | | +------------ Down
-'                 | +-------------- Left
-'                 +---------------- Right
-Function atari_read%(idx%)
-  Inc atari_read%, Not Pin(ATARI_FIRE_PIN%(idx%))
-  Inc atari_read%, Not Pin(ATARI_UP_PIN%(idx%)) * 16
-  Inc atari_read%, Not Pin(ATARI_DOWN_PIN%(idx%)) * 32
-  Inc atari_read%, Not Pin(ATARI_LEFT_PIN%(idx%)) * 64
-  Inc atari_read%, Not Pin(ATARI_RIGHT_PIN%(idx%)) * 128
+' @return  bitmap corresponding to current controller state:
+'            7 6 5 4 3 2 1 0
+'            | | | | | | | |
+'            | | | | | | | +-- Fire Button
+'            | | | | | | +---- unused
+'            | | | | | +------ unused
+'            | | | | +-------- unused
+'            | | | +---------- Up
+'            | | +------------ Down
+'            | +-------------- Left
+'            +---------------- Right
+Function atari_a%()
+  Inc atari_a%, Not Pin(ATARI_FIRE_PIN%(0))
+  Inc atari_a%, Not Pin(ATARI_UP_PIN%(0)) * 16
+  Inc atari_a%, Not Pin(ATARI_DOWN_PIN%(0)) * 32
+  Inc atari_a%, Not Pin(ATARI_LEFT_PIN%(0)) * 64
+  Inc atari_a%, Not Pin(ATARI_RIGHT_PIN%(0)) * 128
 End Function
 
-' Initialises the keyboard by clearing the input buffer.
-Sub keyboard_init(idx%)
-  Do While Inkey$ <> "" : Loop
-End Sub
+' Reads port B connected to an ATARI 1-button joystick.
+Function atari_b%()
+  Inc atari_b%, Not Pin(ATARI_FIRE_PIN%(1))
+  Inc atari_b%, Not Pin(ATARI_UP_PIN%(1)) * 16
+  Inc atari_b%, Not Pin(ATARI_DOWN_PIN%(1)) * 32
+  Inc atari_b%, Not Pin(ATARI_LEFT_PIN%(1)) * 64
+  Inc atari_b%, Not Pin(ATARI_RIGHT_PIN%(1)) * 128
+End Function
 
 ' Reads the keyboard as if it were a controller.
 '
@@ -148,107 +185,132 @@ End Sub
 ' reading a single keypress from the input buffer and cannot handle multiple
 ' simultaneous keys or properly handle a key being pressed and not released.
 '
-' @param idx%   if not 0 then this function will return 0.
-' @return       bitmap corresponding to key read:
-'                 7 6 5 4 3 2 1 0
-'                 | | | | | | | |
-'                 | | | | | | | +-- Space
-'                 | | | | | | +---- unused
-'                 | | | | | +------ unused
-'                 | | | | +-------- unused
-'                 | | | +---------- Up
-'                 | | +------------ Down
-'                 | +-------------- Left
-'                 +---------------- Right
-Function keyboard_read%(idx%)
-  If idx% <> PORT_A% Then Exit Function
+' @return  bitmap corresponding to key read:
+'            7 6 5 4 3 2 1 0
+'            | | | | | | | |
+'            | | | | | | | +-- Space
+'            | | | | | | +---- unused
+'            | | | | | +------ unused
+'            | | | | +-------- unused
+'            | | | +---------- Up
+'            | | +------------ Down
+'            | +-------------- Left
+'            +---------------- Right
+Function keys_cursor%()
   Select Case Asc(Inkey$)
-    Case 32  : keyboard_read% = NES_A%
-    Case 128 : keyboard_read% = NES_UP%
-    Case 129 : keyboard_read% = NES_DOWN%
-    Case 130 : keyboard_read% = NES_LEFT%
-    Case 131 : keyboard_read% = NES_RIGHT%
+    Case 32  : keys_cursor% = BTN_A%
+    Case 128 : keys_cursor% = BTN_UP%
+    Case 129 : keys_cursor% = BTN_DOWN%
+    Case 130 : keys_cursor% = BTN_LEFT%
+    Case 131 : keys_cursor% = BTN_RIGHT%
   End Select
 End Function
 
-' Initialises a port connected to a SNES gamepad.
-' - this is the same intialisation as an NES gamepad.
-'
-' @param idx%   controller port: A = 0 or B = 1.
-Sub snes_init(idx%)
-  nes_init(idx%)
+' Opens port A connected to a SNES gamepad.
+Sub snes_a_open()
+  nes_a_open()
 End Sub
 
-' Reads a port connected to a SNES gamepad.
+' Opens port B connected to a SNES gamepad.
+Sub snes_b_open()
+  nes_b_open()
+End Sub
+
+' Reads port A connected to a SNES gamepad.
 '
-' @param idx%   controller port: A = 0 or B = 1.
-' @return       bitmap corresponding to current controller state:
-'                 11 10 9 8 7 6 5 4 3 2 1 0
-'                 |  |  | | | | | | | | | |
-'                 |  |  | | | | | | | | | +-- Button B
-'                 |  |  | | | | | | | | +---- Button Y
-'                 |  |  | | | | | | | +------ Select
-'                 |  |  | | | | | | +-------- Start
-'                 |  |  | | | | | +---------- Up
-'                 |  |  | | | | +------------ Down
-'                 |  |  | | | +-------------- Left
-'                 |  |  | | +---------------- Right
-'                 |  |  | +------------------ Button A
-'                 |  |  +-------------------- Button X
-'                 |  +----------------------- Left Bumper
-'                 +-------------------------- Right Bumper
-Function snes_read%(idx%)
+' @return  bitmap corresponding to current controller state:
+'            11 10 9 8 7 6 5 4 3 2 1 0
+'            |  |  | | | | | | | | | |
+'            |  |  | | | | | | | | | +-- Button B
+'            |  |  | | | | | | | | +---- Button Y
+'            |  |  | | | | | | | +------ Select
+'            |  |  | | | | | | +-------- Start
+'            |  |  | | | | | +---------- Up
+'            |  |  | | | | +------------ Down
+'            |  |  | | | +-------------- Left
+'            |  |  | | +---------------- Right
+'            |  |  | +------------------ Button A
+'            |  |  +-------------------- Button X
+'            |  +----------------------- Left Bumper
+'            +-------------------------- Right Bumper
+Function snes_a%()
   Local i%
-  Pulse NES_LATCH_PIN%(idx%), NES_PULSE_DURATION!
+  Pulse BTN_LATCH_PIN%(0), BTN_PULSE_DURATION!
   For i% = 0 To 11
-    Inc snes_read%, Not Pin(NES_DATA_PIN%(idx%)) * 2^i%
-    Pulse NES_CLOCK_PIN%(idx%), NES_PULSE_DURATION!
+    Inc snes_a%, Not Pin(BTN_DATA_PIN%(0)) * 2^i%
+    Pulse BTN_CLOCK_PIN%(0), BTN_PULSE_DURATION!
   Next
 End Function
 
-' Initialises a port connected to a NES gamepad.
-'
-' @param idx%   controller port: A = 0 or B = 1.
-Sub nes_init(idx%)
-  SetPin NES_LATCH_PIN%(idx%), Dout
-  SetPin NES_CLOCK_PIN%(idx%), Dout
-  SetPin NES_DATA_PIN%(idx%), Din
-  Pin(NES_LATCH_PIN%(idx%)) = 0
-  Pin(NES_CLOCK_PIN%(idx%)) = 0
+' Reads port B connected to a SNES gamepad.
+Function snes_b%()
+  Local i%
+  Pulse BTN_LATCH_PIN%(1), BTN_PULSE_DURATION!
+  For i% = 0 To 11
+    Inc snes_b%, Not Pin(BTN_DATA_PIN%(1)) * 2^i%
+    Pulse BTN_CLOCK_PIN%(1), BTN_PULSE_DURATION!
+  Next
+End Function
+
+' Opens port A connected to a NES gamepad.
+Sub nes_a_open()
+  SetPin BTN_LATCH_PIN%(0), Dout
+  SetPin BTN_CLOCK_PIN%(0), Dout
+  SetPin BTN_DATA_PIN%(0), Din
+  Pin(BTN_LATCH_PIN%(0)) = 0
+  Pin(BTN_CLOCK_PIN%(0)) = 0
 End Sub
 
-' Reads a port connected to a NES gamepad.
+' Opens port B connected to a NES gamepad.
+Sub nes_b_open()
+  SetPin BTN_LATCH_PIN%(1), Dout
+  SetPin BTN_CLOCK_PIN%(1), Dout
+  SetPin BTN_DATA_PIN%(1), Din
+  Pin(BTN_LATCH_PIN%(1)) = 0
+  Pin(BTN_CLOCK_PIN%(1)) = 0
+End Sub
+
+' Reads port A connected to a NES gamepad.
 '
-' @param idx%   controller port: A = 0 or B = 1.
-' @return       bitmap corresponding to current controller state:
-'                 7 6 5 4 3 2 1 0
-'                 | | | | | | | |
-'                 | | | | | | | +-- Button A
-'                 | | | | | | +---- Button B
-'                 | | | | | +------ Select
-'                 | | | | +-------- Start
-'                 | | | +---------- Up
-'                 | | +------------ Down
-'                 | +-------------- Left
-'                 +---------------- Right
+' @return  bitmap corresponding to current controller state:
+'            7 6 5 4 3 2 1 0
+'            | | | | | | | |
+'            | | | | | | | +-- Button A
+'            | | | | | | +---- Button B
+'            | | | | | +------ Select
+'            | | | | +-------- Start
+'            | | | +---------- Up
+'            | | +------------ Down
+'            | +-------------- Left
+'            +---------------- Right
 '
 ' Note that in theory it should not be necessary to pulse the clock pin after
 ' reading bit 7 (Right), but in practice there are some clone NES controllers
 ' which return the wrong value on subsequent reads of bit 7 if it not pulsed.
-Function nes_read%(idx%)
+Function nes_a%()
   Local i%
-  Pulse NES_LATCH_PIN%(idx%), NES_PULSE_DURATION!
+  Pulse BTN_LATCH_PIN%(0), BTN_PULSE_DURATION!
   For i% = 0 To 7
-    Inc nes_read%, Not Pin(NES_DATA_PIN%(idx%)) * 2^i%
-    Pulse NES_CLOCK_PIN%(idx%), NES_PULSE_DURATION!
+    Inc nes_a%, Not Pin(BTN_DATA_PIN%(0)) * 2^i%
+    Pulse BTN_CLOCK_PIN%(0), BTN_PULSE_DURATION!
+  Next
+End Function
+
+' Reads port B connected to a NES gamepad.
+Function nes_b%()
+  Local i%
+  Pulse BTN_LATCH_PIN%(1), BTN_PULSE_DURATION!
+  For i% = 0 To 7
+    Inc nes_b%, Not Pin(BTN_DATA_PIN%(1)) * 2^i%
+    Pulse BTN_CLOCK_PIN%(1), BTN_PULSE_DURATION!
   Next
 End Function
 
 ' Gets a string representation of bits read from a controller.
 '
-' @param id$    controller Id from CONTROLLER_IDS$().
-' @param bits%  controller state returned by xxx_read%() function.
-Function ctrl_bits_to_string$(id$, bits%)
+' @param ctrl$  controller Id from CONTROLLER_IDS$().
+' @param bits%  controller state returned by controller read function.
+Function ctrl_bits_to_string$(ctrl$, bits%)
   ' These are the names of the buttons on a SNES controller;
   ' we adjust them in the SELECT CASE below for NES/ATARI names.
   Static BUTTONS$(11) = ("B","Y","Select","Start","Up","Down","Left","Right","A","X","L","R")
@@ -260,16 +322,16 @@ Function ctrl_bits_to_string$(id$, bits%)
   For i% = 0 To Bound(BUTTONS$(), 1)
     If bits% And 2^i% Then
       s$ = BUTTONS$(i%)
-      Select Case id$
-        Case "atari"
+      Select Case ctrl$
+        Case "atari_a%", "atari_b%"
           If s$ = "B" Then s$ = "Fire"
-        Case "nes"
+        Case "nes_a$", "nes_b%"
           If s$ = "B" Then s$ = "A"
           If s$ = "Y" Then s$ = "B"
-        Case "keyboard", "snes"
+        Case "keys_cursor%", "snes_a%", "snes_b%"
           ' No extra manipulation.
         Case Else
-          Error "Unknown controller: " + id$
+          Error "Unknown controller: " + ctrl$
       End Select
       If count% > 0 Then Cat ctrl_bits_to_string$, ", "
       Cat ctrl_bits_to_string$, s$

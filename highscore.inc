@@ -92,7 +92,7 @@ Function highscore.show_table%(duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
   Local colours%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 
-  keyboard_init()
+  ctrl.clear_keys()
   Do While Timer < expires% And ctrl$ = ""
 
     For i% = 0 To Bound(highscore.values$(), 1) + 1
@@ -143,13 +143,8 @@ Sub highscore.edit(idx%, colour_%, ctrl$)
 
   ' Re-initialise controller as earlier call to poll_for_controller$() will
   ' have reset pins.
-  keyboard_init()
-  Select Case ctrl$
-    Case "ctrl_nes_a%"   : nes_init(PORT_A%)
-    Case "ctrl_nes_b%"   : nes_init(PORT_B%)
-    Case "ctrl_atari_a%" : atari_init(PORT_A%)
-    Case "ctrl_atari_b%" : atari_init(PORT_B%)
-  End Select
+  ctrl.clear_keys()
+  ctrl.open(ctrl$)
 
   Local font_width% = Peek(Byte Mm.Info(Font Address 1))
   Do
@@ -230,23 +225,16 @@ Function highscore.get_input%(ctrl$)
   If highscore.get_input% > 0 Then Exit Function
 
   Local p%, s$
-  Select Case ctrl$
-    Case "ctrl_nes_a%"   : p% = PORT_A% : s$ = "nes"
-    Case "ctrl_nes_b%"   : p% = PORT_B% : s$ = "nes"
-    Case "ctrl_atari_a%" : p% = PORT_A% : s$ = "atari"
-    Case "ctrl_atari_b%" : p% = PORT_B% : s$ = "atari"
-    Case Else            : Exit Function
-  End Select
 
   ' Note that port initialisation should have already occurred earlier.
-  Local k% = Call(s$ + "_read%", p%)
+  Local k% = Call(ctrl$)
   Select Case k%
-    Case NES_A%     : k% = &h83 ' Right arrow
-    Case NES_START% : k% = &h0A ' Line feed \n
-    Case NES_UP%    : k% = &h80 ' Up arrow
-    Case NES_DOWN%  : k% = &h81 ' Down arrow
-    Case NES_LEFT%  : k% = &h82 ' Left arrow
-    Case NES_RIGHT% : k% = &h83 ' Right arrow
+    Case BTN_A%     : k% = &h83 ' Right arrow
+    Case BTN_START% : k% = &h0A ' Line feed \n
+    Case BTN_UP%    : k% = &h80 ' Up arrow
+    Case BTN_DOWN%  : k% = &h81 ' Down arrow
+    Case BTN_LEFT%  : k% = &h82 ' Left arrow
+    Case BTN_RIGHT% : k% = &h83 ' Right arrow
     Case Else       : k% = 0
   End Select
   highscore.get_input% = k%

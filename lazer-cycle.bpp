@@ -55,7 +55,7 @@ Dim SOUNDFX_WIPE%(3)    = (&h3F3E3D3C3B3A3938, &h4746454443424140, &h004E4D4C4B4
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
-Dim COMPASS_TO_CTRL%(3) = (NES_UP%, NES_RIGHT%, NES_DOWN%, NES_LEFT%)
+Dim COMPASS_TO_CTRL%(3) = (BTN_UP%, BTN_RIGHT%, BTN_DOWN%, BTN_LEFT%)
 Dim CTRL_NAMES$(8)
 Dim CTRL_SUBS$(8)
 
@@ -219,7 +219,7 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function wait%(duration%)
-  keyboard_init()
+  ctrl.clear_keys()
   Local ctrl$ = poll_for_controller$(duration%)
   wait% = ctrl$ <> ""
   default_ctrl$ = Choice(default_ctrl$ = "", ctrl$, default_ctrl$)
@@ -243,10 +243,10 @@ Sub show_menu()
 
   ' Initialise cycle.ctrl_backup$() on first entry to this subroutine,
   ' subsequent calls use the previously stored state.
-  If default_ctrl$ = "" Then default_ctrl$ = "keyboard"
+  If default_ctrl$ = "" Then default_ctrl$ = "keys_cursor%"
   If cycle.ctrl_backup$(0) = "" Then
-    cycle.ctrl_backup$(0) = "ctrl_" + default_ctrl$ + "_a%"
-    If cycle.ctrl_backup$(0) = "ctrl_keyboard_a%" Then cycle.ctrl_backup$(0) = "ctrl_keys1%"
+    cycle.ctrl_backup$(0) = default_ctrl$
+    If cycle.ctrl_backup$(0) = "keys_cursor%" Then cycle.ctrl_backup$(0) = "ctrl_keys1%"
     For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ctrl_ai%" : Next
   EndIf
 
@@ -255,8 +255,8 @@ Sub show_menu()
   ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, COLOUR_CYAN%
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, COLOUR_CYAN%
 
-  keyboard_init()
-  Call default_ctrl$ + "_init", PORT_A%
+  ctrl.clear_keys()
+  ctrl.open(default_ctrl$)
 
   Do
 
@@ -272,44 +272,44 @@ Sub show_menu()
       Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_CYAN%
       If IS_CMM2% Then Page Copy 1 To 0, B
       Pause 100
-      keyboard_init()
+      ctrl.clear_keys()
       update% = 0
     EndIf
 
-    key% = Call(default_ctrl$ + "_read%", PORT_A%)
-    If key% = 0 Then key% = keyboard_read%(PORT_A%) ' Always respond to the keyboard.
+    key% = Call(default_ctrl$)
+    If key% = 0 Then key% = keys_cursor%() ' Always respond to the keyboard.
     Select Case key%
-      Case NES_UP%
+      Case BTN_UP%
         If item% > 0 Then
           Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
           Inc item%, -1
           update% = 1
         EndIf
 
-      Case NES_DOWN%
+      Case BTN_DOWN%
         If item% < 7 Then
           Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
           Inc item%
           update% = 1
         EndIf
 
-      Case NES_LEFT%, NES_RIGHT%, NES_A%
+      Case BTN_LEFT%, BTN_RIGHT%, BTN_A%
         Select Case item%
           Case 0
-            If key% = NES_A% Then Exit Do
+            If key% = BTN_A% Then Exit Do
 
           Case 1,2,3,4
-            update_controller(item% - 1, Choice(key% = NES_LEFT%, -1, +1))
+            update_controller(item% - 1, Choice(key% = BTN_LEFT%, -1, +1))
             update% = 1
 
           Case 5 ' Difficulty
-            Inc difficulty%, Choice(key% = NES_LEFT%, -1, 1)
+            Inc difficulty%, Choice(key% = BTN_LEFT%, -1, 1)
             If difficulty% < 1 Then difficulty% = 5
             If difficulty% > 5 Then difficulty% = 1
             update% = 1
 
           Case 6 ' Sound
-            Inc sound_setting%, Choice(key% = NES_LEFT%, -1, 1)
+            Inc sound_setting%, Choice(key% = BTN_LEFT%, -1, 1)
             If sound_setting% < 0 Then sound_setting% = 3
             If sound_setting% > 3 Then sound_setting% = 0
             music_start_ptr% = Choice(sound_setting% And &b10, Peek(VarAddr NO_MUSIC%()), Peek(VarAddr MUSIC%()))
@@ -318,7 +318,7 @@ Sub show_menu()
             update% = 1
 
           Case 7 ' Quit
-            If key% = NES_A% Then End
+            If key% = BTN_A% Then End
 
         End Select
 
@@ -364,12 +364,12 @@ Sub update_controller(idx%, delta%)
 
     ' Check there is no conflict with other player's controller choice.
     Select Case CTRL_SUBS$(i%)
-      Case "ctrl_atari_a%", "ctrl_nes_a%"
-        ok% = Not has_controller%(idx%, "ctrl_atari_a%")
-        ok% = ok% And (Not has_controller%(idx%, "ctrl_nes_a%"))
-      Case "ctrl_atari_b%", "ctrl_nes_b%"
-        ok% = Not has_controller%(idx%, "ctrl_atari_b%")
-        ok% = ok% And (Not has_controller%(idx%, "ctrl_nes_b%"))
+      Case "atari_a%", "nes_a%"
+        ok% = Not has_controller%(idx%, "atari_a%")
+        ok% = ok% And (Not has_controller%(idx%, "nes_a%"))
+      Case "atari_b%", "nes_b%"
+        ok% = Not has_controller%(idx%, "atari_b%")
+        ok% = ok% And (Not has_controller%(idx%, "nes_b%"))
       Case "ctrl_keys1%", "ctrl_keys2%"
         ok% = Not has_controller%(idx%, "ctrl_keys1%")
         ok% = ok% And (Not has_controller%(idx%, "ctrl_keys2%"))
@@ -446,12 +446,7 @@ Sub init_game()
 
   ' Initialise game ports.
   For i% = 0 To MAX_CYCLE_IDX%
-    Select Case cycle.ctrl$(i%)
-      Case "ctrl_nes_a%"   : nes_init(PORT_A%)
-      Case "ctrl_nes_b%"   : nes_init(PORT_B%)
-      Case "ctrl_atari_a%" : atari_init(PORT_A%)
-      Case "ctrl_atari_b%" : atari_init(PORT_B%)
-    End Select
+    ctrl.open(cycle.ctrl$(i%))
   Next
 
 End Sub
@@ -483,7 +478,7 @@ Function game_loop%()
   ' cycle.score%(3) = 975
   ' score% = 3175
 
-  keyboard_init()
+  ctrl.clear_keys()
   If Not attract_mode% Then On Key on_key()
 
   Do While num_players% > 0
@@ -511,10 +506,10 @@ Function game_loop%()
     For i% = 0 To MAX_CYCLE_IDX%
       cycle.current% = i%
       Select Case Call(cycle.ctrl$(i%))
-        Case NES_UP%:    cycle.dir%(i%) = NORTH%
-        Case NES_DOWN%:  cycle.dir%(i%) = SOUTH%
-        Case NES_LEFT%:  cycle.dir%(i%) = WEST%
-        Case NES_RIGHT%: cycle.dir%(i%) = EAST%
+        Case BTN_UP%:    cycle.dir%(i%) = NORTH%
+        Case BTN_DOWN%:  cycle.dir%(i%) = SOUTH%
+        Case BTN_LEFT%:  cycle.dir%(i%) = WEST%
+        Case BTN_RIGHT%: cycle.dir%(i%) = EAST%
       End Select
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
@@ -574,10 +569,10 @@ Sub cycle.dying(idx%)
   cycle.pos%(idx%) = cycle.nxt%(idx%) ' Move
   cycle.current% = idx%
   Select Case ctrl_die%()
-    Case NES_UP%:    cycle.dir%(idx%) = NORTH%
-    Case NES_DOWN%:  cycle.dir%(idx%) = SOUTH%
-    Case NES_LEFT%:  cycle.dir%(idx%) = WEST%
-    Case NES_RIGHT%: cycle.dir%(idx%) = EAST%
+    Case BTN_UP%:    cycle.dir%(idx%) = NORTH%
+    Case BTN_DOWN%:  cycle.dir%(idx%) = SOUTH%
+    Case BTN_LEFT%:  cycle.dir%(idx%) = WEST%
+    Case BTN_RIGHT%: cycle.dir%(idx%) = EAST%
   End Select
   cycle.nxt%(idx%) = cycle.pos%(idx%) + DIRECTIONS%(cycle.dir%(idx%))
   cycle.check_collision(idx%)
@@ -643,66 +638,50 @@ Function ctrl_die%()
   ctrl_die% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 3) + 2) Mod 4)
 End Function
 
-Function ctrl_nes_a%()
-  ctrl_nes_a% = nes_read%(PORT_A%)
-End Function
-
-Function ctrl_nes_b%()
-  ctrl_nes_b% = nes_read%(PORT_B%)
-End Function
-
-Function ctrl_atari_a%()
-  ctrl_atari_a% = atari_read%(PORT_A%)
-End Function
-
-Function ctrl_atari_b%()
-  ctrl_atari_b% = atari_read%(PORT_B%)
-End Function
-
 Function ctrl_keys1%()
   If Peek(Var keys%(), 65) Then      ' A
-    ctrl_keys1% = NES_UP%
+    ctrl_keys1% = BTN_UP%
     Poke Var keys%(), 65, 0
   ElseIf Peek(Var keys%(), 90) Then  ' Z
-    ctrl_keys1% = NES_DOWN%
+    ctrl_keys1% = BTN_DOWN%
     Poke Var keys%(), 90, 0
   ElseIf Peek(Var keys%(), 46) Then   ' full-stop
-    ctrl_keys1% = NES_RIGHT%
+    ctrl_keys1% = BTN_RIGHT%
     Poke Var keys%(), 46, 0
   ElseIf Peek(Var keys%(), 44) Then   ' comma
-    ctrl_keys1% = NES_LEFT%
+    ctrl_keys1% = BTN_LEFT%
     Poke Var keys%(), 44, 0
   EndIf
 End Function
 
 Function ctrl_keys2%()
   If Peek(Var keys%(), 65) Then      ' A
-    ctrl_keys2% = NES_UP%
+    ctrl_keys2% = BTN_UP%
     Poke Var keys%(), 65, 0
   ElseIf Peek(Var keys%(), 90) Then  ' Z
-    ctrl_keys2% = NES_DOWN%
+    ctrl_keys2% = BTN_DOWN%
     Poke Var keys%(), 90, 0
   ElseIf Peek(Var keys%(), 67) Then  ' C
-    ctrl_keys2% = NES_RIGHT%
+    ctrl_keys2% = BTN_RIGHT%
     Poke Var keys%(), 67, 0
   ElseIf Peek(Var keys%(), 88) Then  ' X
-    ctrl_keys2% = NES_LEFT%
+    ctrl_keys2% = BTN_LEFT%
     Poke Var keys%(), 88, 0
   EndIf
 End Function
 
 Function ctrl_keys3%()
   If Peek(Var keys%(), 73) Then      ' I
-    ctrl_keys3% = NES_UP%
+    ctrl_keys3% = BTN_UP%
     Poke Var keys%(), 73, 0
   ElseIf Peek(Var keys%(), 75) Then  ' K
-    ctrl_keys3% = NES_DOWN%
+    ctrl_keys3% = BTN_DOWN%
     Poke Var keys%(), 75, 0
   ElseIf Peek(Var keys%(), 80) Then  ' P
-    ctrl_keys3% = NES_RIGHT%
+    ctrl_keys3% = BTN_RIGHT%
     Poke Var keys%(), 80, 0
   ElseIf Peek(Var keys%(), 79) Then  ' O
-    ctrl_keys3% = NES_LEFT%
+    ctrl_keys3% = BTN_LEFT%
     Poke Var keys%(), 79, 0
   EndIf
 End Function
@@ -827,10 +806,10 @@ controller_data:
 Data "KEYS: AZ,.", "ctrl_keys1%"
 Data "KEYS: AZXC", "ctrl_keys2%"
 Data "KEYS: IKOP", "ctrl_keys3%"
-Data "GAMEPAD A",  "ctrl_nes_a%"
-Data "GAMEPAD B",  "ctrl_nes_b%"
-Data "JOYSTICK A", "ctrl_atari_a%"
-Data "JOYSTICK B", "ctrl_atari_b%"
+Data "GAMEPAD A",  "nes_a%"
+Data "GAMEPAD B",  "nes_b%"
+Data "JOYSTICK A", "atari_a%"
+Data "JOYSTICK B", "atari_b%"
 Data "AI",         "ctrl_ai%"
 Data "NONE",       "ctrl_none%"
 
