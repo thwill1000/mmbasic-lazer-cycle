@@ -246,7 +246,7 @@ Sub show_menu()
   If cycle.ctrl_backup$(0) = "" Then
     cycle.ctrl_backup$(0) = default_ctrl$
     If cycle.ctrl_backup$(0) = "keys_cursor%" Then cycle.ctrl_backup$(0) = "keys_cegg%"
-    For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ctrl_ai%" : Next
+    For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ai_control%" : Next
   EndIf
 
   For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
@@ -391,7 +391,7 @@ End Function
 Sub init_attract_mode()
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
-    cycle.ctrl$(i%) = "ctrl_ai%"
+    cycle.ctrl$(i%) = "ai_control%"
   Next
   attract_mode% = 1
 End Sub
@@ -425,15 +425,15 @@ Sub init_game()
 
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
-    cycle.is_ai%(i%) = cycle.ctrl$(i%) = "ctrl_ai%"
+    cycle.is_ai%(i%) = cycle.ctrl$(i%) = "ai_control%"
     cycle.score%(i%) = 0
-    If cycle.ctrl$(i%) = "ctrl_none%" Then
+    If cycle.ctrl$(i%) = "noop_control%" Then
       cycle.pos%(i%) = -1
       cycle.nxt%(i%) = -1
       cycle.state%(i%) = STATE_DEAD%
     Else
       Inc num_players%
-      If cycle.ctrl$(i%) <> "ctrl_ai%" Then Inc num_humans%
+      If cycle.ctrl$(i%) <> "ai_control%" Then Inc num_humans%
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       Poke Byte p_arena% + cycle.pos%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
       Poke Byte p_arena% + cycle.nxt%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
@@ -607,7 +607,7 @@ Sub show_game_over()
   If new_highscore% Then highscore.save(HIGHSCORE_FILENAME$)
 End Sub
 
-Function ctrl_ai%()
+Function ai_control%()
   Local idx% = cycle.current%
   Local d% = cycle.dir%(idx%)
 
@@ -623,7 +623,7 @@ Function ctrl_ai%()
     d% = NEXT_DIR%(i% + idx%)
   Next
 
-  ctrl_ai% = COMPASS_TO_CTRL%(d%)
+  ai_control% = COMPASS_TO_CTRL%(d%)
 End Function
 
 Function ctrl_die%()
@@ -651,7 +651,7 @@ Function keys_ikop%()
   keys_ikop% = keys_ikop% Or ctrl.keydown%(112) * BTN_RIGHT% ' P
 End Function
 
-Function ctrl_none%()
+Function noop_control%()
   ' Do nothing.
 End Function
 
@@ -661,7 +661,7 @@ Sub cycle.check_collision(idx%)
     Poke Var arena%(), cycle.pos%(idx%), 0
     Local mask% = (idx% << 1) + 1
     If (Peek(Var arena%(), cycle.nxt%(idx%)) And mask%) <> mask% Then
-      cycle.ctrl$(idx%) = "ctrl_none%"
+      cycle.ctrl$(idx%) = "noop_control%"
       cycle.state%(idx%) = STATE_DEAD%
       cycle.pos%(idx%) = -1
     EndIf
@@ -681,7 +681,7 @@ Sub cycle.check_collision(idx%)
 
   ' Time to die.
   Inc num_players%, -1
-  If cycle.ctrl$(idx%) <> "ctrl_ai%" Then
+  If cycle.ctrl$(idx%) <> "ai_control%" Then
     Inc num_humans%, -1
     If num_humans% = 0 Then
       On Key 0
@@ -770,8 +770,8 @@ Data "GAMEPAD A",  "nes_a%"
 Data "GAMEPAD B",  "nes_b%"
 Data "JOYSTICK A", "atari_a%"
 Data "JOYSTICK B", "atari_b%"
-Data "AI",         "ctrl_ai%"
-Data "NONE",       "ctrl_none%"
+Data "AI",         "ai_control%"
+Data "NONE",       "noop_control%"
 
 highscore_data:
 
