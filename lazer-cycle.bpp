@@ -246,7 +246,7 @@ Sub show_menu()
   If default_ctrl$ = "" Then default_ctrl$ = "keys_cursor%"
   If cycle.ctrl_backup$(0) = "" Then
     cycle.ctrl_backup$(0) = default_ctrl$
-    If cycle.ctrl_backup$(0) = "keys_cursor%" Then cycle.ctrl_backup$(0) = "ctrl_keys1%"
+    If cycle.ctrl_backup$(0) = "keys_cursor%" Then cycle.ctrl_backup$(0) = "keys_cegg%"
     For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ctrl_ai%" : Next
   EndIf
 
@@ -370,11 +370,11 @@ Sub update_controller(idx%, delta%)
       Case "atari_b%", "nes_b%"
         ok% = Not has_controller%(idx%, "atari_b%")
         ok% = ok% And (Not has_controller%(idx%, "nes_b%"))
-      Case "ctrl_keys1%", "ctrl_keys2%"
-        ok% = Not has_controller%(idx%, "ctrl_keys1%")
-        ok% = ok% And (Not has_controller%(idx%, "ctrl_keys2%"))
-      Case "ctrl_keys3%"
-        ok% = Not has_controller%(idx%, "ctrl_keys3%")
+      Case "keys_cegg%", "keys_azxc%"
+        ok% = Not has_controller%(idx%, "keys_cegg%")
+        ok% = ok% And (Not has_controller%(idx%, "keys_azxc%"))
+      Case "keys_ikop%"
+        ok% = Not has_controller%(idx%, "keys_ikop%")
     End Select
   Loop Until ok%
 
@@ -638,50 +638,50 @@ Function ctrl_die%()
   ctrl_die% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 3) + 2) Mod 4)
 End Function
 
-Function ctrl_keys1%()
+Function keys_cegg%()
   If Peek(Var keys%(), 65) Then      ' A
-    ctrl_keys1% = BTN_UP%
+    keys_cegg% = BTN_UP%
     Poke Var keys%(), 65, 0
   ElseIf Peek(Var keys%(), 90) Then  ' Z
-    ctrl_keys1% = BTN_DOWN%
+    keys_cegg% = BTN_DOWN%
     Poke Var keys%(), 90, 0
   ElseIf Peek(Var keys%(), 46) Then   ' full-stop
-    ctrl_keys1% = BTN_RIGHT%
+    keys_cegg% = BTN_RIGHT%
     Poke Var keys%(), 46, 0
   ElseIf Peek(Var keys%(), 44) Then   ' comma
-    ctrl_keys1% = BTN_LEFT%
+    keys_cegg% = BTN_LEFT%
     Poke Var keys%(), 44, 0
   EndIf
 End Function
 
-Function ctrl_keys2%()
+Function keys_azxc%()
   If Peek(Var keys%(), 65) Then      ' A
-    ctrl_keys2% = BTN_UP%
+    keys_azxc% = BTN_UP%
     Poke Var keys%(), 65, 0
   ElseIf Peek(Var keys%(), 90) Then  ' Z
-    ctrl_keys2% = BTN_DOWN%
+    keys_azxc% = BTN_DOWN%
     Poke Var keys%(), 90, 0
   ElseIf Peek(Var keys%(), 67) Then  ' C
-    ctrl_keys2% = BTN_RIGHT%
+    keys_azxc% = BTN_RIGHT%
     Poke Var keys%(), 67, 0
   ElseIf Peek(Var keys%(), 88) Then  ' X
-    ctrl_keys2% = BTN_LEFT%
+    keys_azxc% = BTN_LEFT%
     Poke Var keys%(), 88, 0
   EndIf
 End Function
 
-Function ctrl_keys3%()
+Function keys_ikop%()
   If Peek(Var keys%(), 73) Then      ' I
-    ctrl_keys3% = BTN_UP%
+    keys_ikop% = BTN_UP%
     Poke Var keys%(), 73, 0
   ElseIf Peek(Var keys%(), 75) Then  ' K
-    ctrl_keys3% = BTN_DOWN%
+    keys_ikop% = BTN_DOWN%
     Poke Var keys%(), 75, 0
   ElseIf Peek(Var keys%(), 80) Then  ' P
-    ctrl_keys3% = BTN_RIGHT%
+    keys_ikop% = BTN_RIGHT%
     Poke Var keys%(), 80, 0
   ElseIf Peek(Var keys%(), 79) Then  ' O
-    ctrl_keys3% = BTN_LEFT%
+    keys_ikop% = BTN_LEFT%
     Poke Var keys%(), 79, 0
   EndIf
 End Function
@@ -803,9 +803,9 @@ Data &hFFFF000000000000, &hFFFFFFFFFFFFFFFF, &hFFFFFFFFFFFFFFFF
 
 controller_data:
 
-Data "KEYS: AZ,.", "ctrl_keys1%"
-Data "KEYS: AZXC", "ctrl_keys2%"
-Data "KEYS: IKOP", "ctrl_keys3%"
+Data "KEYS: AZ,.", "keys_cegg%"
+Data "KEYS: AZXC", "keys_azxc%"
+Data "KEYS: IKOP", "keys_ikop%"
 Data "GAMEPAD A",  "nes_a%"
 Data "GAMEPAD B",  "nes_b%"
 Data "JOYSTICK A", "atari_a%"
