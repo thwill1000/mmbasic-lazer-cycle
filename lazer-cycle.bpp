@@ -9,7 +9,7 @@ Option Explicit On
 ' Option LcdPanel NoConsole
 
 #Include "ctrl-pmv.inc"
-#Include "highscore.inc"
+#Include "highscr.inc"
 
 Const VERSION$ = "0.9.0"
 
@@ -169,11 +169,11 @@ Sub init_globals()
   Next
 
   Restore highscore_data
-  Local defaults$(Bound(highscore.values$(), 1))
+  Local defaults$(Bound(highscr.values$(), 1))
   For i% = 0 To Bound(defaults$(), 1)
     Read defaults$(i%)
   Next
-  highscore.load(HIGHSCORE_FILENAME$, defaults$())
+  highscr.load(HIGHSCORE_FILENAME$, defaults$())
 End Sub
 
 Sub read_music()
@@ -213,7 +213,7 @@ End Function
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_highscore%(duration%)
-  Local ctrl$ = highscore.show_table$(5000)
+  Local ctrl$ = highscr.show_table$(5000)
   If ctrl$ <> "" Then
     ui_ctrl$ = ctrl$
     show_highscore% = 1
@@ -609,19 +609,19 @@ Sub show_game_over()
   For i% = 0 To MAX_CYCLE_IDX%
     player% = idx%(i%)
     If cycle.is_ai%(player%) Then Continue For
-    For j% = 0 To Bound(highscore.values$())
-      If cycle.score%(i%) > Val(Field$(highscore.values$(j%), 2)) Then
-        For k% = Bound(highscore.values$(), 1) To j% Step -1
-          If k% <> 0 Then highscore.values$(k%) = highscore.values$(k% - 1)
+    For j% = 0 To Bound(highscr.values$())
+      If cycle.score%(i%) > Val(Field$(highscr.values$(j%), 2)) Then
+        For k% = Bound(highscr.values$(), 1) To j% Step -1
+          If k% <> 0 Then highscr.values$(k%) = highscr.values$(k% - 1)
         Next
-        highscore.values$(j%) = ", " + Str$(cycle.score%(i%))
-        highscore.edit(player% + 1, j%, cycle.colour%(player%), cycle.ctrl_backup$(player%))
+        highscr.values$(j%) = ", " + Str$(cycle.score%(i%))
+        highscr.edit(player% + 1, j%, cycle.colour%(player%), cycle.ctrl_backup$(player%))
         new_highscore% = 1
         Exit For
       EndIf
     Next
   Next
-  If new_highscore% Then highscore.save(HIGHSCORE_FILENAME$)
+  If new_highscore% Then highscr.save(HIGHSCORE_FILENAME$)
 End Sub
 
 Function ai_control%()

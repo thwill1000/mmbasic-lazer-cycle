@@ -2,19 +2,19 @@
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.05
 
-Const highscore.MAX_NAME_LEN% = 8
+Const highscr.MAX_NAME_LEN% = 8
 
-Dim highscore.values$(9) Length highscore.MAX_NAME_LEN% + 7
+Dim highscr.values$(9) Length highscr.MAX_NAME_LEN% + 7
 
-Sub highscore.load(filename$, defaults$())
+Sub highscr.load(filename$, defaults$())
   ' It is convenient to always fill with the defaults
   ' even if we end up overwriting them immediately.
-  If Bound(highscore.values$(), 1) <> Bound(defaults$()) Then
+  If Bound(highscr.values$(), 1) <> Bound(defaults$()) Then
     Error "Invalid number of high-score defaults"
   EndIf
   Local i%
-  For i% = 0 To Bound(highscore.values$())
-    highscore.values$(i%) = defaults$(i%)
+  For i% = 0 To Bound(highscr.values$())
+    highscr.values$(i%) = defaults$(i%)
   Next
 
   ' If there is no SD Card then do not load high-scores.
@@ -54,26 +54,26 @@ Sub highscore.load(filename$, defaults$())
 
   ' Read the file.
   Open filename$ For Input As #1
-  For i% = 0 To Bound(highscore.values$())
-    Line Input #1, highscore.values$(i%)
-    ok% = ok% And Field$(highscore.values$(i%), 1) <> ""
-    ok% = ok% And Field$(highscore.values$(i%), 2) <> ""
-    ok% = ok% And Val(Field$(highscore.values$(i%), 2)) > 0
+  For i% = 0 To Bound(highscr.values$())
+    Line Input #1, highscr.values$(i%)
+    ok% = ok% And Field$(highscr.values$(i%), 1) <> ""
+    ok% = ok% And Field$(highscr.values$(i%), 2) <> ""
+    ok% = ok% And Val(Field$(highscr.values$(i%), 2)) > 0
     If Not ok% Then Error "Invalid high-score file '" + filename$ + "'"
   Next
   Close #1
 End Sub
 
 ' Assumes parent directory of filename$ already exists.
-Sub highscore.save(filename$)
+Sub highscr.save(filename$)
   ' If there is no SD Card then do not save high-scores.
   Local has_sdcard% = UCase$(Mm.Info$(SdCard)) = "READY"
   If Not has_sdcard% Then Exit Sub
 
   Open filename$ For Output As #1
   Local i%
-  For i% = 0 To Bound(highscore.values$())
-    Print #1, highscore.values$(i%)
+  For i% = 0 To Bound(highscr.values$())
+    Print #1, highscr.values$(i%)
   Next
   Close #1
 End Sub
@@ -84,7 +84,7 @@ End Sub
 ' @param duration%  duration in milliseconds; if 0 then indefinite.
 ' @return           controller id if user pressed button/key,
 '                   empty string if the duration expired.
-Function highscore.show_table$(duration%)
+Function highscr.show_table$(duration%)
   Const ch$ = Chr$(205)
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
 
@@ -93,12 +93,12 @@ Function highscore.show_table$(duration%)
   Local colours%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 
   ctrl.init_keys()
-  Do While Timer < expires% And highscore.show_table$ = ""
+  Do While Timer < expires% And highscr.show_table$ = ""
 
-    For i% = 0 To Bound(highscore.values$(), 1) + 1
-      If i% <= Bound(highscore.values$(), 1) Then
-        name$ = str.rpad$(Field$(highscore.values$(i%), 1), highscore.MAX_NAME_LEN%)
-        score$ = str.lpad$(Field$(highscore.values$(i%), 2), 5)
+    For i% = 0 To Bound(highscr.values$(), 1) + 1
+      If i% <= Bound(highscr.values$(), 1) Then
+        name$ = str.rpad$(Field$(highscr.values$(i%), 1), highscr.MAX_NAME_LEN%)
+        score$ = str.lpad$(Field$(highscr.values$(i%), 2), 5)
         y% = Y_OFFSET% - 75 + 15 * i%
         Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, colours%(col_idx%)
       EndIf
@@ -107,17 +107,17 @@ Function highscore.show_table$(duration%)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-    highscore.show_table$ = poll_for_controller$(200)
+    highscr.show_table$ = poll_for_controller$(200)
   Loop
 End Function
 
 ' Provides UI for editing an entry in the high-score table.
 '
 ' @param  player%   player id, counting from 1.
-' @param  idx%      index of entry in the highscore.values$ array.
+' @param  idx%      index of entry in the highscr.values$ array.
 ' @param  colour_%  player colour.
 ' @param  ctrl$     controller id for given player.
-Sub highscore.edit(player%, idx%, colour_%, ctrl$)
+Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   ' 256-bit map of characters that can be entered into the high-score table
   ' via gamepad or joystick. For each character 0-255 the character is allowed
   ' if the corresponding bit is set.
@@ -129,9 +129,9 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
 
   ' Draw current high-score table.
   Local i%, name$, score$, x%, y%
-  For i% = 0 To Bound(highscore.values$(), 1)
-    name$ = str.rpad$(Field$(highscore.values$(i%), 1), highscore.MAX_NAME_LEN%)
-    score$ = str.lpad$(Field$(highscore.values$(i%), 2), 5)
+  For i% = 0 To Bound(highscr.values$(), 1)
+    name$ = str.rpad$(Field$(highscr.values$(i%), 1), highscr.MAX_NAME_LEN%)
+    score$ = str.lpad$(Field$(highscr.values$(i%), 2), 5)
     y% = Y_OFFSET% - 75 + 15 * i%
     Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, colour_%, Rgb(Blue))
   Next
@@ -159,7 +159,7 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
       t% = Timer
     EndIf
 
-    For i% = 1 To highscore.MAX_NAME_LEN%
+    For i% = 1 To highscr.MAX_NAME_LEN%
       bg% = Choice((i% = p%) And cursor%, colour_%, Rgb(Black))
       fg% = Choice((i% = p%) And cursor%, Rgb(Black), colour_%)
       ch$ = Choice(i% <= Len(name$), Mid$(name$, i%, 1), " ")
@@ -175,7 +175,7 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
     Pause 100
 
-    key% = highscore.get_input%(ctrl$)
+    key% = highscr.get_input%(ctrl$)
     If key% > 0 Then
       play_sound% = 1
       Select Case key%
@@ -199,8 +199,8 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
           key% = -1 ' So we exit the DO LOOP.
         Case &h20 To &h7E
           Do While p% > Len(name$) : Cat name$, " " : Loop
-          name$ = Left$(Left$(name$, p% - 1) + Chr$(key%) + Mid$(name$, p%), highscore.MAX_NAME_LEN%)
-          If p% < highscore.MAX_NAME_LEN% Then Inc p%, 1
+          name$ = Left$(Left$(name$, p% - 1) + Chr$(key%) + Mid$(name$, p%), highscr.MAX_NAME_LEN%)
+          If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1
         Case &h80, &h81 ' Up and down arrows
           i% = Asc(Mid$(name$, p%, 1))
           If i% = 0 Then i% = 64 ' @
@@ -214,7 +214,7 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
         Case &h82 ' Left arrow
           If p% > 1 Then Inc p%, -1
         Case &h83 ' Right arrow
-          If p% < highscore.MAX_NAME_LEN% Then Inc p%, 1 Else key% = -1
+          If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1 Else key% = -1
         Case Else
           play_sound% = 0
       End Select
@@ -237,7 +237,7 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
   Next
   If anon% Then name$ = "PLAYER " + Str$(player%)
 
-  highscore.values$(idx%) = name$ + ", " + Field$(highscore.values$(idx%), 2)
+  highscr.values$(idx%) = name$ + ", " + Field$(highscr.values$(idx%), 2)
 End Sub
 
 ' Gets player input to edit entry in the high-score table.
@@ -245,9 +245,9 @@ End Sub
 ' @param  ctrl$    controller for given player.
 ' @return          ASCII code of key pressed, or negative of value read
 '                  from player's configured controller port.
-Function highscore.get_input%(ctrl$)
-  highscore.get_input% = Asc(UCase$(Inkey$))
-  If highscore.get_input% > 0 Then Exit Function
+Function highscr.get_input%(ctrl$)
+  highscr.get_input% = Asc(UCase$(Inkey$))
+  If highscr.get_input% > 0 Then Exit Function
 
   ' Note that port initialisation should have already occurred earlier.
   Local k% = Call(ctrl$)
@@ -259,5 +259,5 @@ Function highscore.get_input%(ctrl$)
     Case BTN_RIGHT% : k% = &h83 ' Right arrow
     Case Else       : k% = 0
   End Select
-  highscore.get_input% = k%
+  highscr.get_input% = k%
 End Function
