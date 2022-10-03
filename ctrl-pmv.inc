@@ -47,15 +47,15 @@ Dim ATARI_LEFT_PIN%(1)  = ( Mm.Info(PinNo  GP2), Mm.Info(PinNo  GP2) )
 Dim ATARI_RIGHT_PIN%(1) = ( Mm.Info(PinNo  GP3), Mm.Info(PinNo  GP3) )
 
 ' Pin mappings for NES/SNES gamepad.
-Dim BTN_CLOCK_PIN%(1) = ( Mm.Info(PinNo  GP3), Mm.Info(PinNo GP22) )
-Dim BTN_DATA_PIN%(1)  = ( Mm.Info(PinNo  GP1), Mm.Info(PinNo  GP4) )
-Dim BTN_LATCH_PIN%(1) = ( Mm.Info(PinNo  GP2), Mm.Info(PinNo  GP5) )
+Dim NES_CLOCK_PIN%(1) = ( Mm.Info(PinNo  GP3), Mm.Info(PinNo GP22) )
+Dim NES_DATA_PIN%(1)  = ( Mm.Info(PinNo  GP1), Mm.Info(PinNo  GP4) )
+Dim NES_LATCH_PIN%(1) = ( Mm.Info(PinNo  GP2), Mm.Info(PinNo  GP5) )
 
 EndIf
 
 ' The NES standard specifies a 12 micro-second pulse, but all the controllers
 ' I've tested work with 1 micro-second, and possibly less.
-Const BTN_PULSE_DURATION! = 0.001 ' 1 micro-second
+Const NES_PULSE_DURATION! = 0.001 ' 1 micro-second
 
 Dim CONTROLLER_IDS$(3) Length 8 = ("keys_cursor%", "atari%", "nes%", "snes%")
 Dim CONTROLLER_NAMES$(3) Length 15 = ("Cursor Keys", "Atari Joystick", "NES Gamepad" , "SNES Gamepad")
@@ -259,39 +259,39 @@ End Sub
 '            +-------------------------- Right Bumper
 Function snes_a%()
   Local i%
-  Pulse BTN_LATCH_PIN%(0), BTN_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(0), NES_PULSE_DURATION!
   For i% = 0 To 11
-    Inc snes_a%, Not Pin(BTN_DATA_PIN%(0)) * 2^i%
-    Pulse BTN_CLOCK_PIN%(0), BTN_PULSE_DURATION!
+    Inc snes_a%, Not Pin(NES_DATA_PIN%(0)) * 2^i%
+    Pulse NES_CLOCK_PIN%(0), NES_PULSE_DURATION!
   Next
 End Function
 
 ' Reads port B connected to a SNES gamepad.
 Function snes_b%()
   Local i%
-  Pulse BTN_LATCH_PIN%(1), BTN_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(1), NES_PULSE_DURATION!
   For i% = 0 To 11
-    Inc snes_b%, Not Pin(BTN_DATA_PIN%(1)) * 2^i%
-    Pulse BTN_CLOCK_PIN%(1), BTN_PULSE_DURATION!
+    Inc snes_b%, Not Pin(NES_DATA_PIN%(1)) * 2^i%
+    Pulse NES_CLOCK_PIN%(1), NES_PULSE_DURATION!
   Next
 End Function
 
 ' Opens port A connected to a NES gamepad.
 Sub nes_a_open()
-  SetPin BTN_LATCH_PIN%(0), Dout
-  SetPin BTN_CLOCK_PIN%(0), Dout
-  SetPin BTN_DATA_PIN%(0), Din
-  Pin(BTN_LATCH_PIN%(0)) = 0
-  Pin(BTN_CLOCK_PIN%(0)) = 0
+  SetPin NES_LATCH_PIN%(0), Dout
+  SetPin NES_CLOCK_PIN%(0), Dout
+  SetPin NES_DATA_PIN%(0), Din
+  Pin(NES_LATCH_PIN%(0)) = 0
+  Pin(NES_CLOCK_PIN%(0)) = 0
 End Sub
 
 ' Opens port B connected to a NES gamepad.
 Sub nes_b_open()
-  SetPin BTN_LATCH_PIN%(1), Dout
-  SetPin BTN_CLOCK_PIN%(1), Dout
-  SetPin BTN_DATA_PIN%(1), Din
-  Pin(BTN_LATCH_PIN%(1)) = 0
-  Pin(BTN_CLOCK_PIN%(1)) = 0
+  SetPin NES_LATCH_PIN%(1), Dout
+  SetPin NES_CLOCK_PIN%(1), Dout
+  SetPin NES_DATA_PIN%(1), Din
+  Pin(NES_LATCH_PIN%(1)) = 0
+  Pin(NES_CLOCK_PIN%(1)) = 0
 End Sub
 
 ' Reads port A connected to a NES gamepad.
@@ -313,20 +313,20 @@ End Sub
 ' which return the wrong value on subsequent reads of bit 7 if it not pulsed.
 Function nes_a%()
   Local i%
-  Pulse BTN_LATCH_PIN%(0), BTN_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(0), NES_PULSE_DURATION!
   For i% = 0 To 7
-    Inc nes_a%, Not Pin(BTN_DATA_PIN%(0)) * 2^i%
-    Pulse BTN_CLOCK_PIN%(0), BTN_PULSE_DURATION!
+    Inc nes_a%, Not Pin(NES_DATA_PIN%(0)) * 2^i%
+    Pulse NES_CLOCK_PIN%(0), NES_PULSE_DURATION!
   Next
 End Function
 
 ' Reads port B connected to a NES gamepad.
 Function nes_b%()
   Local i%
-  Pulse BTN_LATCH_PIN%(1), BTN_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(1), NES_PULSE_DURATION!
   For i% = 0 To 7
-    Inc nes_b%, Not Pin(BTN_DATA_PIN%(1)) * 2^i%
-    Pulse BTN_CLOCK_PIN%(1), BTN_PULSE_DURATION!
+    Inc nes_b%, Not Pin(NES_DATA_PIN%(1)) * 2^i%
+    Pulse NES_CLOCK_PIN%(1), NES_PULSE_DURATION!
   Next
 End Function
 
