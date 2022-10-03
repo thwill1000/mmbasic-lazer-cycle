@@ -24,18 +24,18 @@
 If Mm.Info(Option Base) <> 0 Then Error "OPTION BASE 0 required"
 
 ' Button values as returned by controller read functions.
-Const BTN_A%      = 1  ' FIRE on joystick and "B" on SNES.
-Const BTN_B%      = 2  ' "Y" on SNES.
-Const BTN_SELECT% = 4
-Const BTN_START%  = 8
-Const BTN_UP%     = 16
-Const BTN_DOWN%   = 32
-Const BTN_LEFT%   = 64
-Const BTN_RIGHT%  = 128
-Const BTN_C%      = 256 ' "A" on SNES.
-Const BTN_D%      = 512 ' "X" on SENS.
-Const BTN_E%      = 1204 ' Left-Bumper on SNES.
-Const BTN_F%      = 2048 ' Right-Bumper on SNES.
+Const ctrl.A%      = 1  ' FIRE on joystick and "B" on SNES.
+Const ctrl.B%      = 2  ' "Y" on SNES.
+Const ctrl.SELECT% = 4
+Const ctrl.START%  = 8
+Const ctrl.UP%     = 16
+Const ctrl.DOWN%   = 32
+Const ctrl.LEFT%   = 64
+Const ctrl.RIGHT%  = 128
+Const ctrl.C%      = 256 ' "A" on SNES.
+Const ctrl.D%      = 512 ' "X" on SENS.
+Const ctrl.E%      = 1204 ' Left-Bumper on SNES.
+Const ctrl.F%      = 2048 ' Right-Bumper on SNES.
 
 If InStr(Mm.Device$, "PicoMite") > 0 Then
 
@@ -55,10 +55,10 @@ EndIf
 
 ' The NES standard specifies a 12 micro-second pulse, but all the controllers
 ' I've tested work with 1 micro-second, and possibly less.
-Const NES_PULSE_DURATION! = 0.001 ' 1 micro-second
+Const NES_PULSE! = 0.001 ' 1 micro-second
 
-Dim CONTROLLER_IDS$(3) Length 8 = ("keys_cursor%", "atari%", "nes%", "snes%")
-Dim CONTROLLER_NAMES$(3) Length 15 = ("Cursor Keys", "Atari Joystick", "NES Gamepad" , "SNES Gamepad")
+Dim ctrl.IDS$(3) Length 8 = ("keys_cursor%", "atari%", "nes%", "snes%")
+Dim ctrl.NAMES$(3) Length 15 = ("Cursor Keys", "Atari Joystick", "NES Gamepad" , "SNES Gamepad")
 
 ' When a key is pressed ctrl.on_key() sets the corresponding byte of this
 ' 256-byte map to 1. When ctrl.keydown(i%) is called the corresponding
@@ -128,19 +128,19 @@ End Sub
 '                     or "atari_a%" if the ATARI FIRE button is pressed,
 '                     or "keys_cursor%" if the SPACE key is pressed,
 '                     or "" if none of the above before the duration expires.
-Function poll_for_controller$(duration%)
+Function ctrl.poll$(duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
 
   ' Just check the keyboard if we are not on a PicoMite.
   If InStr(Mm.Device$, "PicoMite") = 0 Then
-    Do While poll_for_controller$ = "" And Timer < expires%)
-      poll_for_controller$ = Choice(keys_cursor%() = BTN_A%, "keys_cursor%", "")
+    Do While ctrl.poll$ = "" And Timer < expires%)
+      ctrl.poll$ = Choice(keys_cursor%() = ctrl.A%, "keys_cursor%", "")
     Loop
     Exit Function
   EndIf
 
   Local read_fn$(2) = ("nes_a%", "atari_a%", "keys_cursor%")
-  Local expected%(2) = (BTN_START%, BTN_A%, BTN_A%)
+  Local expected%(2) = (ctrl.START%, ctrl.A%, ctrl.A%)
   Local i%, t%
   Do
     For i% = 0 To Bound(read_fn$(), 1)
@@ -149,7 +149,7 @@ Function poll_for_controller$(duration%)
       ' Try to read the controller multiple times within a 100ms window.
       Do
         If Call(read_fn$(i%)) = expected%(i%) Then
-          poll_for_controller$ = read_fn$(i%)
+          ctrl.poll$ = read_fn$(i%)
           Exit Function
         EndIf
       Loop Until Timer >= t%
@@ -223,11 +223,11 @@ End Function
 '            | +-------------- Left
 '            +---------------- Right
 Function keys_cursor%()
-  keys_cursor% = keys_cursor% Or ctrl.keydown%(32)  * BTN_A%
-  keys_cursor% = keys_cursor% Or ctrl.keydown%(128) * BTN_UP%
-  keys_cursor% = keys_cursor% Or ctrl.keydown%(129) * BTN_DOWN%
-  keys_cursor% = keys_cursor% Or ctrl.keydown%(130) * BTN_LEFT%
-  keys_cursor% = keys_cursor% Or ctrl.keydown%(131) * BTN_RIGHT%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(32)  * ctrl.A%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(128) * ctrl.UP%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(129) * ctrl.DOWN%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(130) * ctrl.LEFT%
+  keys_cursor% = keys_cursor% Or ctrl.keydown%(131) * ctrl.RIGHT%
 End Function
 
 ' Opens port A connected to a SNES gamepad.
@@ -259,20 +259,20 @@ End Sub
 '            +-------------------------- Right Bumper
 Function snes_a%()
   Local i%
-  Pulse NES_LATCH_PIN%(0), NES_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(0), NES_PULSE!
   For i% = 0 To 11
     Inc snes_a%, Not Pin(NES_DATA_PIN%(0)) * 2^i%
-    Pulse NES_CLOCK_PIN%(0), NES_PULSE_DURATION!
+    Pulse NES_CLOCK_PIN%(0), NES_PULSE!
   Next
 End Function
 
 ' Reads port B connected to a SNES gamepad.
 Function snes_b%()
   Local i%
-  Pulse NES_LATCH_PIN%(1), NES_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(1), NES_PULSE!
   For i% = 0 To 11
     Inc snes_b%, Not Pin(NES_DATA_PIN%(1)) * 2^i%
-    Pulse NES_CLOCK_PIN%(1), NES_PULSE_DURATION!
+    Pulse NES_CLOCK_PIN%(1), NES_PULSE!
   Next
 End Function
 
@@ -313,26 +313,26 @@ End Sub
 ' which return the wrong value on subsequent reads of bit 7 if it not pulsed.
 Function nes_a%()
   Local i%
-  Pulse NES_LATCH_PIN%(0), NES_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(0), NES_PULSE!
   For i% = 0 To 7
     Inc nes_a%, Not Pin(NES_DATA_PIN%(0)) * 2^i%
-    Pulse NES_CLOCK_PIN%(0), NES_PULSE_DURATION!
+    Pulse NES_CLOCK_PIN%(0), NES_PULSE!
   Next
 End Function
 
 ' Reads port B connected to a NES gamepad.
 Function nes_b%()
   Local i%
-  Pulse NES_LATCH_PIN%(1), NES_PULSE_DURATION!
+  Pulse NES_LATCH_PIN%(1), NES_PULSE!
   For i% = 0 To 7
     Inc nes_b%, Not Pin(NES_DATA_PIN%(1)) * 2^i%
-    Pulse NES_CLOCK_PIN%(1), NES_PULSE_DURATION!
+    Pulse NES_CLOCK_PIN%(1), NES_PULSE!
   Next
 End Function
 
 ' Gets a string representation of bits read from a controller.
 '
-' @param ctrl$  controller Id from CONTROLLER_IDS$().
+' @param ctrl$  controller Id from ctrl.IDS$().
 ' @param bits%  controller state returned by controller read function.
 Function ctrl_bits_to_string$(ctrl$, bits%)
   ' These are the names of the buttons on a SNES controller;

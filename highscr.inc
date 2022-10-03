@@ -107,7 +107,7 @@ Function highscr.show_table$(duration%)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-    highscr.show_table$ = poll_for_controller$(200)
+    highscr.show_table$ = ctrl.poll$(200)
   Loop
 End Function
 
@@ -252,11 +252,11 @@ Function highscr.get_input%(ctrl$)
   ' Note that port initialisation should have already occurred earlier.
   Local k% = Call(ctrl$)
   Select Case k%
-    Case BTN_A%     : k% = &h01 ' Magic value to use for fire
-    Case BTN_UP%    : k% = &h80 ' Up arrow
-    Case BTN_DOWN%  : k% = &h81 ' Down arrow
-    Case BTN_LEFT%  : k% = &h82 ' Left arrow
-    Case BTN_RIGHT% : k% = &h83 ' Right arrow
+    Case ctrl.A%     : k% = &h01 ' Magic value to use for fire
+    Case ctrl.UP%    : k% = &h80 ' Up arrow
+    Case ctrl.DOWN%  : k% = &h81 ' Down arrow
+    Case ctrl.LEFT%  : k% = &h82 ' Left arrow
+    Case ctrl.RIGHT% : k% = &h83 ' Right arrow
     Case Else       : k% = 0
   End Select
   highscr.get_input% = k%
