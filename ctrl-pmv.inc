@@ -1,7 +1,9 @@
 ' Copyright (c) 2022 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For PicoMite VGA, MMBasic 5.07.05
-
+'
+' PicoGAME / PicoMiteVGA controller code.
+'
 ' Note 1:
 '   This code is written for readability, not for performance.
 '   If necessary it can be made faster by:

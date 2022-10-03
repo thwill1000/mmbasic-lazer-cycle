@@ -8,7 +8,7 @@ Option Explicit On
 
 ' Option LcdPanel NoConsole
 
-#Include "PicoGAME.inc"
+#Include "ctrl-pmv.inc"
 #Include "highscore.inc"
 
 Const VERSION$ = "0.9.0"
