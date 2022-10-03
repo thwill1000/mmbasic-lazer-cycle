@@ -293,6 +293,9 @@ Sub show_menu()
     key% = Call(ui_ctrl$)
     If key% = 0 Then key% = keys_cursor%() ' Always respond to the keyboard.
     Select Case key%
+      Case ctrl.START%
+        Exit Do
+
       Case ctrl.UP%
         If item% > 0 Then
           Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
