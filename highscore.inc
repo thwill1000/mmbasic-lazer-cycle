@@ -138,6 +138,14 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
     Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, colour_%, Rgb(Blue))
   Next
 
+  ' Show help text.
+  Inc y%, 25
+  Local y_help% = y%
+  Local help$ = "Use "
+  For i% = 146 To 149 : Cat help$, Chr$(i%) + " " : Next
+  Cat help$, "and FIRE to confirm"
+  Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(White)
+
   Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, play_sound%
   y% = Y_OFFSET% - 75 + 15 * idx%
   name$ = ""
@@ -146,6 +154,7 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
   ctrl.open(ctrl$)
 
   Local font_width% = Peek(Byte Mm.Info(Font Address 1))
+  Local confirm% = 0
   Do
     If Timer > t% + 500 Then
       cursor% = Not cursor%
@@ -160,9 +169,10 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
       Text x%, y%, ch$, , 1, 1, fg%, bg%
     Next
 
-    ' Display green check mark if next right/fire will OK the name.
-    Inc x%, 2 * font_width%
-    Text x%, y%, Chr$(129), , 1, 1, Choice(p% = highscore.MAX_NAME_LEN%, Rgb(Green), Rgb(Black))
+    If confirm% > 0 Then
+      Inc confirm%, -1
+      If confirm% = 0 Then Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(White), Rgb(Black) ' Restore the help text.
+    EndIf 
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
     Pause 100
@@ -171,6 +181,15 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
     If key% > 0 Then
       play_sound% = 1
       Select Case key%
+        Case &h01 ' Fire
+          If confirm% > 0 Then
+            key% = -1 ' So we exit the DO LOOP.
+          Else
+            Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(Black), Rgb(Black)
+            Text X_OFFSET%, y_help%, " Press FIRE again to confirm ", "CT", 1, 1, Rgb(Black), Rgb(White)
+            confirm% = 50
+            Pause 500 ' So we do not immediately respond to another FIRE press.
+          EndIf
         Case &h08 ' Backspace
           If p% > 1 Then
             name$ = Left$(name$, p% - 2) + Mid$(name$, p%)
@@ -210,7 +229,8 @@ Sub highscore.edit(player%, idx%, colour_%, ctrl$)
 
   Loop While key% <> -1
 
-  Text x%, y%, Chr$(129), , 1, 1, Rgb(Black)
+  ' Delete the help text.
+  Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(Black), Rgb(Black)
 
   ' Don't allow empty names.
   Local anon% = 1
@@ -231,13 +251,10 @@ Function highscore.get_input%(ctrl$)
   highscore.get_input% = Asc(UCase$(Inkey$))
   If highscore.get_input% > 0 Then Exit Function
 
-  Local p%, s$
-
   ' Note that port initialisation should have already occurred earlier.
   Local k% = Call(ctrl$)
   Select Case k%
-    Case BTN_A%     : k% = &h83 ' Right arrow
-    Case BTN_START% : k% = &h0A ' Line feed \n
+    Case BTN_A%     : k% = &h01 ' Magic value to use for fire
     Case BTN_UP%    : k% = &h80 ' Up arrow
     Case BTN_DOWN%  : k% = &h81 ' Down arrow
     Case BTN_LEFT%  : k% = &h82 ' Left arrow
