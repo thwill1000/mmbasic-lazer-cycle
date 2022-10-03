@@ -545,8 +545,6 @@ Function game_loop%()
 
   ' Wait for any sound effect to complete.
   Do While Peek(Byte soundfx_ptr%) <> &hFF : Loop
-
-  If Not attract_mode% Then On Key 0
 End Function
 
 Sub draw_score()
@@ -702,10 +700,7 @@ Sub cycle.check_collision(idx%)
   Inc num_players%, -1
   If cycle.ctrl$(idx%) <> "ai_control%" Then
     Inc num_humans%, -1
-    If num_humans% = 0 Then
-      On Key 0
-      attract_mode% = 1
-    EndIf
+    If num_humans% = 0 Then attract_mode% = 1
   EndIf
   cycle.ctrl$(idx%) = "ctrl_die%"
   cycle.nxt%(idx%) = cycle.pos%(idx%)

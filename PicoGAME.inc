@@ -140,7 +140,7 @@ Function poll_for_controller$(duration%)
   Local read_fn$(2) = ("nes_a%", "atari_a%", "keys_cursor%")
   Local expected%(2) = (BTN_START%, BTN_A%, BTN_A%)
   Local i%, t%
-  Do While Timer < expires%
+  Do
     For i% = 0 To Bound(read_fn$(), 1)
       ctrl.open(read_fn$(i%))
       t% = Min(expires%, Timer + 100)
@@ -152,7 +152,7 @@ Function poll_for_controller$(duration%)
         EndIf
       Loop Until Timer >= t%
     Next
-  Loop
+  Loop Until Timer >= expires%
 End Function
 
 ' Opens port A connected to an ATARI 1-button joystick.
