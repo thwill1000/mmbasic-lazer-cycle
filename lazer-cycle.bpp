@@ -60,7 +60,7 @@ Dim COMPASS_TO_CTRL%(3) = (BTN_UP%, BTN_RIGHT%, BTN_DOWN%, BTN_LEFT%)
 Dim CTRL_NAMES$(8)
 Dim CTRL_SUBS$(8)
 
-Dim default_ctrl$ = ""
+Dim ui_ctrl$ = "keys_cursor%" ' Controller id for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
 Dim difficulty% = 1
@@ -114,7 +114,7 @@ Do
 
   If attract_mode% Then
     wipe()
-    attract_mode% = Not highscore.show_table%(5000)
+    attract_mode% = Not show_highscore%(5000)
   EndIf
 
   wipe()
@@ -132,7 +132,7 @@ Do
   Select Case game_loop%()
     Case 0
       show_game_over()
-      attract_mode% = Not highscore.show_table%(5000)
+      attract_mode% = Not show_highscore%(5000)
     Case 1
       attract_mode% = 1
     Case 2
@@ -206,6 +206,20 @@ Function show_title%(duration%)
   show_title% = wait%(duration%)
 End Function
 
+' Displays the highscore table for a specified duration or until the user presses
+' START/FIRE/SPACE.
+'
+' @param duration%  duration in milliseconds; if 0 then indefinite.
+' @return           1 if the user pressed button/key,
+'                   0 if the duration expired.
+Function show_highscore%(duration%)
+  Local ctrl$ = highscore.show_table$(5000)
+  If ctrl$ <> "" Then
+    ui_ctrl$ = ctrl$
+    show_highscore% = 1
+  EndIf
+End Function
+
 Sub clear_display()
    Box 0, 0, Mm.HRes, Mm.VRes, 1, COLOUR_BLACK%, COLOUR_BLACK%
    If IS_CMM2% Then Page Copy 1 To 0, B
@@ -221,8 +235,10 @@ End Sub
 Function wait%(duration%)
   ctrl.init_keys()
   Local ctrl$ = poll_for_controller$(duration%)
-  wait% = ctrl$ <> ""
-  default_ctrl$ = Choice(default_ctrl$ = "", ctrl$, default_ctrl$)
+  If ctrl$ <> "" Then
+    ui_ctrl$ = ctrl$
+    wait% = 1
+  EndIf
 End Function
 
 Function str.lpad$(s$, x%)
@@ -243,9 +259,8 @@ Sub show_menu()
 
   ' Initialise cycle.ctrl_backup$() on first entry to this subroutine,
   ' subsequent calls use the previously stored state.
-  If default_ctrl$ = "" Then default_ctrl$ = "keys_cursor%"
   If cycle.ctrl_backup$(0) = "" Then
-    cycle.ctrl_backup$(0) = default_ctrl$
+    cycle.ctrl_backup$(0) = ui_ctrl$
     If cycle.ctrl_backup$(0) = "keys_cursor%" Then cycle.ctrl_backup$(0) = "keys_cegg%"
     For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ai_control%" : Next
   EndIf
@@ -256,7 +271,7 @@ Sub show_menu()
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, COLOUR_CYAN%
 
   ctrl.init_keys()
-  ctrl.open(default_ctrl$)
+  ctrl.open(ui_ctrl$)
 
   Do
 
@@ -275,7 +290,7 @@ Sub show_menu()
       update% = 0
     EndIf
 
-    key% = Call(default_ctrl$)
+    key% = Call(ui_ctrl$)
     If key% = 0 Then key% = keys_cursor%() ' Always respond to the keyboard.
     Select Case key%
       Case BTN_UP%
@@ -519,6 +534,7 @@ Function game_loop%()
     ' Check for "attract mode" being interrupted.
     ctrl$ = poll_for_controller$(1)
     If ctrl$ <> "" Then
+      ui_ctrl$ = ctrl$
       num_players% = 0
       game_loop% = 2
     EndIf

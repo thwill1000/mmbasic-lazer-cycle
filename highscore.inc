@@ -82,9 +82,9 @@ End Sub
 ' START/FIRE/SPACE.
 '
 ' @param duration%  duration in milliseconds; if 0 then indefinite.
-' @return           1 if the user pressed button/key,
-'                   0 if the duration expired.
-Function highscore.show_table%(duration%)
+' @return           controller id if user pressed button/key,
+'                   empty string if the duration expired.
+Function highscore.show_table$(duration%)
   Const ch$ = Chr$(205)
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
 
@@ -93,7 +93,7 @@ Function highscore.show_table%(duration%)
   Local colours%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 
   ctrl.init_keys()
-  Do While Timer < expires% And ctrl$ = ""
+  Do While Timer < expires% And highscore.show_table$ = ""
 
     For i% = 0 To Bound(highscore.values$(), 1) + 1
       If i% <= Bound(highscore.values$(), 1) Then
@@ -107,10 +107,8 @@ Function highscore.show_table%(duration%)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-    ctrl$ = poll_for_controller$(200)
+    highscore.show_table$ = poll_for_controller$(200)
   Loop
-
-  highscore.show_table% = ctrl$ <> ""
 End Function
 
 ' Provides UI for editing an entry in the high-score table.
@@ -118,7 +116,7 @@ End Function
 ' @param  player%   player id, counting from 1.
 ' @param  idx%      index of entry in the highscore.values$ array.
 ' @param  colour_%  player colour.
-' @param  ctrl$     controller for given player.
+' @param  ctrl$     controller id for given player.
 Sub highscore.edit(player%, idx%, colour_%, ctrl$)
   ' 256-bit map of characters that can be entered into the high-score table
   ' via gamepad or joystick. For each character 0-255 the character is allowed
