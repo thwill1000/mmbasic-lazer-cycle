@@ -18,14 +18,13 @@ Sub highscr.load(filename$, defaults$())
   Next
 
   ' If there is no SD Card then do not load high-scores.
-  Local has_sdcard% = UCase$(Mm.Info$(SdCard)) = "READY"
-  If Not has_sdcard% Then Exit Sub
+  If Not highscr.has_sdcard%() Then Exit Sub
 
   ' Check filename$ is absolute.
   Local ok% = 0
-  Select Case Left$(filename$, 1)
+  Select Case UCase$(Left$(filename$, 1))
     Case "/", "\" : ok% = 1
-    Case "A", "a" : If Mid$(filename$, 2, 1) = ":" Then ok% = 1
+    Case "A" To "Z" : If Mid$(filename$, 2, 1) = ":" Then ok% = 1
   End Select
   If Not ok% Then Error "Expected absolute file path '" + filename$ + "'"
 
@@ -33,17 +32,14 @@ Sub highscr.load(filename$, defaults$())
   Local ch$, parent$
   For i% = 1 To Len(filename$)
     ch$ = Mid$(filename$, i%, 1)
-    Select Case ch$
-      Case "/", "\"
-        If parent$ = "" Or UCase$(parent$) = "A:" Then Continue For
-        Select Case Mm.Info(FileSize parent$)
-          Case -2   : ' Is a directory, do nothing.
-          Case -1   : MkDir parent$
-          Case Else : Error "Expected directory but found file '" + parent$ + "'"
-        End Select
-      Case Else
-        Cat parent$, ch$
-    End Select
+    If InStr("/\", ch$) And parent$ <> "" And UCase$(parent$) <> "A:" Then
+      Select Case Mm.Info(FileSize parent$)
+        Case -2   : ' Is a directory, do nothing.
+        Case -1   : MkDir parent$
+        Case Else : Error "Expected directory but found file '" + parent$ + "'"
+      End Select
+    EndIf
+    Cat parent$, ch$
   Next
 
   ' Check file exists and is not a directory.
@@ -64,11 +60,18 @@ Sub highscr.load(filename$, defaults$())
   Close #1
 End Sub
 
+Function highscr.has_sdcard%()
+  If Mm.Device$ = "MMBasic for Windows" Then
+    highscr.has_sdcard% = 1
+  Else
+    highscr.has_sdcard% = (UCase$(Mm.Info$(SdCard)) = "READY")
+  EndIf
+End Function
+
 ' Assumes parent directory of filename$ already exists.
 Sub highscr.save(filename$)
   ' If there is no SD Card then do not save high-scores.
-  Local has_sdcard% = UCase$(Mm.Info$(SdCard)) = "READY"
-  If Not has_sdcard% Then Exit Sub
+  If Not highscr.has_sdcard%() Then Exit Sub
 
   Open filename$ For Output As #1
   Local i%
@@ -107,7 +110,7 @@ Function highscr.show_table$(duration%)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-    highscr.show_table$ = ctrl.poll$(200)
+    highscr.show_table$ = ctrl.poll$(200, POLL_THESE$())
   Loop
 End Function
 
@@ -149,9 +152,9 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   name$ = ""
 
   ctrl.term_keys()
-  ctrl.open(ctrl$)
 
-  Local font_width% = Peek(Byte Mm.Info(Font Address 1))
+  ' PEEKing the font doesn't work in MMB4W.
+  Local font_width% = Choice(Mm.Device$ = "MMBasic for Windows", 8, Peek(Byte Mm.Info(Font Address 1)))
   Local confirm% = 0
   Do
     If Timer > t% + 500 Then
@@ -246,18 +249,18 @@ End Sub
 ' @return          ASCII code of key pressed, or negative of value read
 '                  from player's configured controller port.
 Function highscr.get_input%(ctrl$)
-  highscr.get_input% = Asc(UCase$(Inkey$))
-  If highscr.get_input% > 0 Then Exit Function
-
-  ' Note that port initialisation should have already occurred earlier.
-  Local k% = Call(ctrl$)
-  Select Case k%
-    Case ctrl.A%     : k% = &h01 ' Magic value to use for fire
-    Case ctrl.UP%    : k% = &h80 ' Up arrow
-    Case ctrl.DOWN%  : k% = &h81 ' Down arrow
-    Case ctrl.LEFT%  : k% = &h82 ' Left arrow
-    Case ctrl.RIGHT% : k% = &h83 ' Right arrow
-    Case Else       : k% = 0
-  End Select
-  highscr.get_input% = k%
+  ' Note that controller initialisation should have already occurred.
+  Local key% = Asc(UCase$(Inkey$))
+  If key% = 0 Then
+    Call ctrl$, key%
+    Select Case key%
+      Case ctrl.A     : key% = &h01 ' Magic value to use for fire
+      Case ctrl.UP    : key% = &h80 ' Up arrow
+      Case ctrl.DOWN  : key% = &h81 ' Down arrow
+      Case ctrl.LEFT  : key% = &h82 ' Left arrow
+      Case ctrl.RIGHT : key% = &h83 ' Right arrow
+      Case Else       : key% = 0
+    End Select
+  EndIf
+  highscr.get_input% = key%
 End Function

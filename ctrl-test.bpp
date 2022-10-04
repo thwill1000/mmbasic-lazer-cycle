@@ -1,0 +1,234 @@
+' Copyright (c) 2022 Thomas Hugo Williams
+' License MIT <https://opensource.org/licenses/MIT>
+'!ifdef PICOMITE
+' For PicoGAME VGA 1.4 running PicoMiteVGA MMBasic 5.07.05
+'!endif
+'!ifdef CMM2
+' For CMM2 running MMBasic 5.07.02b6
+'!endif
+
+Option Base 0
+Option Default None
+Option Explicit On
+
+#Include "ctrl.ipp"
+
+Mode 1
+
+If Mm.Device$ = "MMB4L" Then
+  Dim WIDTH%, HEIGHT%
+  Console GetSize WIDTH%, HEIGHT%
+  Console HideCursor
+Else
+  Const WIDTH% = Mm.Hres \ Mm.Info(FontWidth)
+EndIf
+
+Dim ctrl$ = "no_ctrl", err$
+
+Option Break 4
+On Key 3, on_break
+
+read_controller_data()
+show_menu()
+main_loop()
+end_program()
+
+Sub on_break()
+  Option Break 3
+  end_program()
+End Sub
+
+Sub end_program()
+  On Error Ignore
+  Call ctrl$, ctrl.CLOSE
+  On Error Abort
+  If Mm.Device$ = "MMB4L" Then Console ShowCursor
+  End
+End SUb
+
+Sub read_controller_data()
+  Local i%, s1$, s2$
+  restore_controller_data()
+  Dim NUM_CTRL% = 0
+  Do
+    Read s1$, s2$
+    If s1$ = "" Then Exit Do
+    Inc NUM_CTRL%
+  Loop
+
+  Dim CTRL_IDS$(NUM_CTRL%)
+  Dim CTRL_NAMES$(NUM_CTRL%)
+  restore_controller_data()
+  For i% = 1 To NUM_CTRL%
+    Read CTRL_IDS$(i%), CTRL_NAMES$(i%)
+  Next
+End Sub
+
+Sub restore_controller_data()
+  Select Case Mm.Device$
+    Case "PicoMite", "PicoMiteVGA"
+      Restore controller_data_picomite
+    Case "Colour Maximite 2", "Colour Maximite 2 G2"
+      Restore controller_data_cmm2
+    Case "MMB4L"
+      Restore controller_data_mmb4l
+    Case Else
+      Error "Unsupported device: " + Mm.Device$
+  End Select
+End Sub
+
+Sub show_menu()
+  Cls
+  print_at(0, 0, "MMBasic Controller Test " + format_version$(ctrl.VERSION))
+  print_at(0, 1, Mm.Device$ + " " + Str$(Mm.Info(Version)))
+  print_at(0, 3,  "Select controller using the function keys")
+  print_at(0, 4,  "Then 'play' with controller to test response")
+  Local i%
+  For i% = 1 To NUM_CTRL%
+    print_ctrl_option(i%, 0)
+  Next
+  print_at(2, i% + 5, "[Esc] Quit")
+End Sub
+
+Function format_version$(version%)
+  Local major% = version% \ 10000
+  Local minor% = (version% - major% * 10000) \ 100
+  Local micro% = version% - major% * 10000 - minor% * 100
+  format_version$ = Str$(major%) + "." + Str$(minor%) + "." + Str$(micro%)
+End Function
+
+Sub main_loop()
+  Local bits%, current%, i%, s$
+
+  ctrl.init_keys();
+
+  Do
+    If ctrl.keydown%(27) Then Exit Do ' Escape pressed.
+
+    For i% = 1 To 12
+      If ctrl.keydown%(i% + 144) Then ' Fn key i% pressed.
+        print_ctrl_option(current%, 0)
+        On Error Ignore
+        Call ctrl$, ctrl.CLOSE
+        err$ = Choice(Mm.ErrNo = 0, "", Mm.ErrMsg$)
+        On Error Abort
+        current% = Choice(is_valid%(i%), i%, 0)
+        print_ctrl_option(current%, 1)
+        ctrl$ = Choice(current% = 0, "no_ctrl", CTRL_IDS$(i%))
+        On Error Ignore
+        Call ctrl$, ctrl.OPEN
+        err$ = Choice(Mm.ErrNo = 0, "", Mm.ErrMsg$)
+        On Error Abort
+        Do While ctrl.keydown%(i% + 144) : Loop ' Wait for key to be released.
+        Exit For
+      EndIf
+    Next
+
+    If err$ = "" Then
+      Call ctrl$, bits%
+      s$ = rpad$("Currently reading: " + ctrl_bits_to_string$(bits%), WIDTH%)
+    Else
+      s$ = rpad$(Mid$(err$, InStr(err$, ":") + 1), WIDTH%)
+    EndIf
+    print_at(0, 8 + NUM_CTRL%, s$)
+
+    ' Compensate for Inkey$ not being the ideal way to read the keyboard.
+    If Not InStr(Mm.Device$, "Colour Maximite 2") And InStr(ctrl$, "keys") Then Pause 100
+  Loop
+End Sub
+
+Sub no_ctrl(x%)
+  x% = 0
+End Sub
+
+Function is_valid%(fn_key%)
+  is_valid% = fn_key% >= 1 And fn_key% <= NUM_CTRL%
+End Function
+
+' Prints text on the VGA screen at the given column and row.
+'
+' @param col%      the column, from 0.
+' @param row%      the row, from 0.
+' @param s$        the text.
+' @param inverse%  print black on white instead of white on black.
+Sub print_at(col%, row%, s$, inverse%)
+  If Mm.Device$ = "MMB4L" Then
+' TODO: Why does Print @ not work as expected in MMB4L
+'    Print @(col%, row%), s$
+    Console SetCursor col%, row%
+    Console Inverse inverse%
+    Print s$
+    Console Inverse 0
+  Else
+    Local x% = col% * Mm.Info(FontWidth)
+    Local y% = row% * Mm.Info(FontHeight) * 1.5
+    Local fg% = Choice(inverse%, Rgb(Black), Rgb(White))
+    Local bg% = Choice(inverse%, Rgb(White), Rgb(Black))
+    Text x%, y%, s$, LT, 1, 1, fg%, bg%
+  EndIf
+End Sub
+
+Sub print_ctrl_option(fn_key%, selected%)
+  If Not is_valid%(fn_key%) Then Exit Sub
+  Local s$ = rpad$("[F" + Str$(fn_key%) + "] ", 6) + CTRL_NAMES$(fn_key%)
+  print_at(2, fn_key% + 5, s$, selected%)
+End Sub
+
+' Gets a string representation of bits read from a controller.
+'
+' @param bits%  controller state returned by controller read function.
+Function ctrl_bits_to_string$(bits%)
+  Static BUTTONS$(14) = ("R","Start","Home","Select","L","Down","Right","Up","Left","ZR","X","A","Y","B","ZL")
+
+  If bits% = 0 Then
+    ctrl_bits_to_string$ = "None"
+    Exit Function
+  EndIf
+
+  ctrl_bits_to_string$ = Str$(bits%) + " = "
+  Local count%, i%, s$
+  For i% = 0 To Bound(BUTTONS$(), 1)
+    If bits% And 2^i% Then
+      s$ = BUTTONS$(i%)
+      If count% > 0 Then Cat ctrl_bits_to_string$, ", "
+      Cat ctrl_bits_to_string$, s$
+      Inc count%
+    EndIf
+  Next
+End Function
+
+' Gets a string padded to a given width with spaces to the right.
+'
+' @param s$  the string.
+' @param w%  the width.
+' @return    the padded string.
+'            If Len(s$) > w% then returns the unpadded string.
+Function rpad$(s$, w%)
+  rpad$ = s$
+  If Len(s$) < w% Then rpad$ = s$ + Space$(w% - Len(s$))
+End Function
+
+controller_data_picomite:
+
+Data "keys_cursor", "Keyboard: Cursor keys & Space"
+Data "atari_a",     "Port A: Atari VCS joystick"
+Data "atari_b",     "Port B: Atari VCS joystick"
+Data "nes_a",       "Port A: NES gamepad"
+Data "nes_b",       "Port B: NES gamepad"
+Data "snes_a",      "Port A: SNES gamepad"
+Data "snes_b",      "Port B: SNES gamepad"
+Data "", ""
+
+controller_data_cmm2:
+
+Data "keys_cursor",   "Keyboard: Cursor keys & Space"
+Data "atari_dx",      "CMM2 DX Atari VCS joystick"
+Data "wii_classic_3", "Port 1: Wii Classic Controller (I2C3)"
+Data "wii_classic_1", "Port 2: Wii Classic Controller (I2C1)"
+Data "wii_classic_2", "Port 3: Wii Classic Controller (I2C2)"
+Data "", ""
+
+controller_data_mmb4l:
+
+Data "keys_cursor", "Keyboard: Cursor keys & Space"
+Data "", ""
