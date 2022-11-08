@@ -8,9 +8,10 @@ Option Explicit On
 
 ' Option LcdPanel NoConsole
 
+'!set CTRL_NO_SNES
 #Include "ctrl.ipp"
-#Include "highscr.inc"
 #Include "sound.inc"
+#Include "highscr.inc"
 
 Const VERSION$ = "0.9.0"
 
@@ -18,14 +19,12 @@ Select Case Mm.Device$
   Case "Colour Maximite 2", "Colour Maximite 2 G2", "MMBasic for Windows"
     Const HIGHSCORE_FILENAME$ = Mm.Info(Path) + "high-scores/lazer-cycle.csv"
     Const IS_CMM2% = 1
-    Dim POLL_THESE$(2) = ("keys_cursor", "atari_dx", "wii_classic_3")
     Mode 7
     Page Write 1
   Case "PicoMiteVGA"
     If Val(Mm.Info(CpuSpeed)) < 252000000 Then Error "Requires OPTION CPUSPEED 252000 or 378000"
     Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
     Const IS_CMM2% = 0
-    Dim POLL_THESE$(2) = ("keys_cursor", "nes_a", "atari_a")
     Mode 2
   Case Else
     Error "Unsupported device: " + Mm.Device$
@@ -48,7 +47,7 @@ Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
 
-Dim ui_ctrl$ = "keys_cursor" ' Controller id for controlling the UI.
+Dim ui_ctrl$ = "keys_cegg" ' Controller id for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
 Dim difficulty% = 1
@@ -63,18 +62,17 @@ Dim next_frame%
 '   bit  7   - arena wall (other bits will be 0)
 Dim arena%(HEIGHT% * WIDTH% \ 8)
 
-Dim cycle.current% ' Current cycle index, set before calling ctrl_xxx() functions.
-Dim cycle.is_ai%(MAX_CYCLE_IDX%)
+Dim cycle.current% ' Current cycle index, set before calling controller subroutines.
 Dim cycle.score%(MAX_CYCLE_IDX%)
 Dim cycle.nxt%(MAX_CYCLE_IDX%)
 Dim cycle.pos%(MAX_CYCLE_IDX%)
 Dim cycle.dir%(MAX_CYCLE_IDX%)
 Dim cycle.colour%(MAX_CYCLE_IDX%) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
-Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32
+Dim cycle.ctrl_setting$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.state%(MAX_CYCLE_IDX%)
 
-Dim num_players%
+Dim num_alive%
 Dim num_humans%
 
 Option Break 4
@@ -83,46 +81,33 @@ On Key 3, on_quit
 init_globals()
 clear_display()
 sound.init()
+outer_loop()
+End
 
-Do
-  If attract_mode% Then
+Sub outer_loop()
+  Local attract_mode% = 1, i%
+
+  Do
+    If     attract_mode% Then wipe() : attract_mode% = Not show_title%(5000)
+    If     attract_mode% Then wipe() : attract_mode% = Not show_highscore%(5000)
+    If Not attract_mode% Then wipe() : show_menu()
+
     wipe()
-    attract_mode% = Not show_title%(5000)
-  EndIf
+    init_game(attract_mode%)
+    draw_arena()
 
-  If attract_mode% Then
-    wipe()
-    attract_mode% = Not show_highscore%(5000)
-  EndIf
-
-  wipe()
-
-  If attract_mode% Then
-    init_attract_mode()
-  Else
-    show_menu()
-    wipe()
-  EndIf
-
-  init_game()
-  draw_arena()
-
-  Select Case game_loop%()
-    Case 0
+    If game_loop%() Then
+      ' Game loop interrupted after all human players dead.
+      attract_mode% = 0
+    ElseIf Not attract_mode% Then
+      ' Game ended normally whilst not in attract mode.
       show_game_over()
       attract_mode% = Not show_highscore%(5000)
-    Case 1
-      attract_mode% = 1
-    Case 2
-      attract_mode% = 0
-    Case Else
-      Error "Invalid value for 'attract_mode%'"
-  End Select
+    EndIf
 
-  close_controllers()
-Loop
-
-End
+    close_controllers()
+  Loop
+End Sub
 
 ' Break handler to stop music & fx when Ctrl-C pressed.
 Sub on_quit()
@@ -135,20 +120,31 @@ End Sub
 
 ' Initialises global variables.
 Sub init_globals()
-  Local i%
+  Local a%, i%, j%
 
   ' Initialise list of controllers.
   If InStr(Mm.Device$, "PicoMite") Then
-    Restore controller_data_pm
+    Restore controller_data_pmvga
   Else
     Restore controller_data_cmm2
   EndIf
-  Local num_ctrl%
-  Read num_ctrl%
+  Local num_ctrl%, num_poll%
+  Read num_ctrl%, num_poll%
   Dim CTRL_NAMES$(num_ctrl% - 1)
   Dim CTRL_SUBS$(num_ctrl% - 1)
+  Dim CTRLS_TO_POLL$(num_poll% - 1)
+  j% = 0
   For i% = 0 To num_ctrl% - 1
-    Read CTRL_NAMES$(i%), CTRL_SUBS$(i%)
+    Read CTRL_NAMES$(i%), CTRL_SUBS$(i%), a%
+    If a% Then
+      CTRLS_TO_POLL$(j%) = CTRL_SUBS$(i%)
+      Inc j%
+    EndIf
+  Next
+
+  ' Initialise controller settings.
+  For i% = 0 To MAX_CYCLE_IDX%
+    cycle.ctrl_setting$(i%) = "ai_control"
   Next
 
   ' Initialise high-scores.
@@ -183,7 +179,7 @@ End Function
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_highscore%(duration%)
-  Local ctrl$ = highscr.show_table$(5000)
+  Local ctrl$ = highscr.show_table$(CTRLS_TO_POLL$(), 5000)
   If ctrl$ <> "" Then
     ui_ctrl$ = ctrl$
     show_highscore% = 1
@@ -204,7 +200,7 @@ End Sub
 '                   0 if the duration expired.
 Function wait%(duration%)
   ctrl.init_keys()
-  Local ctrl$ = ctrl.poll$(duration%, POLL_THESE$())
+  Local ctrl$ = ctrl.poll$(duration%, CTRLS_TO_POLL$())
   If ctrl$ <> "" Then
     ui_ctrl$ = ctrl$
     wait% = 1
@@ -217,15 +213,14 @@ Sub show_menu()
   Local sounds$(3) = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
   Local sound_setting% = 3 - sound.get_state%()
 
-  ' Initialise cycle.ctrl_backup$() on first entry to this subroutine,
-  ' subsequent calls use the previously stored state.
-  If cycle.ctrl_backup$(0) = "" Then
-    cycle.ctrl_backup$(0) = ui_ctrl$
-    If cycle.ctrl_backup$(0) = "keys_cursor" Then cycle.ctrl_backup$(0) = "keys_cegg"
-    For i% = 1 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = "ai_control" : Next
-  EndIf
+  ' Initialise cycle.ctrl_setting$(0) if all entries are currently "no" or "ai" control.
+  Local count% = 0
+  For i% = 0 To MAX_CYCLE_IDX%
+    Inc count%, Not InStr("ai_control|no_control", cycle.ctrl_setting$(i%))
+  Next
+  If count% = 0 Then cycle.ctrl_setting$(0) = ui_ctrl$
 
-  For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
+'  For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
 
   ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, Rgb(Cyan)
@@ -253,7 +248,7 @@ Sub show_menu()
     EndIf
 
     Call ui_ctrl$, key%
-    If key% = 0 Then keys_cursor(key%) ' Always respond to the keyboard.
+    If key% = 0 Then keys_cursor(key%) ' Always respond to the cursor keys.
     Select Case key%
       Case ctrl.START
         Exit Do
@@ -310,7 +305,7 @@ Sub show_menu()
 
   Loop
 
-  For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = cycle.ctrl$(i%) : Next
+'  For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl_backup$(i%) = cycle.ctrl$(i%) : Next
 
   close_controller_no_error(ui_ctrl$)
 End Sub
@@ -323,22 +318,22 @@ End Sub
 Function get_controller_name$(idx%)
   Local i%
   For i% = 0 To Bound(CTRL_SUBS$(), 1)
-    If cycle.ctrl$(idx%) = CTRL_SUBS$(i%) Then
+    If cycle.ctrl_setting$(idx%) = CTRL_SUBS$(i%) Then
       get_controller_name$ = CTRL_NAMES$(i%)
       Do While Len(get_controller_name$) < 13 : Cat get_controller_name$, " " : Loop
       Exit Function
     Endif
   Next
-  Error "Unknown controller: " + cycle.ctrl$(idx%)
+  Error "Unknown controller: " + cycle.ctrl_setting$(idx%)
 End Function
 
 Sub update_controller(idx%, delta%)
   ' Find index of currently selected controller.
   Local i%
   For i% = 0 To Bound(CTRL_SUBS$(), 1)
-    If cycle.ctrl$(idx%) = CTRL_SUBS$(i%) Then Exit For
+    If cycle.ctrl_setting$(idx%) = CTRL_SUBS$(i%) Then Exit For
   Next
-  If i% = Bound(CTRL_SUBS$(), 1) + 1 Then Error "Unknown controller: " + cycle.ctrl$(idx%)
+  If i% = Bound(CTRL_SUBS$(), 1) + 1 Then Error "Unknown controller: " + cycle.ctrl_setting$(idx%)
 
   Local ok%
   Do
@@ -347,7 +342,9 @@ Sub update_controller(idx%, delta%)
     If i% > Bound(CTRL_SUBS$(), 1) Then i% = 0
 
     ' Check there is no conflict with other player's controller choice.
-    If has_controller%(idx%, CTRL_SUBS$(i%)) Then Continue Do
+    If Not InStr("ai_control|no_control", CTRL_SUBS$(i%)) Then
+      If has_controller%(idx%, CTRL_SUBS$(i%)) Then Continue Do
+    EndIf
     Select Case CTRL_SUBS$(i%)
       Case "atari_a"   : ok% = Not has_controller%(idx%, "nes_a")
       Case "atari_b"   : ok% = Not has_controller%(idx%, "nes_b")
@@ -359,7 +356,7 @@ Sub update_controller(idx%, delta%)
     End Select
   Loop Until ok%
 
-  cycle.ctrl$(idx%) = CTRL_SUBS$(i%)
+  cycle.ctrl_setting$(idx%) = CTRL_SUBS$(i%)
 End Sub
 
 ' Is any player other than idx% using the specified controller ?
@@ -367,21 +364,13 @@ Function has_controller%(idx%, ctrl$)
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
     If i% = idx% Then Continue For
-    If cycle.ctrl$(i%) = ctrl$ Then has_controller% = 1
+    If cycle.ctrl_setting$(i%) = ctrl$ Then has_controller% = 1
   Next
 End Function
 
-Sub init_attract_mode()
-  Local i%
-  For i% = 0 To MAX_CYCLE_IDX%
-    cycle.ctrl$(i%) = "ai_control"
-  Next
-  attract_mode% = 1
-End Sub
-
-Sub init_game()
+Sub init_game(attract_mode%)
   frame_duration% = 3 * (5 + (6 - difficulty%))
-  num_players% = 0 ' Incremented later.
+  num_alive% = 0 ' Incremented later.
   num_humans% = 0
   score% = 0
 
@@ -408,15 +397,15 @@ Sub init_game()
 
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
-    cycle.is_ai%(i%) = cycle.ctrl$(i%) = "ai_control"
+    cycle.ctrl$(i%) = Choice(attract_mode%, "ai_control", cycle.ctrl_setting$(i%))
     cycle.score%(i%) = 0
-    If cycle.ctrl$(i%) = "noop_control" Then
+    If cycle.ctrl$(i%) = "no_control" Then
       cycle.pos%(i%) = -1
       cycle.nxt%(i%) = -1
       cycle.state%(i%) = STATE_DEAD%
     Else
-      Inc num_players%
-      If cycle.ctrl$(i%) <> "ai_control" Then Inc num_humans%
+      Inc num_alive%
+      Inc num_humans%, cycle.ctrl$(i%) <> "ai_control"
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
       Poke Byte p_arena% + cycle.pos%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
       Poke Byte p_arena% + cycle.nxt%(i%), (cycle.dir%(i%) << 3) + (i% << 1) + 1
@@ -428,7 +417,7 @@ Sub init_game()
   For i% = 0 To MAX_CYCLE_IDX%
     On Error Ignore
     Call cycle.ctrl$(i%), ctrl.OPEN
-    If Mm.ErrNo <> 0 Then cycle.ctrl$(i%) = "noop_control"
+    If Mm.ErrNo <> 0 Then cycle.ctrl$(i%) = "no_control"
     On Error Abort
   Next
   ctrl.init_keys()
@@ -447,21 +436,18 @@ Sub draw_arena()
 End Sub
 
 ' @return  0 - normal game over
-'          1 - attract mode game over
-'          2 - attract mode interrupted
+'          1 - game interrupted after all human players died
 Function game_loop%()
-  Local key%, ctrl$, i%
-  game_loop% = attract_mode%
-  next_frame% = Timer + frame_duration%
+  Local i%, key%, next_frame% = Timer + frame_duration%
 
-  ' num_players% = 0
+  ' num_alive% = 0
   ' cycle.score%(0) = 3175
   ' cycle.score%(1) = 2175
   ' cycle.score%(2) = 1175
   ' cycle.score%(3) = 975
   ' score% = 3175
 
-  Do While num_players% > 0
+  Do While num_alive% > 0
     Inc score%, 1
     If score% Mod 5 = 0 Then draw_score()
 
@@ -500,17 +486,14 @@ Function game_loop%()
     Do While Timer < next_frame% : Loop
     Inc next_frame%, frame_duration%
 
-    If Not attract_mode% Then Continue Do
+    If num_humans% > 0 Then Continue Do
 
     ' Check for "attract mode" being interrupted.
-    ' TODO: What if controllers have not been configured or all players are AI ?
-    For i% = 0 To MAX_CYCLE_IDX%
-      If cycle.ctrl_backup$(i%) <> "" Then Call cycle.ctrl_backup$(i%), key%
-      If key% = ctrl.A Or key% = ctrl.START Then
-        num_players% = 0
-        game_loop% = 2
-      EndIf
-    Next
+    If ctrl.poll_single%(CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1)), ctrl.A Or ctrl.START) Then
+      If ui_ctrl$ = "" Then ui_ctrl$ = CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1))
+      num_alive% = 0
+      game_loop% = 1
+    EndIf
   Loop
 
   ' Ensure display updated at end of loop.
@@ -551,7 +534,7 @@ Sub cycle.dying(idx%)
   cycle.pos%(idx%) = cycle.nxt%(idx%) ' Move
   cycle.current% = idx%
   Local key%
-  ctrl_die(key%)
+  die_control(key%)
   Select Case key%
     Case ctrl.UP:    cycle.dir%(idx%) = NORTH%
     Case ctrl.DOWN:  cycle.dir%(idx%) = SOUTH%
@@ -583,14 +566,14 @@ Sub show_game_over()
   Local new_highscore%, player%
   For i% = 0 To MAX_CYCLE_IDX%
     player% = idx%(i%)
-    If cycle.is_ai%(player%) Then Continue For
+    If cycle.ctrl_setting$(player%) = "ai_control" Then Continue For
     For j% = 0 To Bound(highscr.values$())
       If cycle.score%(i%) > Val(Field$(highscr.values$(j%), 2)) Then
         For k% = Bound(highscr.values$(), 1) To j% Step -1
           If k% <> 0 Then highscr.values$(k%) = highscr.values$(k% - 1)
         Next
         highscr.values$(j%) = ", " + Str$(cycle.score%(i%))
-        highscr.edit(player% + 1, j%, cycle.colour%(player%), cycle.ctrl_backup$(player%))
+        highscr.edit(player% + 1, j%, cycle.colour%(player%), cycle.ctrl_setting$(player%))
         new_highscore% = 1
         Exit For
       EndIf
@@ -600,6 +583,8 @@ Sub show_game_over()
 End Sub
 
 Sub ai_control(x%)
+  If x% < 0 Then Exit Sub
+
   Local idx% = cycle.current%
   Local d% = cycle.dir%(idx%)
 
@@ -618,33 +603,39 @@ Sub ai_control(x%)
   x% = COMPASS_TO_CTRL%(d%)
 End Sub
 
-Sub ctrl_die(x%)
+Sub die_control(x%)
+  If x% < 0 Then Exit Sub
   x% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 3) + 2) Mod 4)
 End Sub
 
+Sub no_control(x%)
+End Sub
+
 Sub keys_cegg(x%)
-  x% =    ctrl.keydown%(97)  * ctrl.UP    ' A
+  If x% < 0 Then Exit Sub
+  x% =    ctrl.keydown%(32)  * ctrl.A     ' Space
+  Inc x%, ctrl.keydown%(97)  * ctrl.UP    ' A
   Inc x%, ctrl.keydown%(122) * ctrl.DOWN  ' Z
   Inc x%, ctrl.keydown%(44)  * ctrl.LEFT  ' comma
   Inc x%, ctrl.keydown%(46)  * ctrl.RIGHT ' full-stop
 End Sub
 
 Sub keys_azxc(x%)
-  x% =    ctrl.keydown%(97)  * ctrl.UP    ' A
+  If x% < 0 Then Exit Sub
+  x% =    ctrl.keydown%(32)  * ctrl.A     ' Space
+  Inc x%, ctrl.keydown%(97)  * ctrl.UP    ' A
   Inc x%, ctrl.keydown%(122) * ctrl.DOWN  ' Z
   Inc x%, ctrl.keydown%(120) * ctrl.LEFT  ' X
   Inc x%, ctrl.keydown%(99)  * ctrl.RIGHT ' C
 End Sub
 
 Sub keys_ikop(x%)
-  x% =    ctrl.keydown%(105) * ctrl.UP    ' I
+  If x% < 0 Then Exit Sub
+  x% =    ctrl.keydown%(32)  * ctrl.A     ' Space
+  Inc x%, ctrl.keydown%(105) * ctrl.UP    ' I
   Inc x%, ctrl.keydown%(107) * ctrl.DOWN  ' K
   Inc x%, ctrl.keydown%(111) * ctrl.LEFT  ' O
   Inc x%, ctrl.keydown%(112) * ctrl.RIGHT ' P
-End Function
-
-Sub noop_control(x%)
-  x% = 0
 End Sub
 
 Sub cycle.check_collision(idx%)
@@ -653,7 +644,7 @@ Sub cycle.check_collision(idx%)
     Poke Var arena%(), cycle.pos%(idx%), 0
     Local mask% = (idx% << 1) + 1
     If (Peek(Var arena%(), cycle.nxt%(idx%)) And mask%) <> mask% Then
-      cycle.ctrl$(idx%) = "noop_control"
+      cycle.ctrl$(idx%) = "no_control"
       cycle.state%(idx%) = STATE_DEAD%
       cycle.pos%(idx%) = -1
     EndIf
@@ -672,12 +663,9 @@ Sub cycle.check_collision(idx%)
   If cycle.state%(idx%) < STATE_DYING% Then Exit Sub
 
   ' Time to die.
-  Inc num_players%, -1
-  If cycle.ctrl$(idx%) <> "ai_control" Then
-    Inc num_humans%, -1
-    If num_humans% = 0 Then attract_mode% = 1
-  EndIf
-  cycle.ctrl$(idx%) = "ctrl_die"
+  Inc num_alive%, -1
+  If cycle.ctrl$(idx%) <> "ai_control" Then Inc num_humans%, -1
+  cycle.ctrl$(idx%) = "die_control"
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
   sound.start_fx(sound.FX_DIE%(), 0)
@@ -686,7 +674,7 @@ End Sub
 Sub close_controllers()
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
-    close_controller_no_error(cycle.ctrl_backup$(i%))
+    close_controller_no_error(cycle.ctrl_setting$(i%))
   Next
 End Sub
 
@@ -696,31 +684,31 @@ Sub close_controller_no_error(ctrl$)
   On Error Abort
 End Sub
 
-controller_data_pm:
+controller_data_pmvga:
 
-Data 9
-Data "KEYS: AZ,.", "keys_cegg"
-Data "KEYS: AZXC", "keys_azxc"
-Data "KEYS: IKOP", "keys_ikop"
-Data "GAMEPAD A",  "nes_a"
-Data "GAMEPAD B",  "nes_b"
-Data "JOYSTICK A", "atari_a"
-Data "JOYSTICK B", "atari_b"
-Data "AI",         "ai_control"
-Data "NONE",       "noop_control"
+Data 9, 5
+Data "KEYS: AZ,.", "keys_cegg",  1
+Data "KEYS: AZXC", "keys_azxc",  0
+Data "KEYS: IKOP", "keys_ikop",  0
+Data "GAMEPAD A",  "nes_a",      1
+Data "GAMEPAD B",  "nes_b",      1
+Data "JOYSTICK A", "atari_a",    1
+Data "JOYSTICK B", "atari_b",    1
+Data "AI",         "ai_control", 0
+Data "NONE",       "no_control", 0
 
 controller_data_cmm2:
 
-Data 9
-Data "KEYS: AZ,.",    "keys_cegg"
-Data "KEYS: AZXC",    "keys_azxc"
-Data "KEYS: IKOP",    "keys_ikop"
-Data "JOYSTICK DX",   "atari_dx"
-Data "WII CLASSIC 1", "wii_classic_3" ' Port 1 => I2C3
-Data "WII CLASSIC 2", "wii_classic_1" ' Port 2 => I2C1
-Data "WII CLASSIC 3", "wii_classic_2" ' Port 3 => I2C2
-Data "AI",            "ai_control"
-Data "NONE",          "noop_control"
+Data 9, 5
+Data "KEYS: AZ,.",    "keys_cegg",     1
+Data "KEYS: AZXC",    "keys_azxc",     0
+Data "KEYS: IKOP",    "keys_ikop",     0
+Data "JOYSTICK DX",   "atari_dx",      1
+Data "WII CLASSIC 1", "wii_classic_3", 1 ' Port 1 => I2C3
+Data "WII CLASSIC 2", "wii_classic_1", 1 ' Port 2 => I2C1
+Data "WII CLASSIC 3", "wii_classic_2", 1 ' Port 3 => I2C2
+Data "AI",            "ai_control",    0
+Data "NONE",          "no_control",    0
 
 highscore_data:
 

@@ -37,7 +37,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_NO_SNES defined
 '!endif
 
-Const ctrl.VERSION = 900  ' 0.9.0
+Const ctrl.VERSION = 901  ' 0.9.1
 
 ' Button values as returned by controller read functions.
 Const ctrl.R      = &h01
@@ -136,28 +136,41 @@ Function ctrl.keydown%(i%)
 End Function
 
 Function ctrl.poll$(duration%, ctrls$())
-  Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
-  Local key%, i%, t%
+  Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF), i%
   Do
     For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
-      On Error Ignore
-      Call ctrls$(i%), ctrl.OPEN
-      On Error Abort
-      If Mm.ErrNo <> 0 Then Continue For
-      t% = Timer + 20
-      Do
-        Call ctrls$(i%), key%
-        If (key% = ctrl.A) Or (key% = ctrl.START) Then
-          ctrl.poll$ = ctrls$(i%)
-          ' Wait for user to release key.
-          Do While key% <> 0 : Call ctrls$(i%), key% : Loop
-          Call ctrls$(i%), ctrl.CLOSE
-          Exit Function
-        EndIf
-      Loop While Timer < t%
-      Call ctrls$(i%), ctrl.CLOSE
+      If ctrl.poll_single%(ctrls$(i%), ctrl.A Or ctrl.START) Then
+        ctrl.poll$ = ctrls$(i%)
+        Exit Function
+      EndIf
     Next
-  Loop Until Timer >= expires%
+  Loop While Timer < expires%
+End Function
+
+' Opens, polls (for a maximum of 20ms) and closes a controller.
+'
+' @param  ctrl$  controller driver function.
+' @param  mask%  bit mask to match against.
+' @return        1 if any of the bits in the mask match what is read from the
+'                controller, otherwise 0.
+Function ctrl.poll_single%(ctrl$, mask%)
+  On Error Ignore
+  Call ctrl$, ctrl.OPEN
+  ' TODO: What if CLASSIC controller is already open ?
+  If Mm.ErrNo = 0 Then
+    Local key%, t% = Timer + 20
+    Do
+      Call ctrl$, key%
+      If key% And mask% Then
+        ctrl.poll_single% = 1
+        ' Wait for user to release key.
+        Do While key% <> 0 : Call ctrl$, key% : Loop
+        Exit Do
+      EndIf
+    Loop While Timer < t%
+    Call ctrl$, ctrl.CLOSE
+  EndIf
+  On Error Abort
 End Function
 
 '!ifdef PICOMITE

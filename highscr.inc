@@ -84,10 +84,11 @@ End Sub
 ' Shows the high-score table for a specified duration or until the user presses
 ' START/FIRE/SPACE.
 '
-' @param duration%  duration in milliseconds; if 0 then indefinite.
-' @return           controller id if user pressed button/key,
-'                   empty string if the duration expired.
-Function highscr.show_table$(duration%)
+' @param  ctrls$     controllers to poll.
+' @param  duration%  duration in milliseconds; if 0 then indefinite.
+' @return            controller id if user pressed button/key,
+'                    empty string if the duration expired.
+Function highscr.show_table$(ctrls$(), duration%)
   Const ch$ = Chr$(205)
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
 
@@ -110,7 +111,7 @@ Function highscr.show_table$(duration%)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-    highscr.show_table$ = ctrl.poll$(200, POLL_THESE$())
+    highscr.show_table$ = ctrl.poll$(200, ctrls$())
   Loop
 End Function
 
