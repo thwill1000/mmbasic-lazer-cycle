@@ -224,7 +224,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
     End If
 
     If play_sound% Then
-      start_soundfx(Peek(VarAddr SOUNDFX_SELECT%()))
+      sound.start_fx(sound.FX_SELECT%())
       play_sound% = 0
     EndIf
 
