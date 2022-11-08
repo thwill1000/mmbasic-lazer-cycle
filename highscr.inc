@@ -264,3 +264,19 @@ Function highscr.get_input%(ctrl$)
   EndIf
   highscr.get_input% = key%
 End Function
+
+' Gets bit i% of x%.
+Function bits.get%(x%, i%)
+  If i% < 0 Or i% > 63 Then Error "i% out of 0 .. 63 range"
+  bits.get% = (x% And 1 << i%) <> 0
+End Function
+
+Function str.lpad$(s$, x%)
+  str.lpad$ = s$
+  If Len(s$) < x% Then str.lpad$ = Space$(x% - Len(s$)) + s$
+End Function
+
+Function str.rpad$(s$, x%)
+  str.rpad$ = s$
+  If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
+End Function

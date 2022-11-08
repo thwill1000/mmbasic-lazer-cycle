@@ -246,16 +246,6 @@ Function wait%(duration%)
   EndIf
 End Function
 
-Function str.lpad$(s$, x%)
-  str.lpad$ = s$
-  If Len(s$) < x% Then str.lpad$ = Space$(x% - Len(s$)) + s$
-End Function
-
-Function str.rpad$(s$, x%)
-  str.rpad$ = s$
-  If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
-End Function
-
 Sub show_menu()
   Const x% = X_OFFSET% - 100
   Local key%, i%, item% = 0, update% = 1
@@ -767,12 +757,6 @@ Sub play_soundfx()
   Play Sound 4, B, s, FREQUENCY!(n%), (n% <> 0) * 25
   Inc soundfx_ptr%
 End Sub
-
-' Gets bit i% of x%.
-Function bits.get%(x%, i%)
-  If i% < 0 Or i% > 63 Then Error "i% out of 0 .. 63 range"
-  bits.get% = (x% And 1 << i%) <> 0
-End Function
 
 music_data:
 
