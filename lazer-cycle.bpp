@@ -30,14 +30,6 @@ Select Case Mm.Device$
     Error "Unsupported device: " + Mm.Device$
 End Select
 
-Const COLOUR_BLACK%  = Rgb(Black)
-Const COLOUR_BLUE%   = Rgb(Blue)
-Const COLOUR_CYAN%   = Rgb(Cyan)
-Const COLOUR_GREEN%  = Rgb(Green)
-Const COLOUR_GREY%   = Rgb(Grey)
-Const COLOUR_RED%    = Rgb(Red)
-Const COLOUR_YELLOW% = Rgb(Yellow)
-Const COLOUR_WHITE%  = Rgb(White)
 Const WIDTH% = Mm.HRes \ 2
 Const HEIGHT% = (Mm.VRes - 20) \ 2
 Const X_OFFSET% = MM.HRes \ 2
@@ -82,7 +74,7 @@ Dim cycle.score%(MAX_CYCLE_IDX%)
 Dim cycle.nxt%(MAX_CYCLE_IDX%)
 Dim cycle.pos%(MAX_CYCLE_IDX%)
 Dim cycle.dir%(MAX_CYCLE_IDX%)
-Dim cycle.colour%(MAX_CYCLE_IDX%) = (COLOUR_RED%, COLOUR_YELLOW%, COLOUR_CYAN%, COLOUR_GREEN%)
+Dim cycle.colour%(MAX_CYCLE_IDX%) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.ctrl_backup$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.state%(MAX_CYCLE_IDX%)
@@ -210,11 +202,11 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_title%(duration%)
-  Text X_OFFSET%, Y_OFFSET% - 15, "LAZER CYCLE", "CM", 1, 2, COLOUR_WHITE%
-  Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, COLOUR_CYAN%
-  Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, COLOUR_CYAN%
+  Text X_OFFSET%, Y_OFFSET% - 15, "LAZER CYCLE", "CM", 1, 2, Rgb(White)
+  Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
   Local text$ = Choice(Mm.Device$ <> "MMBasic for Windows", "Press START, FIRE or SPACE", "Press SPACE")
-  Text X_OFFSET%, Y_OFFSET% + 40, text$, "CM", 1, 1, COLOUR_WHITE%
+  Text X_OFFSET%, Y_OFFSET% + 40, text$, "CM", 1, 1, Rgb(White)
   If IS_CMM2% Then Page Copy 1 To 0, B
   show_title% = wait%(duration%)
 End Function
@@ -234,7 +226,7 @@ Function show_highscore%(duration%)
 End Function
 
 Sub clear_display()
-   Box 0, 0, Mm.HRes, Mm.VRes, 1, COLOUR_BLACK%, COLOUR_BLACK%
+   Box 0, 0, Mm.HRes, Mm.VRes, 1, Rgb(Black), Rgb(Black)
    If IS_CMM2% Then Page Copy 1 To 0, B
 End Sub
 
@@ -280,8 +272,8 @@ Sub show_menu()
 
   For i% = 0 To MAX_CYCLE_IDX% : cycle.ctrl$(i%) = cycle.ctrl_backup$(i%) : Next
 
-  ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, COLOUR_CYAN%
-  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, COLOUR_CYAN%
+  ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
   On Error Ignore
@@ -291,15 +283,15 @@ Sub show_menu()
   Do
 
     If update% Then
-      Text x%, Y_OFFSET% - 95, "START GAME", , 1, 1, COLOUR_WHITE%
+      Text x%, Y_OFFSET% - 95, "START GAME", , 1, 1, Rgb(White)
       text_for_controller(x%, Y_OFFSET% - 75, 0)
       text_for_controller(x%, Y_OFFSET% - 55, 1)
       text_for_controller(x%, Y_OFFSET% - 35, 2)
       text_for_controller(x%, Y_OFFSET% - 15, 3)
-      Text x%, Y_OFFSET% + 5,  "DIFFICULTY: " + Str$(difficulty%), , 1, 1, COLOUR_WHITE%
-      Text x%, Y_OFFSET% + 25, "SOUND:      " + sounds$(sound_setting%), , 1, 1, COLOUR_WHITE%
-      Text x%, Y_OFFSET% + 45, "QUIT", , 1, 1, COLOUR_WHITE%
-      Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_CYAN%
+      Text x%, Y_OFFSET% + 5,  "DIFFICULTY: " + Str$(difficulty%), , 1, 1, Rgb(White)
+      Text x%, Y_OFFSET% + 25, "SOUND:      " + sounds$(sound_setting%), , 1, 1, Rgb(White)
+      Text x%, Y_OFFSET% + 45, "QUIT", , 1, 1, Rgb(White)
+      Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Cyan)
       If IS_CMM2% Then Page Copy 1 To 0, B
       Pause 200
       update% = 0
@@ -313,14 +305,14 @@ Sub show_menu()
 
       Case ctrl.UP
         If item% > 0 Then
-          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
+          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Black)
           Inc item%, -1
           update% = 1
         EndIf
 
       Case ctrl.DOWN
         If item% < 7 Then
-          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, COLOUR_BLACK%
+          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Black)
           Inc item%
           update% = 1
         EndIf
@@ -491,7 +483,7 @@ Sub draw_arena()
     If a% = 0 Then Continue For
     For j% = 0 To 7
       If Peek(Var a%, j%) <> 128 Then Continue For
-      Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), COLOUR_GREY%
+      Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), Rgb(Grey)
     Next
   Next
 End Sub
@@ -582,7 +574,7 @@ Sub wipe()
   Local y%
   start_soundfx(Peek(VarAddr SOUNDFX_WIPE%()), 1)
   For y% = 0 To Mm.VRes \ 2 Step 5
-     Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, COLOUR_CYAN%, COLOUR_BLACK%
+     Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, Rgb(Cyan), Rgb(Black)
      If IS_CMM2% Then Page Copy 1 To 0, B
      Pause 30
   Next
