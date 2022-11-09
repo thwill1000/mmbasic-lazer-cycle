@@ -223,6 +223,8 @@ controller_data_cmm2:
 
 Data "keys_cursor",   "Keyboard: Cursor keys & Space"
 Data "atari_dx",      "CMM2 DX Atari VCS joystick"
+Data "nes_dx",        "CMM2 DX NES gamepad (attached to Atari port with adapter)"
+Data "snes_dx",       "CMM2 DX SNES gamepad (attached to Atari port with adapter)"
 Data "wii_classic_3", "Port 1: Wii Classic Controller (I2C3)"
 Data "wii_classic_1", "Port 2: Wii Classic Controller (I2C1)"
 Data "wii_classic_2", "Port 3: Wii Classic Controller (I2C2)"

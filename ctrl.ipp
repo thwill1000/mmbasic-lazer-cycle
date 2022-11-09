@@ -60,13 +60,9 @@ Const ctrl.OPEN  = -1
 Const ctrl.CLOSE = -2
 Const ctrl.SOFT_CLOSE = -3
 
-'!ifdef PICOMITE
-
 ' The NES standard specifies a 12 micro-second pulse, but all the controllers
 ' I've tested work with 1 micro-second, and possibly less.
 Const ctrl.PULSE = 0.001 ' 1 micro-second
-
-'!endif
 
 '!ifndef CMM2
 
@@ -268,9 +264,9 @@ Sub snes_b(x%)
   End Select
 End Sub
 
-'!endif ' CTRL_ONE_PLAYER
+'!endif ' !ifndef CTRL_ONE_PLAYER
 
-'!endif ' CTRL_NO_SNES
+'!endif ' !ifndef CTRL_NO_SNES
 
 ' Reads port A connected to a NES gamepad.
 '
@@ -349,6 +345,66 @@ Sub atari_dx(x%)
       SetPin 40, Din, PullUp
   End Select
 End Sub
+
+' NES gamepad attached USING ADAPTER to Atari joystick port on CMM2 Deluxe G2.
+'
+' IMPORTANT! the adapter is required to swap the Male DB9 (CMM2) +5V supply on
+' Pin 7 to Pin 6 on the Female DB9 (Gamepad).
+'
+'   Pin 38: Latch, Pin 40: Clock, Pin 36: Data
+Sub nes_dx(x%)
+  Select Case x%
+    Case Is >= 0
+      Pulse 38, ctrl.PULSE
+      x% =    Not Pin(36) * ctrl.A      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.B      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.SELECT : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.START  : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.UP     : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.DOWN   : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.LEFT   : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.RIGHT  : Pulse 40, ctrl.PULSE
+      Exit Sub
+    Case ctrl.OPEN
+      SetPin 38, Dout
+      SetPin 40, Dout
+      SetPin 36, Din
+      Pin(38) = 0
+      Pin(40) = 0
+  End Select
+End Sub
+
+'!ifndef CTRL_NO_SNES
+
+' SNES gamepad attached USING ADAPTER to Atari joystick port on CMM2 Deluxe G2.
+'
+' IMPORTANT! the adapter is required to swap the Male DB9 (CMM2) +5V supply on
+' Pin 7 to Pin 6 on the Female DB9 (Gamepad).
+'
+'   Pin 38: Latch, Pin 40: Clock, Pin 36: Data
+Sub snes_dx(x%)
+  Select Case x%
+    Case Is >= 0
+      Pulse 38, ctrl.PULSE
+      x% =    Not Pin(36) * ctrl.B      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.Y      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.SELECT : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.START  : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.UP     : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.DOWN   : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.LEFT   : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.RIGHT  : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.A      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.X      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.L      : Pulse 40, ctrl.PULSE
+      Inc x%, Not Pin(36) * ctrl.R      : Pulse 40, ctrl.PULSE
+      Exit Sub
+    Case ctrl.OPEN
+      nes_dx(ctrl.OPEN)
+  End Select
+End Sub
+
+'!endif '!ifndef CTRL_NO_SNES
 
 ' Wii Classic gamepad on I2C1.
 Sub wii_classic_1(x%)
