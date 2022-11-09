@@ -55,9 +55,9 @@ Dim frame_duration%
 Dim next_frame%
 
 ' Each cell of the arena takes up 1 byte:
-'   bit  0    - occupied by cycle
+'   bit  0   - occupied by cycle
 '   bits 1-2 - index of cycle
-'   bits 3-4 - direction cycle was going in when entered cycle
+'   bits 3-4 - direction cycle was going in when entered cell
 '   bits 5-6 - unused
 '   bit  7   - arena wall (other bits will be 0)
 Dim arena%(HEIGHT% * WIDTH% \ 8)
@@ -605,7 +605,11 @@ End Sub
 
 Sub die_control(x%)
   If x% < 0 Then Exit Sub
-  x% = COMPASS_TO_CTRL%(((Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 3) + 2) Mod 4)
+  Local bits% = Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 1
+  If (bits% And &b11) = cycle.current% Then
+    bits% = (bits% >> 2) And &b11
+    x% = COMPASS_TO_CTRL%((bits% + 2) Mod 4)
+  EndIf
 End Sub
 
 Sub no_control(x%)
