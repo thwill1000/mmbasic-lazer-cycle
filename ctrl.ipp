@@ -58,6 +58,7 @@ Const ctrl.ZL     = &h4000
 
 Const ctrl.OPEN  = -1
 Const ctrl.CLOSE = -2
+Const ctrl.SOFT_CLOSE = -3
 
 '!ifdef PICOMITE
 
@@ -147,7 +148,7 @@ Function ctrl.poll$(duration%, ctrls$())
   Loop While Timer < expires%
 End Function
 
-' Opens, polls (for a maximum of 20ms) and closes a controller.
+' Opens, polls (for a maximum of 5ms) and closes a controller.
 '
 ' @param  ctrl$  controller driver function.
 ' @param  mask%  bit mask to match against.
@@ -158,7 +159,7 @@ Function ctrl.poll_single%(ctrl$, mask%)
   Call ctrl$, ctrl.OPEN
   ' TODO: What if CLASSIC controller is already open ?
   If Mm.ErrNo = 0 Then
-    Local key%, t% = Timer + 20
+    Local key%, t% = Timer + 5
     Do
       Call ctrl$, key%
       If key% And mask% Then
@@ -168,7 +169,7 @@ Function ctrl.poll_single%(ctrl$, mask%)
         Exit Do
       EndIf
     Loop While Timer < t%
-    Call ctrl$, ctrl.CLOSE
+    Call ctrl$, ctrl.SOFT_CLOSE
   EndIf
   On Error Abort
 End Function
@@ -351,41 +352,59 @@ End Sub
 
 ' Wii Classic gamepad on I2C1.
 Sub wii_classic_1(x%)
+  If x% >= 0 Then
+    x% = Classic(B, 1)
+    If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
+    Exit Sub
+  EndIf
+
+  Static is_open% = 0
   Select Case x%
-    Case Is >= 0
-      x% = Classic(B, 1)
-      Exit Sub
     Case ctrl.OPEN
-      Controller Classic Open 1
+      If Not is_open% Then Controller Classic Open 1 : is_open% = 1
     Case ctrl.CLOSE
-      Controller Classic Close 1
+      If is_open% Then Controller Classic Close 1 : is_open% = 0
+    Case ctrl.SOFT_CLOSE
+      ' Do nothing
   End Select
 End Sub
 
 ' Wii Classic gamepad on I2C2.
 Sub wii_classic_2(x%)
+  If x% >= 0 Then
+    x% = Classic(B, 2)
+    If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
+    Exit Sub
+  EndIf
+
+  Static is_open% = 0
   Select Case x%
-    Case Is >= 0
-      x% = Classic(B, 2)
-      Exit Sub
     Case ctrl.OPEN
-      Controller Classic Open 2
+      If Not is_open% Then Controller Classic Open 2 : is_open% = 1
     Case ctrl.CLOSE
-      Controller Classic Close 2
+      If is_open% Then Controller Classic Close 2 : is_open% = 0
+    Case ctrl.SOFT_CLOSE
+      ' Do nothing
   End Select
 End Sub
 
 ' Wii Classic gamepad on I2C3.
 Sub wii_classic_3(x%)
+  If x% >= 0 Then
+    x% = Classic(B, 3)
+    If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
+    Exit Sub
+  EndIf
+
+  Static is_open% = 0
   Select Case x%
-    Case Is >= 0
-      x% = Classic(B, 3)
-      Exit Sub
     Case ctrl.OPEN
-      Controller Classic Open 3
+      If Not is_open% Then Controller Classic Open 3 : is_open% = 1
     Case ctrl.CLOSE
-      Controller Classic Close 3
+      If is_open% Then Controller Classic Close 3 : is_open% = 0
+    Case ctrl.SOFT_CLOSE
+      ' Do nothing
   End Select
 End Sub
 
-'!endif
+'!endif ' CMM2
