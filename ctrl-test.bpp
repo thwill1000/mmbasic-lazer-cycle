@@ -212,7 +212,7 @@ controller_data_picomite:
 
 Data "keys_cursor", "Keyboard: Cursor keys & Space"
 Data "atari_a",     "Port A: Atari VCS joystick"
-Data "atari_b",     "Port B: Atari VCS joystick"
+Data "atari_b",     "Port B: Atari VCS joystick (2.0 PCB only)"
 Data "nes_a",       "Port A: NES gamepad"
 Data "nes_b",       "Port B: NES gamepad"
 Data "snes_a",      "Port A: SNES gamepad"

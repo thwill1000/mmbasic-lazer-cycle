@@ -37,7 +37,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_NO_SNES defined
 '!endif
 
-Const ctrl.VERSION = 901  ' 0.9.1
+Const ctrl.VERSION = 902  ' 0.9.2
 
 ' Button values as returned by controller read functions.
 Const ctrl.R      = &h01
