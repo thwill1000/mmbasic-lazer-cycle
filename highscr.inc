@@ -150,7 +150,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
   Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, play_sound%
   y% = Y_OFFSET% - 75 + 15 * idx%
-  name$ = ""
+  name$ = "PLAYER " + Str$(player%)
 
   ctrl.term_keys()
 
