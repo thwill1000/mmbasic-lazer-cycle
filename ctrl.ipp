@@ -132,13 +132,13 @@ Function ctrl.keydown%(i%)
 '!endif
 End Function
 
-Function ctrl.poll$(duration%, ctrls$())
+Function ctrl.poll_multiple$(ctrls$(), mask%, duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF), i%
   Do
     For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
-      If ctrl.poll_single%(ctrls$(i%), ctrl.A Or ctrl.START) Then
-        ctrl.poll$ = ctrls$(i%)
-        Exit Function
+      If ctrl.poll_single%(ctrls$(i%), mask%) Then
+        ctrl.poll_multiple$ = ctrls$(i%)
+        Exit Do
       EndIf
     Next
   Loop While Timer < expires%

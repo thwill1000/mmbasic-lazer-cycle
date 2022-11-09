@@ -204,7 +204,7 @@ End Sub
 '                   0 if the duration expired.
 Function wait%(duration%)
   ctrl.init_keys()
-  Local ctrl$ = ctrl.poll$(duration%, CTRLS_TO_POLL$())
+  Local ctrl$ = ctrl.poll_multiple$(CTRLS_TO_POLL$(), ctrl.A Or ctrl.START, duration%)
   If ctrl$ <> "" Then
     If ui_ctrl$ = "" Then ui_ctrl$ = ctrl$
     wait% = 1
