@@ -76,7 +76,7 @@ Dim num_alive%
 Dim num_humans%
 
 Option Break 4
-On Key 3, on_quit
+On Key 3, on_exit
 
 init_globals()
 clear_display()
@@ -110,7 +110,7 @@ Sub outer_loop()
 End Sub
 
 ' Break handler to stop music & fx when Ctrl-C pressed.
-Sub on_quit()
+Sub on_exit()
   Play Stop
   On Key 3, 0
   Option Break 3
@@ -295,7 +295,7 @@ Sub show_menu()
             update% = 1
 
           Case 7 ' Quit
-            If key% = ctrl.A Then on_quit()
+            If key% = ctrl.A Then on_exit()
 
         End Select
 
