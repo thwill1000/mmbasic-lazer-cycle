@@ -406,8 +406,10 @@ Sub show_game_over()
   wipe()
 
   ' Insert into high-score table.
+  ' For the moment only the winner can enter a high-score,
+  ' to change that make the upper bound of the FOR statement = MAX_CYCLE_IDX%
   Local new_highscore%, player%
-  For i% = 0 To MAX_CYCLE_IDX%
+  For i% = 0 To 0
     player% = idx%(i%)
     If cycle.ctrl_setting$(player%) = "ai_control" Then Continue For
     For j% = 0 To Bound(highscr.values$())

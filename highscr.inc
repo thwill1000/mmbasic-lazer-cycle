@@ -148,11 +148,12 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   Cat help$, "and FIRE to confirm"
   Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(White)
 
-  Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, play_sound%
+  Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, state%
   y% = Y_OFFSET% - 75 + 15 * idx%
   name$ = "PLAYER " + Str$(player%)
 
-  ctrl.term_keys()
+  ctrl.term_keys() ' Regain control of the keyboard for INKEY$
+  Do While highscr.get_input%(ctrl$) : Loop ' Wait for player to release controller.
 
   ' PEEKing the font doesn't work in MMB4W.
   Local font_width% = Choice(Mm.Device$ = "MMBasic for Windows", 8, Peek(Byte Mm.Info(Font Address 1)))
@@ -181,7 +182,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
     key% = highscr.get_input%(ctrl$)
     If key% > 0 Then
-      play_sound% = 1
+      state% = 1
       Select Case key%
         Case &h01 ' Fire
           If confirm% > 0 Then
@@ -190,12 +191,13 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
             Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(Black), Rgb(Black)
             Text X_OFFSET%, y_help%, " Press FIRE again to confirm ", "CT", 1, 1, Rgb(Black), Rgb(White)
             confirm% = 50
-            Pause 500 ' So we do not immediately respond to another FIRE press.
           EndIf
         Case &h08 ' Backspace
           If p% > 1 Then
             name$ = Left$(name$, p% - 2) + Mid$(name$, p%)
             Inc p%, -1
+          Else
+            state% = 2
           EndIf
         Case &h7F ' Delete
           name$ = Left$(name$, p% - 1) + Mid$(name$, p% + 1)
@@ -216,17 +218,18 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
           Do While p% > Len(name$) : Cat name$, " " : Loop
           name$ = Left$(name$, p% - 1) + Chr$(i%) + Mid$(name$, p% + 1)
         Case &h82 ' Left arrow
-          If p% > 1 Then Inc p%, -1
+          If p% > 1 Then Inc p%, -1 Else state% = 2
         Case &h83 ' Right arrow
-          If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1 Else key% = -1
+          If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1 Else state% = 2
         Case Else
-          play_sound% = 0
+          state% = 0
       End Select
     End If
 
-    If play_sound% Then
-      sound.start_fx(sound.FX_SELECT%())
-      play_sound% = 0
+    If state% > 0 Then
+      If state% = 1 Then sound.start_fx(sound.FX_SELECT%()) Else sound.start_fx(sound.FX_BLART%())
+      If key% <> &h01 Then confirm% = 1 ' So message is cleared
+      state% = 0
     EndIf
 
   Loop While key% <> -1
@@ -255,15 +258,18 @@ Function highscr.get_input%(ctrl$)
   If key% = 0 Then
     Call ctrl$, key%
     Select Case key%
-      Case ctrl.A     : key% = &h01 ' Magic value to use for fire
-      Case ctrl.UP    : key% = &h80 ' Up arrow
-      Case ctrl.DOWN  : key% = &h81 ' Down arrow
-      Case ctrl.LEFT  : key% = &h82 ' Left arrow
-      Case ctrl.RIGHT : key% = &h83 ' Right arrow
-      Case Else       : key% = 0
+      Case ctrl.A     : highscr.get_input% = &h01 ' Magic value to use for fire
+      Case ctrl.UP    : highscr.get_input% = &h80 ' Up arrow
+      Case ctrl.DOWN  : highscr.get_input% = &h81 ' Down arrow
+      Case ctrl.LEFT  : highscr.get_input% = &h82 ' Left arrow
+      Case ctrl.RIGHT : highscr.get_input% = &h83 ' Right arrow
     End Select
+
+    ' Wait for controller/key to be released.
+    Do While key% <> 0 : Call ctrl$, key% : Loop
+  Else
+    highscr.get_input% = key%
   EndIf
-  highscr.get_input% = key%
 End Function
 
 ' Gets bit i% of x%.

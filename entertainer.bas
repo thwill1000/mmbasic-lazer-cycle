@@ -66,6 +66,10 @@ Function music.prompt_for_num_channels%()
   music.prompt_for_num_channels% = Val(s$)
 End Function
 
+Sub music.compose_blart()
+  music.parse(channel1%(), "qC5,qB4,qF#4,qF4")
+End Sub
+
 Sub music.compose_die()
   music.parse(channel1%(), "qF6,qE6,qEb6,qD6,qC#6,qC6,qB5,qA#5")
   music.parse(channel1%(), "qA5,qAb5,qG5,qF#5,qF5,qE5,qEb5,qD5")
