@@ -22,11 +22,11 @@ Select Case Mm.Device$
     Const IS_CMM2% = 1
     Mode 7
     Page Write 1
-  Case "PicoMiteVGA"
+  Case "PicoMite", "PicoMiteVGA"
     If Val(Mm.Info(CpuSpeed)) < 252000000 Then Error "Requires OPTION CPUSPEED 252000 or 378000"
     Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
     Const IS_CMM2% = 0
-    Mode 2
+    If Mm.Device$ = "PicoMiteVGA" Then Mode 2
   Case Else
     Error "Unsupported device: " + Mm.Device$
 End Select
@@ -119,6 +119,7 @@ Sub on_exit()
   On Key 3, 0
   Option Break 3
   close_controllers()
+  Cls
   End
 End Sub
 
@@ -127,11 +128,11 @@ Sub init_globals()
   Local a%, i%, j%
 
   ' Initialise list of controllers.
-  If InStr(Mm.Device$, "PicoMite") Then
-    Restore controller_data_pmvga
-  Else
-    Restore controller_data_cmm2
-  EndIf
+  Select Case Mm.Device$
+    Case "PicoMite"    : Restore controller_data_pm
+    Case "PicoMiteVGA" : Restore controller_data_pmvga
+    Case Else          : Restore controller_data_cmm2
+  End Select
   Local num_ctrl%, num_poll%
   Read num_ctrl%, num_poll%
   Dim CTRL_NAMES$(num_ctrl% - 1)
@@ -533,19 +534,6 @@ Sub close_controller_no_error(ctrl$)
   On Error Abort
 End Sub
 
-controller_data_pmvga:
-
-Data 9, 5
-Data "KEYS: AZ,.", "keys_cegg",  1
-Data "KEYS: AZXC", "keys_azxc",  0
-Data "KEYS: IKOP", "keys_ikop",  0
-Data "GAMEPAD A",  "nes_a",      1
-Data "GAMEPAD B",  "nes_b",      1
-Data "JOYSTICK A", "atari_a",    1
-Data "JOYSTICK B", "atari_b",    1
-Data "AI",         "ai_control", 0
-Data "NONE",       "no_control", 0
-
 controller_data_cmm2:
 
 Data 10, 6
@@ -559,6 +547,29 @@ Data "WII CLASSIC 2",  "wii_classic_1", 1 ' Port 2 => I2C1
 Data "WII CLASSIC 3",  "wii_classic_2", 1 ' Port 3 => I2C2
 Data "AI",             "ai_control",    0
 Data "NONE",           "no_control",    0
+
+controller_data_pm:
+
+Data 6, 2
+Data "KEYS: AZ,.", "keys_cegg",  1
+Data "KEYS: AZXC", "keys_azxc",  0
+Data "KEYS: IKOP", "keys_ikop",  0
+Data "GAMEPAD",    "nes_a",      1
+Data "AI",         "ai_control", 0
+Data "NONE",       "no_control", 0
+
+controller_data_pmvga:
+
+Data 9, 5
+Data "KEYS: AZ,.", "keys_cegg",  1
+Data "KEYS: AZXC", "keys_azxc",  0
+Data "KEYS: IKOP", "keys_ikop",  0
+Data "GAMEPAD A",  "nes_a",      1
+Data "GAMEPAD B",  "nes_b",      1
+Data "JOYSTICK A", "atari_a",    1
+Data "JOYSTICK B", "atari_b",    1
+Data "AI",         "ai_control", 0
+Data "NONE",       "no_control", 0
 
 highscore_data:
 
