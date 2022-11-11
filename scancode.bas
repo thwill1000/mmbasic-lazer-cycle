@@ -8,19 +8,18 @@ Option Base 0
 Option Default None
 Option Explicit On
 
-Dim map_00%(31)
-Dim map_e0%(31)
+Dim scan_map_uk%(31)
 Dim key_map%(31)
 
-read_scan_code_map()
-'generate_scan_code_map()
-'dump_scan_code_map()
+read_scan_map_uk()
+'generate_scan_map_uk()
+'dump_scan_map_uk()
 On Ps2 on_ps2()
 Print "Press some keys:"
 Do : Loop
 End
 
-Sub generate_scan_code_map()
+Sub generate_scan_map_uk()
   ' Letters
   put_scan_code(Asc("a"), &h1C)
   put_scan_code(Asc("b"), &h32)
@@ -140,64 +139,60 @@ End Sub
 
 Sub put_scan_code(key_code%, scan_code%)
   If key_code% > 255 Then Error "Invalid key code: " + Hex$(key_code%)
-  If (scan_code% And &hE000) = &hE000 Then
-'    If Peek(Var map_e0%(), scan_code%) <> &h00 Then Error "Duplicate mapping: " + Hex$(scan_code%)
-    Poke Var map_e0%(), scan_code% And &hFF, key_code%
-  Else If (scan_code% And &hFF00) = 0 Then
-'    If Peek(Var map_00%(), scan_code%) <> &h00 Then Error "Duplicate mapping: " + Hex$(scan_code%)
-    Poke Var map_00%(), scan_code% And &hFF, key_code%
-  Else
-    Error "Unexpected scan code: " + Hex$(scan_code%)
-  End If
+
+  Local offset%
+  Select Case scan_code%
+    Case Is < &hE000
+      offset% = scan_code% And &hFF
+    Case Is < &hF000
+      offset% = (scan_code% And &hFF) + 128
+    Case Else
+      Error "Unexpected scan code: " + Hex$(scan_code%)
+  End Select
+
+  If offset% \ 8 > Bound(scan_map_uk%(), 1) Then Error "Out of bounds"
+  Poke Var scan_map_uk%(), offset%, key_code%
 End Sub
 
-Sub dump_scan_code_map
+Sub dump_scan_map_uk
   Local i%
-  For i% = 0 To 31
+  For i% = Bound(scan_map_uk%(), 0) To Bound(scan_map_uk%(), 1)
     If i% Mod 4 = 0 Then
       Print : Print "Data ";
     Else
       Print ", ";
     EndIf
-    Print "&h" Hex$(map_00%(i%), 16);
-  Next
-  Print
-  For i% = 0 To 31
-    If i% Mod 4 = 0 Then
-      Print : Print "Data ";
-    Else
-      Print ", ";
-    EndIf
-    Print "&h" Hex$(map_e0%(i%), 16);
+    Print "&h" Hex$(scan_map_uk%(i%), 16);
   Next
   Print
 End Sub
 
-Sub read_scan_code_map()
+Sub read_scan_map_uk()
   Read Save
-  Restore scan_uk_data
+  Restore scan_map_uk_data
   Local i%
-  For i% = 0 To 31
-    Read map_00%(i%)
-  Next
-  For i% = 0 To 31
-    Read map_e0%(i%)
+  For i% = Bound(scan_map_uk%(), 0) To Bound(scan_map_uk%(), 1)
+    Read scan_map_uk%(i%)
   Next
   Read Restore
 End Sub
 
 Sub on_ps2()
-  Local ch%, down%, scan_code% = Mm.Info(PS2)
+  Local ch%, down%, scan_code% = Mm.Info(PS2), offset% = scan_code% And &hFF
   Select Case scan_code%
     Case Is < &hE000
-      ch% = Peek(Var map_00%(), scan_code% And &hFF) : down% = 1
+      down% = 1
     Case Is < &hF000
-      ch% = Peek(Var map_e0%(), scan_code% And &hFF) : down% = 1
+      Inc offset%, 128
+      down% = 1
     Case Is < &hE0F000
-      ch% = Peek(Var map_00%(), scan_code% And &hFF)
+      down% = 0
     Case Else
-      ch% = Peek(Var map_e0%(), scan_code% And &hFF)
+      Inc offset%, 128
+      down% = 0
   End Select
+
+  ch% = Peek(Var scan_map_uk%(), offset%)
   Poke Var key_map%(), ch%, down%
 
   Print "<0x" Hex$(scan_code%, 6) "> => <0x" Hex$(ch%, 2) "> => " nice$(ch%)
@@ -207,7 +202,7 @@ End Sub
 Function nice$(ch%)
   Select Case ch%
     Case &h21 To &h7E : nice$ = Chr$(ch%)
-    Case &h09 : nice$ = "Backspace"
+    Case &h08 : nice$ = "Backspace"
     Case &h09 : nice$ = "Tab"
     Case &h0A : nice$ = "Enter"
     Case &h1B : nice$ = "Escape"
@@ -253,23 +248,13 @@ Sub dump_keys_down()
   Print Choice(count% = 0, "<None>", "")
 End Sub
 
-scan_uk_data:
+scan_map_uk_data:
 
 Data &h9C92919395009900, &h0060099496989A00, &h0031710000008B00, &h00327761737A0000
 Data &h0033346564786300, &h0035727466762000, &h0036796768626E00, &h003837756A6D0000
 Data &h0039306F696B2C00, &h002D703B6C2F2E00, &h00003D5B00270000, &h000023005D0A0000
 Data &h0008000000005C00, &h0000003734003100, &h001B383635322E30, &h0000392A2D332B9B
-Data &h0000000097000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-
-Data &h0000000000000000, &h0000000000000000, &h0000000000008B00, &h0000000000000000
+Data &h0000000097000000, &h0000000000000000, &h0000000000008B00, &h0000000000000000
 Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
 Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
 Data &h0000000000000000, &h0000008682008700, &h0000808300817F84, &h0000889D00890000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
-
