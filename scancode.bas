@@ -195,7 +195,8 @@ Sub on_ps2()
   ch% = Peek(Var scan_map_uk%(), offset%)
   Poke Var key_map%(), ch%, down%
 
-  Print "<0x" Hex$(scan_code%, 6) "> => <0x" Hex$(ch%, 2) "> => " key_code_to_string$(ch%)
+  Print "<0x" Hex$(scan_code%, 6) "> => <0x" Hex$(ch%, 2) "> => ";
+  Print key_code_to_string$(ch%) " " Choice(down%, "[DOWN]", "[UP]")
   dump_keys_down()
 End Sub
 
