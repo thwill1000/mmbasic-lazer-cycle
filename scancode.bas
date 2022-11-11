@@ -195,43 +195,43 @@ Sub on_ps2()
   ch% = Peek(Var scan_map_uk%(), offset%)
   Poke Var key_map%(), ch%, down%
 
-  Print "<0x" Hex$(scan_code%, 6) "> => <0x" Hex$(ch%, 2) "> => " nice$(ch%)
+  Print "<0x" Hex$(scan_code%, 6) "> => <0x" Hex$(ch%, 2) "> => " key_code_to_string$(ch%)
   dump_keys_down()
 End Sub
 
-Function nice$(ch%)
+Function key_code_to_string$(ch%)
   Select Case ch%
-    Case &h21 To &h7E : nice$ = Chr$(ch%)
-    Case &h08 : nice$ = "Backspace"
-    Case &h09 : nice$ = "Tab"
-    Case &h0A : nice$ = "Enter"
-    Case &h1B : nice$ = "Escape"
-    Case &h20 : nice$ = "Space"
-    Case &h7F : nice$ = "Delete"
-    Case &h80 : nice$ = "Up"
-    Case &h81 : nice$ = "Down"
-    Case &h82 : nice$ = "Left"
-    Case &h83 : nice$ = "Right"
-    Case &h84 : nice$ = "Insert"
-    Case &h86 : nice$ = "Home"
-    Case &h87 : nice$ = "End"
-    Case &h88 : nice$ = "Page Up"
-    Case &h89 : nice$ = "Page Down"
-    Case &h8B : nice$ = "Alt"
-    Case &h91 : nice$ = "F1"
-    Case &h92 : nice$ = "F2"
-    Case &h93 : nice$ = "F3"
-    Case &h94 : nice$ = "F4"
-    Case &h95 : nice$ = "F5"
-    Case &h96 : nice$ = "F6"
-    Case &h97 : nice$ = "F7"
-    Case &h98 : nice$ = "F8"
-    Case &h99 : nice$ = "F9"
-    Case &h9A : nice$ = "F10"
-    Case &h9B : nice$ = "F11"
-    Case &h9C : nice$ = "F12"
-    Case &h9D : nice$ = "Prt Scr"
-    Case Else : nice$ = "<unknown>"
+    Case &h21 To &h7E : key_code_to_string$ = Chr$(ch%)
+    Case &h08 : key_code_to_string$ = "Backspace"
+    Case &h09 : key_code_to_string$ = "Tab"
+    Case &h0A : key_code_to_string$ = "Enter"
+    Case &h1B : key_code_to_string$ = "Escape"
+    Case &h20 : key_code_to_string$ = "Space"
+    Case &h7F : key_code_to_string$ = "Delete"
+    Case &h80 : key_code_to_string$ = "Up"
+    Case &h81 : key_code_to_string$ = "Down"
+    Case &h82 : key_code_to_string$ = "Left"
+    Case &h83 : key_code_to_string$ = "Right"
+    Case &h84 : key_code_to_string$ = "Insert"
+    Case &h86 : key_code_to_string$ = "Home"
+    Case &h87 : key_code_to_string$ = "End"
+    Case &h88 : key_code_to_string$ = "Page Up"
+    Case &h89 : key_code_to_string$ = "Page Down"
+    Case &h8B : key_code_to_string$ = "Alt"
+    Case &h91 : key_code_to_string$ = "F1"
+    Case &h92 : key_code_to_string$ = "F2"
+    Case &h93 : key_code_to_string$ = "F3"
+    Case &h94 : key_code_to_string$ = "F4"
+    Case &h95 : key_code_to_string$ = "F5"
+    Case &h96 : key_code_to_string$ = "F6"
+    Case &h97 : key_code_to_string$ = "F7"
+    Case &h98 : key_code_to_string$ = "F8"
+    Case &h99 : key_code_to_string$ = "F9"
+    Case &h9A : key_code_to_string$ = "F10"
+    Case &h9B : key_code_to_string$ = "F11"
+    Case &h9C : key_code_to_string$ = "F12"
+    Case &h9D : key_code_to_string$ = "Prt Scr"
+    Case Else : key_code_to_string$ = "<unknown>"
   End Select
 End Function
 
@@ -241,7 +241,7 @@ Sub dump_keys_down()
   For ch% = 0 To 255
     If Peek(Var key_map%(), ch%) Then
       If count% > 0 Then Print ", ";
-      Print nice$(ch%) " ";
+      Print key_code_to_string$(ch%) " ";
       Inc count%
     EndIf
   Next ch%
