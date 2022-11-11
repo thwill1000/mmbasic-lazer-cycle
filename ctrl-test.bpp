@@ -119,7 +119,7 @@ Sub main_loop()
         Call ctrl$, ctrl.OPEN
         err$ = Choice(Mm.ErrNo = 0, "", Mm.ErrMsg$)
         On Error Abort
-        Do While ctrl.keydown%(i% + 144) : Loop ' Wait for key to be released.
+        Do While ctrl.keydown%(i% + 144) : Pause 5 : Loop ' Wait for key to be released.
         Exit For
       EndIf
     Next

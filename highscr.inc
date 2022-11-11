@@ -266,7 +266,7 @@ Function highscr.get_input%(ctrl$)
     End Select
 
     ' Wait for controller/key to be released.
-    Do While key% <> 0 : Call ctrl$, key% : Loop
+    Do While key% : Pause 5 : Call ctrl$, key% : Loop
   Else
     highscr.get_input% = key%
   EndIf

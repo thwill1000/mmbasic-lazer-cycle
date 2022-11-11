@@ -27,6 +27,17 @@ Error "File 'ctrl.ipp' requires transpiling"
 '!ifndef CTRL_PLATFORM_SET
   '!error "File 'ctrl.ipp' was transpiled without CMM2, MMB4L or PICOMITE flags set"
 '!endif
+'!ifndef CTRL_USE_INKEY
+  '!ifdef CMM2
+    '!set CTRL_USE_KEYDOWN
+  '!endif
+  '!ifdef MMB4L
+    '!set CTRL_USE_INKEY
+  '!endif
+  '!ifdef PICOMITE
+    '!set CTRL_USE_ON_PS2
+  '!endif
+'!endif
 '!ifdef CTRL_ONE_PLAYER
 ' Preprocessor flag CTRL_ONE_PLAYER defined
 '!endif
@@ -35,6 +46,15 @@ Error "File 'ctrl.ipp' requires transpiling"
 '!endif
 '!ifdef CTRL_NO_SNES
 ' Preprocessor flag CTRL_NO_SNES defined
+'!endif
+'!ifdef CTRL_USE_INKEY
+' Preprocessor flag CTRL_USE_INKEY defined
+'!endif
+'!ifdef CTRL_USE_ON_PS2
+' Preprocessor flag CTRL_USE_ON_PS2 defined
+'!endif
+'!ifdef CTRL_USE_KEYDOWN
+' Preprocessor flag CTRL_USE_KEYDOWN defined
 '!endif
 
 Const ctrl.VERSION = 902  ' 0.9.2
@@ -72,7 +92,14 @@ Const ctrl.PULSE = 0.001 ' 1 micro-second
 ' keyup events and instead automatically clear a byte after it is read.
 Dim ctrl.key_map%(31 + Mm.Info(Option Base))
 
-'!ifdef CMM2
+'!ifdef CTRL_USE_ON_PS2
+' Map used to convert PS/2 set 2 scan codes to entries in ctrl.key_map%().
+' The scan code first has to be converted into a single byte value,
+' see ctrl.on_ps2().
+Dim ctrl.scan_map%(31)
+'!endif
+
+'!ifdef CTRL_USE_KEYDOWN
 ' Timer number configured for reading the KEYDOWN state on the CMM2.
 Dim ctrl.tick_nbr%
 '!endif
@@ -83,16 +110,26 @@ Dim ctrl.tick_nbr%
 ' @param  nbr%     CMM2 only - timer nbr to read KEYDOWN state, default 4.
 Sub ctrl.init_keys(period%, nbr%)
   ctrl.term_keys()
-'!ifdef CMM2
+'!ifdef CTRL_USE_INKEY
+  On Key ctrl.on_key()
+'!endif
+'!ifdef CTRL_USE_ON_PS2
+  Read Save
+  Restore ctrl.scan_map_data
+  Local i%
+  For i% = Bound(ctrl.scan_map%(), 0) To Bound(ctrl.scan_map%(), 1)
+    Read ctrl.scan_map%(i%)
+  Next
+  Read Restore
+  On Ps2 ctrl.on_ps2()
+'!endif
+'!ifdef CTRL_USE_KEYDOWN
   ctrl.tick_nbr% = Choice(nbr% = 0, 4, nbr%)
   SetTick Choice(period% = 0, 40, period%), ctrl.on_tick(), ctrl.tick_nbr%
 '!endif
-'!ifndef CMM2
-  On Key ctrl.on_key()
-'!endif
 End Sub
 
-'!ifdef CMM2
+'!ifdef CTRL_USE_KEYDOWN
 ' Note there is little point in calling KeyDown(0) to determine the number of
 ' keys that are down, hardware limitations mean it's unlikely ever to be > 4
 ' and if a given key isn't down it just returns 0 so we harmlessly set that
@@ -106,19 +143,34 @@ Sub ctrl.on_tick()
 End Sub
 '!endif
 
-'!ifndef CMM2
+'!ifdef CTRL_USE_INKEY
 Sub ctrl.on_key()
   Poke Var ctrl.key_map%(), Asc(Inkey$), 1
 End Sub
 '!endif
 
+'!ifdef CTRL_USE_ON_PS2
+Sub ctrl.on_ps2()
+  Local ps2% = Mm.Info(PS2)
+  Select Case ps2%
+    Case Is < &hE000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), ps2% And &hFF), 1
+    Case Is < &hF000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), (ps2% And &hFF) + &h80), 1
+    Case Is < &hE0F000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), ps2% And &hFF), 0
+    Case Else : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), (ps2% And &hFF) + &h80), 0
+  End Select
+End Sub
+'!endif
+
 ' Terminates keyboard reading.
 Sub ctrl.term_keys()
-'!ifdef CMM2
-  If ctrl.tick_nbr% <> 0 Then SetTick 0, 0, ctrl.tick_nbr%
-'!endif
-'!ifndef CMM2
+'!ifdef CTRL_USE_INKEY
   On Key 0
+'!endif
+'!ifdef CTRL_USE_ON_PS2
+  On Ps2 0
+'!endif
+'!ifdef CTRL_USE_KEYDOWN
+  If ctrl.tick_nbr% <> 0 Then SetTick 0, 0, ctrl.tick_nbr%
 '!endif
   Memory Set Peek(VarAddr ctrl.key_map%()), 0, 256
   Do While Inkey$ <> "" : Loop
@@ -126,24 +178,10 @@ End Sub
 
 Function ctrl.keydown%(i%)
   ctrl.keydown% = Peek(Var ctrl.key_map%(), i%)
-'!ifndef CMM2
+'!ifdef CTRL_USE_INKEY
   Poke Var ctrl.key_map%(), i%, 0
 '!endif
 End Function
-
-'!ifndef CTRL_NO_CURSORS
-
-' Reads the keyboard as if it were a controller.
-Sub keys_cursor(x%)
-  If x% < 0 Then Exit Sub
-  x% =    ctrl.keydown%(32)  * ctrl.A
-  Inc x%, ctrl.keydown%(128) * ctrl.UP
-  Inc x%, ctrl.keydown%(129) * ctrl.DOWN
-  Inc x%, ctrl.keydown%(130) * ctrl.LEFT
-  Inc x%, ctrl.keydown%(131) * ctrl.RIGHT
-End Sub
-
-'!endif ' CTRL_NO_CURSORS
 
 Function ctrl.poll_multiple$(ctrls$(), mask%, duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF), i%
@@ -173,7 +211,7 @@ Function ctrl.poll_single%(ctrl$, mask%)
       If key% And mask% Then
         ctrl.poll_single% = 1
         ' Wait for user to release key.
-        Do While key% <> 0 : Call ctrl$, key% : Loop
+        Do While key% : Pause 5 : Call ctrl$, key% : Loop
         Exit Do
       EndIf
     Loop While Timer < t%
@@ -181,6 +219,24 @@ Function ctrl.poll_single%(ctrl$, mask%)
   EndIf
   On Error Abort
 End Function
+
+'!ifndef CTRL_NO_CURSORS
+
+' Reads the keyboard as if it were a controller.
+'
+' Note that the PicoMite has no KEYDOWN function so we are limited to
+' reading a single keypress from the input buffer and cannot handle multiple
+' simultaneous keys or properly handle a key being pressed and not released.
+Sub keys_cursor(x%)
+  If x% < 0 Then Exit Sub
+  x% =    ctrl.keydown%(32)  * ctrl.A
+  Inc x%, ctrl.keydown%(128) * ctrl.UP
+  Inc x%, ctrl.keydown%(129) * ctrl.DOWN
+  Inc x%, ctrl.keydown%(130) * ctrl.LEFT
+  Inc x%, ctrl.keydown%(131) * ctrl.RIGHT
+End Sub
+
+'!endif ' CTRL_NO_CURSORS
 
 '!ifdef PICOMITE
 
@@ -476,3 +532,16 @@ Sub wii_classic_3(x%)
 End Sub
 
 '!endif ' CMM2
+
+'!ifdef CTRL_USE_ON_PS2
+ctrl.scan_map_data:
+
+Data &h9C92919395009900, &h0060099496989A00, &h0031710000008B00, &h00327761737A0000
+Data &h0033346564786300, &h0035727466762000, &h0036796768626E00, &h003837756A6D0000
+Data &h0039306F696B2C00, &h002D703B6C2F2E00, &h00003D5B00270000, &h000023005D0A0000
+Data &h0008000000005C00, &h0000003734003100, &h001B383635322E30, &h0000392A2D332B9B
+Data &h0000000097000000, &h0000000000000000, &h0000000000008B00, &h0000000000000000
+Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
+Data &h0000000000000000, &h0000000000000000, &h0000000000000000, &h0000000000000000
+Data &h0000000000000000, &h0000008682008700, &h0000808300817F84, &h0000889D00890000
+'!endif
