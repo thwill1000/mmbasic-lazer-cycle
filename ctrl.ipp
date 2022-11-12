@@ -77,20 +77,6 @@ Dim ctrl.key_map%(31 + Mm.Info(Option Base))
 Dim ctrl.tick_nbr%
 '!endif
 
-'!ifndef CTRL_NO_CURSORS
-
-' Reads the keyboard as if it were a controller.
-Sub keys_cursor(x%)
-  If x% < 0 Then Exit Sub
-  x% =    ctrl.keydown%(32)  * ctrl.A
-  Inc x%, ctrl.keydown%(128) * ctrl.UP
-  Inc x%, ctrl.keydown%(129) * ctrl.DOWN
-  Inc x%, ctrl.keydown%(130) * ctrl.LEFT
-  Inc x%, ctrl.keydown%(131) * ctrl.RIGHT
-End Sub
-
-'!endif ' CTRL_NO_CURSORS
-
 ' Initialises keyboard reading.
 '
 ' @param  period%  CMM2 only - interval to read KEYDOWN state, default 40 ms.
@@ -144,6 +130,20 @@ Function ctrl.keydown%(i%)
   Poke Var ctrl.key_map%(), i%, 0
 '!endif
 End Function
+
+'!ifndef CTRL_NO_CURSORS
+
+' Reads the keyboard as if it were a controller.
+Sub keys_cursor(x%)
+  If x% < 0 Then Exit Sub
+  x% =    ctrl.keydown%(32)  * ctrl.A
+  Inc x%, ctrl.keydown%(128) * ctrl.UP
+  Inc x%, ctrl.keydown%(129) * ctrl.DOWN
+  Inc x%, ctrl.keydown%(130) * ctrl.LEFT
+  Inc x%, ctrl.keydown%(131) * ctrl.RIGHT
+End Sub
+
+'!endif ' CTRL_NO_CURSORS
 
 Function ctrl.poll_multiple$(ctrls$(), mask%, duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF), i%
