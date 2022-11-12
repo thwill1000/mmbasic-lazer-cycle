@@ -166,7 +166,6 @@ End Function
 Function ctrl.poll_single%(ctrl$, mask%)
   On Error Ignore
   Call ctrl$, ctrl.OPEN
-  ' TODO: What if CLASSIC controller is already open ?
   If Mm.ErrNo = 0 Then
     Local key%, t% = Timer + 5
     Do
