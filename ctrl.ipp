@@ -64,23 +64,22 @@ Const ctrl.SOFT_CLOSE = -3
 ' I've tested work with 1 micro-second, and possibly less.
 Const ctrl.PULSE = 0.001 ' 1 micro-second
 
-'!ifndef CMM2
-
-' When a key is pressed ctrl.on_key() sets the corresponding byte of this
-' 256-byte map to 1. When ctrl.keydown(i%) is called the corresponding
-' byte is read and set to 0. Note that a 256-bit map could be used but would
-' be slower.
+' When a key is down the corresponding byte of this 256-byte map is set,
+' when the key is up then it is unset.
+'
+' Note that when using INKEY$ (as opposed to the CMM2 'KEYDOWN' function or
+' the PicoMiteVGA 'ON PS2' command) to read the keyboard we cannot detect
+' keyup events and instead automatically clear a byte after it is read.
 Dim ctrl.key_map%(31 + Mm.Info(Option Base))
 
+'!ifdef CMM2
+' Timer number configured for reading the KEYDOWN state on the CMM2.
+Dim ctrl.tick_nbr%
 '!endif
 
 '!ifndef CTRL_NO_CURSORS
 
 ' Reads the keyboard as if it were a controller.
-'
-' Note that the PicoMite has no KEYDOWN function so we are limited to
-' reading a single keypress from the input buffer and cannot handle multiple
-' simultaneous keys or properly handle a key being pressed and not released.
 Sub keys_cursor(x%)
   If x% < 0 Then Exit Sub
   x% =    ctrl.keydown%(32)  * ctrl.A
@@ -93,42 +92,56 @@ End Sub
 '!endif ' CTRL_NO_CURSORS
 
 ' Initialises keyboard reading.
-Sub ctrl.init_keys()
+'
+' @param  period%  CMM2 only - interval to read KEYDOWN state, default 40 ms.
+' @param  nbr%     CMM2 only - timer nbr to read KEYDOWN state, default 4.
+Sub ctrl.init_keys(period%, nbr%)
   ctrl.term_keys()
+'!ifdef CMM2
+  ctrl.tick_nbr% = Choice(nbr% = 0, 4, nbr%)
+  SetTick Choice(period% = 0, 40, period%), ctrl.on_tick(), ctrl.tick_nbr%
+'!endif
 '!ifndef CMM2
   On Key ctrl.on_key()
 '!endif
 End Sub
 
+'!ifdef CMM2
+' Note there is little point in calling KeyDown(0) to determine the number of
+' keys that are down, hardware limitations mean it's unlikely ever to be > 4
+' and if a given key isn't down it just returns 0 so we harmlessly set that
+' byte in the key map.
+Sub ctrl.on_tick()
+  Memory Set Peek(VarAddr ctrl.key_map%()), 0, 256
+  Poke Var ctrl.key_map%(), KeyDown(1), 1
+  Poke Var ctrl.key_map%(), KeyDown(2), 1
+  Poke Var ctrl.key_map%(), KeyDown(3), 1
+  Poke Var ctrl.key_map%(), KeyDown(4), 1
+End Sub
+'!endif
+
 '!ifndef CMM2
 Sub ctrl.on_key()
-  Local ch$ = Inkey$
-  If ch$ <> "" Then Poke Var ctrl.key_map%(), Asc(ch$), 1
+  Poke Var ctrl.key_map%(), Asc(Inkey$), 1
 End Sub
 '!endif
 
 ' Terminates keyboard reading.
 Sub ctrl.term_keys()
+'!ifdef CMM2
+  If ctrl.tick_nbr% <> 0 Then SetTick 0, 0, ctrl.tick_nbr%
+'!endif
 '!ifndef CMM2
   On Key 0
-  Memory Set Peek(VarAddr ctrl.key_map%()), 0, 256
 '!endif
+  Memory Set Peek(VarAddr ctrl.key_map%()), 0, 256
   Do While Inkey$ <> "" : Loop
 End Sub
 
 Function ctrl.keydown%(i%)
-'!ifndef CMM2
   ctrl.keydown% = Peek(Var ctrl.key_map%(), i%)
-  If ctrl.keydown% Then Poke Var ctrl.key_map%(), i%, 0
-'!endif
-'!ifdef CMM2
-  Local j%
-  For j% = 1 To KeyDown(0)
-    If KeyDown(j%) = i% Then
-      ctrl.keydown% = 1
-      Exit Function
-    EndIf
-  Next
+'!ifndef CMM2
+  Poke Var ctrl.key_map%(), i%, 0
 '!endif
 End Function
 
