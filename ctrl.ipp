@@ -59,7 +59,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 
 Const ctrl.VERSION = 902  ' 0.9.2
 
-' Button values as returned by controller read functions.
+' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01
 Const ctrl.START  = &h02
 Const ctrl.HOME   = &h04
