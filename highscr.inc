@@ -150,7 +150,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
   Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, state%
   y% = Y_OFFSET% - 75 + 15 * idx%
-  name$ = "PLAYER " + Str$(player%)
+  name$ = str.rpad$("PLAYER " + Str$(player%), highscr.MAX_NAME_LEN%)
 
   ctrl.term_keys() ' Regain control of the keyboard for INKEY$
   Do While highscr.get_input%(ctrl$) : Loop ' Wait for player to release controller.
@@ -167,7 +167,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
     For i% = 1 To highscr.MAX_NAME_LEN%
       bg% = Choice((i% = p%) And cursor%, colour_%, Rgb(Black))
       fg% = Choice((i% = p%) And cursor%, Rgb(Black), colour_%)
-      ch$ = Choice(i% <= Len(name$), Mid$(name$, i%, 1), " ")
+      ch$ = Mid$(name$, i%, 1)
       x% = X_OFFSET% + (i% - 1.5) * font_width%
       Text x%, y%, ch$, , 1, 1, fg%, bg%
     Next
@@ -194,18 +194,17 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
           EndIf
         Case &h08 ' Backspace
           If p% > 1 Then
-            name$ = Left$(name$, p% - 2) + Mid$(name$, p%)
+            name$ = Left$(name$, p% - 2) + Mid$(name$, p%) + " "
             Inc p%, -1
           Else
             state% = 2
           EndIf
         Case &h7F ' Delete
-          name$ = Left$(name$, p% - 1) + Mid$(name$, p% + 1)
+          name$ = Left$(name$, p% - 1) + Mid$(name$, p% + 1) + " "
         Case &h0A, &h0D ' LF and CR
           key% = -1 ' So we exit the DO LOOP.
         Case &h20 To &h7E
-          Do While p% > Len(name$) : Cat name$, " " : Loop
-          name$ = Left$(Left$(name$, p% - 1) + Chr$(key%) + Mid$(name$, p%), highscr.MAX_NAME_LEN%)
+          Poke Var name$, p%, key%
           If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1
         Case &h80, &h81 ' Up and down arrows
           i% = Asc(Mid$(name$, p%, 1))
@@ -215,8 +214,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
             If i% < 0 Then i% = 255
             If i% > 255 Then i% = 0
           Loop Until bits.get%(ALLOWED_CHARS%(i% \ 64), i% Mod 64)
-          Do While p% > Len(name$) : Cat name$, " " : Loop
-          name$ = Left$(name$, p% - 1) + Chr$(i%) + Mid$(name$, p% + 1)
+          Poke Var name$, p%, i%
         Case &h82 ' Left arrow
           If p% > 1 Then Inc p%, -1 Else state% = 2
         Case &h83 ' Right arrow
@@ -232,17 +230,17 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
       state% = 0
     EndIf
 
+    ' Sanity check.
+    If Len(name$) <> highscr.MAX_NAME_LEN% Then Error "Invalid name length"
+
   Loop While key% <> -1
 
   ' Delete the help text.
   Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(Black), Rgb(Black)
 
   ' Don't allow empty names.
-  Local anon% = 1
-  For i% = 1 To Len(name$)
-    If Mid$(name$, i%, 1) <> " " Then anon% = 0
-  Next
-  If anon% Then name$ = "PLAYER " + Str$(player%)
+  name$ = str.trim$(name$)
+  If name$ = "" Then name$ = "PLAYER " + Str$(player%)
 
   highscr.values$(idx%) = name$ + ", " + Field$(highscr.values$(idx%), 2)
 End Sub
@@ -286,4 +284,16 @@ End Function
 Function str.rpad$(s$, x%)
   str.rpad$ = s$
   If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
+End Function
+
+' Returns a copy of s$ with leading and trailing spaces removed.
+Function str.trim$(s$)
+  Local st%, en%
+  For st% = 1 To Len(s$)
+    If Peek(Var s$, st%) <> 32 Then Exit For
+  Next
+  For en% = Len(s$) To 1 Step -1
+    If Peek(Var s$, en%) <> 32 Then Exit For
+  Next
+  If en% >= st% Then str.trim$ = Mid$(s$, st%, en% - st% + 1)
 End Function
