@@ -282,7 +282,7 @@ End Sub
 ' @return  0 - normal game over
 '          1 - game interrupted after all human players died
 Function game_loop%()
-  Local i%, key%, next_frame% = Timer + frame_duration%
+  Local d%, i%, key%, next_frame% = Timer + frame_duration%
 
   ' num_alive% = 0
   ' cycle.score%(0) = 3175
@@ -316,13 +316,15 @@ Function game_loop%()
     For i% = 0 To MAX_CYCLE_IDX%
       cycle.current% = i%
       Call cycle.ctrl$(i%), key%
+      d% = cycle.dir%(i%)
       Select Case key%
-        Case ctrl.UP:    cycle.dir%(i%) = NORTH%
-        Case ctrl.DOWN:  cycle.dir%(i%) = SOUTH%
-        Case ctrl.LEFT:  cycle.dir%(i%) = WEST%
-        Case ctrl.RIGHT: cycle.dir%(i%) = EAST%
+        Case ctrl.UP:    If d% <> SOUTH% Then d% = NORTH%
+        Case ctrl.DOWN:  If d% <> NORTH% Then d% = SOUTH%
+        Case ctrl.LEFT:  If d% <> EAST% Then d% = WEST%
+        Case ctrl.RIGHT: If d% <> WEST% Then d% = EAST%
       End Select
-      cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(cycle.dir%(i%))
+      cycle.dir%(i%) = d%
+      cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(d%)
       If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
     Next
 
