@@ -57,7 +57,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_USE_KEYDOWN defined
 '!endif
 
-Const ctrl.VERSION = 902  ' 0.9.2
+Const ctrl.VERSION = 903  ' 0.9.3
 
 ' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01
@@ -498,7 +498,11 @@ Sub wii_internal(i2c%, x%, type%)
       If is_open%(i2c%) Then Exit Sub
       Controller Nunchuk Open i2c%
       If Mm.ErrNo Then
-        Error "Not connected"
+        If InStr(Mm.ErrMsg$, "already OPEN") Then
+          Error "I2C" + Str$(i2c%) + " already open"
+        Else
+          Error "I2C" + Str$(i2c%) + " not connected"
+        EndIf
         Exit Sub
       EndIf
       is_open%(i2c%) = Nunchuk(T, i2c%)
@@ -507,20 +511,20 @@ Sub wii_internal(i2c%, x%, type%)
           If Not(type% And &h01) Then
             Controller Nunchuk Close i2c%
             is_open%(i2c%) = 0
-            Error "Nunchuck controller not supported"
+            Error "Nunchuck controller on I2C" + Str$(i2c%) + " not supported"
           EndIf
         Case &hA4200101
           Controller Nunchuk Close i2c%
           If Not(type% And &h10) Then
             is_open%(i2c%) = 0
-            Error "Classic controller not supported"
+            Error "Classic controller on I2C" + Str$(i2c%) + " not supported"
           Else
             Controller Classic Open i2c%
           EndIf
         Case Else
           Controller Nunchuck Close i2c%
           is_open%(i2c%) = 0
-          Error "Unrecognised controller"
+          Error "Unrecognised controller on I2C" + Str$(i2c%)
       End Select
     Case ctrl.CLOSE
       Select Case is_open%(i2c%)

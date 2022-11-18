@@ -15,8 +15,9 @@ Option Break 4
 On Key 3, on_break
 
 Dim bits%
-Dim driver$(3) = ("", "wii_nunchuk_1", "wii_nunchuk_2", "wii_nunchuk_3")
-' Dim driver$(3) = ("", "wii_any_1", "wii_any_2", "wii_any_3")
+Dim driver$(3) = ("", "wii_any_1", "wii_any_2", "wii_any_3")
+'Dim driver$(3) = ("", "wii_classic_1", "wii_classic_2", "wii_classic_3")
+'Dim driver$(3) = ("", "wii_nunchuk_1", "wii_nunchuk_2", "wii_nunchuk_3")
 Dim err$(3)
 Dim i%
 Dim out$(3)
