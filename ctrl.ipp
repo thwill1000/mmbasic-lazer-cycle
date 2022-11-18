@@ -474,61 +474,110 @@ End Sub
 
 '!endif '!ifndef CTRL_NO_SNES
 
-' Wii Classic gamepad on I2C1.
-Sub wii_classic_1(x%)
+Sub wii_internal(i2c%, x%, type%)
+  Static is_open%(3)
+
   If x% >= 0 Then
-    x% = Classic(B, 1)
-    If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
+    Select Case is_open%(i2c%)
+      Case &hA4200101
+        x% = Classic(B, i2c%)
+        If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
+      Case &hA4200000
+        x% =    Nunchuk(Z,  i2c%) * ctrl.A
+        Inc x%, Nunchuk(C,  i2c%) * ctrl.B
+        Inc x%, (Nunchuk(JY, i2c%) > 170) * ctrl.UP
+        Inc x%, (Nunchuk(JY, i2c%) < 90)  * ctrl.DOWN
+        Inc x%, (Nunchuk(JX, i2c%) < 90)  * ctrl.LEFT
+        Inc x%, (Nunchuk(JX, i2c%) > 170) * ctrl.RIGHT
+    End Select
     Exit Sub
   EndIf
 
-  Static is_open% = 0
   Select Case x%
     Case ctrl.OPEN
-      If Not is_open% Then Controller Classic Open 1 : is_open% = 1
+      If is_open%(i2c%) Then Exit Sub
+      Controller Nunchuk Open i2c%
+      If Mm.ErrNo Then
+        Error "Not connected"
+        Exit Sub
+      EndIf
+      is_open%(i2c%) = Nunchuk(T, i2c%)
+      Select Case is_open%(i2c%)
+        Case &hA4200000
+          If Not(type% And &h01) Then
+            Controller Nunchuk Close i2c%
+            is_open%(i2c%) = 0
+            Error "Nunchuck controller not supported"
+          EndIf
+        Case &hA4200101
+          Controller Nunchuk Close i2c%
+          If Not(type% And &h10) Then
+            is_open%(i2c%) = 0
+            Error "Classic controller not supported"
+          Else
+            Controller Classic Open i2c%
+          EndIf
+        Case Else
+          Controller Nunchuck Close i2c%
+          is_open%(i2c%) = 0
+          Error "Unrecognised controller"
+      End Select
     Case ctrl.CLOSE
-      If is_open% Then Controller Classic Close 1 : is_open% = 0
+      Select Case is_open%(i2c%)
+        Case &hA4200000
+          Controller Nunchuk Close i2c%
+        Case &hA4200101
+          Controller Classic Close i2c%
+      End Select
+      is_open%(i2c%) = 0
     Case ctrl.SOFT_CLOSE
       ' Do nothing
   End Select
+End Sub
+
+' Wii Nunchuk OR Classic gamepad on I2C1.
+Sub wii_any_1(x%)
+  wii_internal(1, x%, &h11)
+End Sub
+
+' Wii Nunchuk OR Classic gamepad on I2C2.
+Sub wii_any_2(x%)
+  wii_internal(2, x%, &h11)
+End Sub
+
+' Wii Nunchuk OR Classic gamepad on I2C3.
+Sub wii_any_3(x%)
+  wii_internal(3, x%, &h11)
+End Sub
+
+' Wii Classic gamepad on I2C1.
+Sub wii_classic_1(x%)
+  wii_internal(1, x%, &h10)
 End Sub
 
 ' Wii Classic gamepad on I2C2.
 Sub wii_classic_2(x%)
-  If x% >= 0 Then
-    x% = Classic(B, 2)
-    If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
-    Exit Sub
-  EndIf
-
-  Static is_open% = 0
-  Select Case x%
-    Case ctrl.OPEN
-      If Not is_open% Then Controller Classic Open 2 : is_open% = 1
-    Case ctrl.CLOSE
-      If is_open% Then Controller Classic Close 2 : is_open% = 0
-    Case ctrl.SOFT_CLOSE
-      ' Do nothing
-  End Select
+  wii_internal(2, x%, &h10)
 End Sub
 
 ' Wii Classic gamepad on I2C3.
 Sub wii_classic_3(x%)
-  If x% >= 0 Then
-    x% = Classic(B, 3)
-    If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
-    Exit Sub
-  EndIf
+  wii_internal(3, x%, &h10)
+End Sub
 
-  Static is_open% = 0
-  Select Case x%
-    Case ctrl.OPEN
-      If Not is_open% Then Controller Classic Open 3 : is_open% = 1
-    Case ctrl.CLOSE
-      If is_open% Then Controller Classic Close 3 : is_open% = 0
-    Case ctrl.SOFT_CLOSE
-      ' Do nothing
-  End Select
+' Wii Nunchuk on I2C1.
+Sub wii_nunchuk_1(x%)
+  wii_internal(1, x%, &h01)
+End Sub
+
+' Wii Nunchuk on I2C2.
+Sub wii_nunchuk_2(x%)
+  wii_internal(2, x%, &h01)
+End Sub
+
+' Wii Nunchuk on I2C3.
+Sub wii_nunchuk_3(x%)
+  wii_internal(3, x%, &h01)
 End Sub
 
 '!endif ' CMM2
