@@ -163,8 +163,9 @@ Sub menu.update_controller(idx%, delta%, ui_ctrl$)
       Case "atari_b"   : ok% = Not menu.has_controller%(idx%, "nes_b")
       Case "nes_a"     : ok% = Not menu.has_controller%(idx%, "atari_a")
       Case "nes_b"     : ok% = Not menu.has_controller%(idx%, "atari_b")
-      Case "keys_cegg" : ok% = Not menu.has_controller%(idx%, "keys_azxc")
+      Case "keys_cegg" : ok% = Not menu.has_controller%(idx%, "keys_azxc", "keys_punc")
       Case "keys_azxc" : ok% = Not menu.has_controller%(idx%, "keys_cegg")
+      Case "keys_punc" : ok% = Not menu.has_controller%(idx%, "keys_cegg")
       Case Else        : ok% = 1
     End Select
 
@@ -190,10 +191,11 @@ Function menu.can_open_controller%(ctrl$)
 End Function
 
 ' Is any player other than idx% using the specified controller ?
-Function menu.has_controller%(idx%, ctrl$)
+Function menu.has_controller%(idx%, ctrl1$, ctrl2$)
   Local i%
   For i% = Bound(menu.ctrls$(), 0) To Bound(menu.ctrls$(), 1)
     If i% = idx% Then Continue For
-    If menu.ctrls$(i%) = ctrl$ Then menu.has_controller% = 1
+    If menu.ctrls$(i%) = ctrl1$ Then menu.has_controller% = 1
+    If menu.ctrls$(i%) = ctrl2$ Then menu.has_controller% = 1
   Next
 End Function

@@ -504,13 +504,13 @@ Sub keys_azxc(x%)
   Inc x%, ctrl.keydown%(99)  * ctrl.RIGHT ' C
 End Sub
 
-Sub keys_ikop(x%)
+Sub keys_punc(x%)
   If x% < 0 Then Exit Sub
-  x% =    ctrl.keydown%(32)  * ctrl.A     ' Space
-  Inc x%, ctrl.keydown%(105) * ctrl.UP    ' I
-  Inc x%, ctrl.keydown%(107) * ctrl.DOWN  ' K
-  Inc x%, ctrl.keydown%(111) * ctrl.LEFT  ' O
-  Inc x%, ctrl.keydown%(112) * ctrl.RIGHT ' P
+  x% =    ctrl.keydown%(32) * ctrl.A     ' Space
+  Inc x%, ctrl.keydown%(39) * ctrl.UP    ' single-quote
+  Inc x%, ctrl.keydown%(47) * ctrl.DOWN  ' slash
+  Inc x%, ctrl.keydown%(44) * ctrl.LEFT  ' comma
+  Inc x%, ctrl.keydown%(46) * ctrl.RIGHT ' full-stop
 End Sub
 
 Sub cycle.check_collision(idx%)
@@ -564,7 +564,7 @@ controller_data_cmm2:
 Data 10, 6
 Data "KEYS: AZ,.",     "keys_cegg",  1
 Data "KEYS: AZXC",     "keys_azxc",  0
-Data "KEYS: IKOP",     "keys_ikop",  0
+Data "KEYS: '/,.",     "keys_punc",  0
 Data "JOYSTICK DX",    "atari_dx",   1
 Data "NES GAMEPAD DX", "nes_dx",     1
 Data "WII CTRL I2C1",  "wii_any_1",  1
@@ -578,7 +578,7 @@ controller_data_pm:
 Data 6, 2
 Data "KEYS: AZ,.", "keys_cegg",  1
 Data "KEYS: AZXC", "keys_azxc",  0
-Data "KEYS: IKOP", "keys_ikop",  0
+Data "KEYS: '/,.", "keys_punc",  0
 Data "GAMEPAD",    "nes_a",      1
 Data "AI",         "ai_control", 0
 Data "NONE",       "no_control", 0
@@ -588,7 +588,7 @@ controller_data_pmvga:
 Data 9, 5
 Data "KEYS: AZ,.", "keys_cegg",  1
 Data "KEYS: AZXC", "keys_azxc",  0
-Data "KEYS: IKOP", "keys_ikop",  0
+Data "KEYS: '/,.", "keys_punc",  0
 Data "GAMEPAD A",  "nes_a",      1
 Data "GAMEPAD B",  "nes_b",      1
 Data "JOYSTICK A", "atari_a",    1
