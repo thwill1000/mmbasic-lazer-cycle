@@ -495,6 +495,20 @@ Sub wii_internal(i2c%, x%, type%)
   EndIf
 
   Select Case x%
+    Case ctrl.SOFT_CLOSE
+      ' Do nothing
+      Exit Sub
+
+    Case ctrl.CLOSE
+      Select Case is_open%(i2c%)
+        Case &hA4200000
+          Controller Nunchuk Close i2c%
+        Case &hA4200101
+          Controller Classic Close i2c%
+      End Select
+      is_open%(i2c%) = 0
+      Exit Sub
+
     Case ctrl.OPEN
       If is_open%(i2c%) Then Exit Sub
       is_open%(i2c%) = -1
@@ -528,16 +542,6 @@ Sub wii_internal(i2c%, x%, type%)
           is_open%(i2c%) = -1
           Error "Unrecognised controller on I2C" + Str$(i2c%)
       End Select
-    Case ctrl.CLOSE
-      Select Case is_open%(i2c%)
-        Case &hA4200000
-          Controller Nunchuk Close i2c%
-        Case &hA4200101
-          Controller Classic Close i2c%
-      End Select
-      is_open%(i2c%) = 0
-    Case ctrl.SOFT_CLOSE
-      ' Do nothing
   End Select
 End Sub
 
