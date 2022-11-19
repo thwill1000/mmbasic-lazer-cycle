@@ -61,6 +61,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
     If key% = ctrl.B Then key% = ctrl.A
     Select Case key%
       Case ctrl.START
+        menu.show% = 1
         Exit Do
 
       Case ctrl.UP
