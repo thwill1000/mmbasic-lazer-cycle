@@ -1,4 +1,4 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022 Thomacs Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.05
 
@@ -256,11 +256,11 @@ Function highscr.get_input%(ctrl$)
   If key% = 0 Then
     Call ctrl$, key%
     Select Case key%
-      Case ctrl.A     : highscr.get_input% = &h01 ' Magic value to use for fire
-      Case ctrl.UP    : highscr.get_input% = &h80 ' Up arrow
-      Case ctrl.DOWN  : highscr.get_input% = &h81 ' Down arrow
-      Case ctrl.LEFT  : highscr.get_input% = &h82 ' Left arrow
-      Case ctrl.RIGHT : highscr.get_input% = &h83 ' Right arrow
+      Case ctrl.A, ctrl.B : highscr.get_input% = &h01 ' Magic value to use for fire
+      Case ctrl.UP        : highscr.get_input% = &h80 ' Up arrow
+      Case ctrl.DOWN      : highscr.get_input% = &h81 ' Down arrow
+      Case ctrl.LEFT      : highscr.get_input% = &h82 ' Left arrow
+      Case ctrl.RIGHT     : highscr.get_input% = &h83 ' Right arrow
     End Select
 
     ' Wait for controller/key to be released.
