@@ -133,7 +133,7 @@ Function menu.get_controller_name$(idx%)
   For i% = Bound(CTRL_SUBS$(), 0) To Bound(CTRL_SUBS$(), 1)
     If menu.ctrls$(idx%) = CTRL_SUBS$(i%) Then
       menu.get_controller_name$ = CTRL_NAMES$(i%)
-      Do While Len(menu.get_controller_name$) < 13 : Cat menu.get_controller_name$, " " : Loop
+      Do While Len(menu.get_controller_name$) < 14 : Cat menu.get_controller_name$, " " : Loop
       Exit Function
     Endif
   Next
