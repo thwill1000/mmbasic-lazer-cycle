@@ -539,16 +539,16 @@ End Sub
 controller_data_cmm2:
 
 Data 10, 6
-Data "KEYS: AZ,.",     "keys_cegg",     1
-Data "KEYS: AZXC",     "keys_azxc",     0
-Data "KEYS: IKOP",     "keys_ikop",     0
-Data "JOYSTICK DX",    "atari_dx",      1
-Data "NES GAMEPAD DX", "nes_dx",        1
-Data "WII CLASSIC 1",  "wii_classic_3", 1 ' Port 1 => I2C3
-Data "WII CLASSIC 2",  "wii_classic_1", 1 ' Port 2 => I2C1
-Data "WII CLASSIC 3",  "wii_classic_2", 1 ' Port 3 => I2C2
-Data "AI",             "ai_control",    0
-Data "NONE",           "no_control",    0
+Data "KEYS: AZ,.",     "keys_cegg",  1
+Data "KEYS: AZXC",     "keys_azxc",  0
+Data "KEYS: IKOP",     "keys_ikop",  0
+Data "JOYSTICK DX",    "atari_dx",   1
+Data "NES GAMEPAD DX", "nes_dx",     1
+Data "WII CTRL I2C1",  "wii_any_1",  1
+Data "WII CTRL I2C2",  "wii_any_2",  1
+Data "WII CTRL I2C3",  "wii_any_3",  1
+Data "AI",             "ai_control", 0
+Data "NONE",           "no_control", 0
 
 controller_data_pm:
 
