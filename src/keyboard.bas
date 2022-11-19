@@ -8,6 +8,9 @@ Option Base 0
 Option Default None
 Option Explicit On
 
+#Include "keycode.inc"
+#Include "scancode.inc"
+
 Dim scan_map_uk%(31)
 Dim key_map%(31)
 
@@ -92,37 +95,37 @@ Sub generate_scan_map_uk()
   put_scan_code(Asc("\"), &h61)
 
   ' Function keys
-  put_scan_code(&h91, &h05) ' F1
-  put_scan_code(&h92, &h06) ' F2
-  put_scan_code(&h93, &h04) ' F3
-  put_scan_code(&h94, &h0C) ' F4
-  put_scan_code(&h95, &h03) ' F5
-  put_scan_code(&h96, &h0B) ' F6
-  put_scan_code(&h97, &h83) ' F7
-  put_scan_code(&h98, &h0A) ' F8
-  put_scan_code(&h99, &h01) ' F9
-  put_scan_code(&h9A, &h09) ' F10
-  put_scan_code(&h9B, &h78) ' F11
-  put_scan_code(&h9C, &h07) ' F12
+  put_scan_code(keycode.F1,  &h05)
+  put_scan_code(keycode.F2,  &h06)
+  put_scan_code(keycode.F3,  &h04)
+  put_scan_code(keycode.F4,  &h0C)
+  put_scan_code(keycode.F5,  &h03)
+  put_scan_code(keycode.F6,  &h0B)
+  put_scan_code(keycode.F7,  &h83)
+  put_scan_code(keycode.F8,  &h0A)
+  put_scan_code(keycode.F9,  &h01)
+  put_scan_code(keycode.F10, &h09)
+  put_scan_code(keycode.F11, &h78)
+  put_scan_code(keycode.F12, &h07)
 
   ' Special keys
-  put_scan_code(&h0A, &h5A)   ' Enter - or should it be => &h0D ?
-  put_scan_code(&h1B, &h76)   ' Escape
-  put_scan_code(&h8B, &h11)   ' Alt (Left)
-  put_scan_code(&h8B, &hE011) ' Alt (Right)
-  put_scan_code(&h9D, &hE07C) ' Prt Scr
-  put_scan_code(&h84, &hE070) ' Insert
-  put_scan_code(&h86, &hE06C) ' Home
-  put_scan_code(&h88, &hE07D) ' Page Up
-  put_scan_code(&h7F, &hE071) ' Delete
-  put_scan_code(&h08, &h66)   ' Backspace
-  put_scan_code(&h87, &hE069) ' End
-  put_scan_code(&h09, &h0D)   ' Tab
-  put_scan_code(&h89, &hE07A) ' Page Down
-  put_scan_code(&h80, &hE075) ' Up Arrow
-  put_scan_code(&h82, &hE06B) ' Left Arrow
-  put_scan_code(&h81, &hE072) ' Down Arrow
-  put_scan_code(&h83, &hE074) ' Right Arrow
+  put_scan_code(keycode.ENTER,        &h5A)   ' Enter - or should it be => &h0D ?
+  put_scan_code(keycode.ESCAPE,       &h76)   ' Escape
+  put_scan_code(keycode.ALT,          &h11)   ' Alt (Left)
+  put_scan_code(keycode.ALT,          &hE011) ' Alt (Right)
+  put_scan_code(keycode.PRINT_SCREEN, &hE07C) ' Prt Scr
+  put_scan_code(keycode.INSERT,       &hE070) ' Insert
+  put_scan_code(keycode.HOME,         &hE06C) ' Home
+  put_scan_code(keycode.PAGE_UP,      &hE07D) ' Page Up
+  put_scan_code(keycode.DELETE,       &hE071) ' Delete
+  put_scan_code(keycode.BACKSPACE,    &h66)   ' Backspace
+  put_scan_code(keycode.END,          &hE069) ' End
+  put_scan_code(keycode.TAB,          &h0D)   ' Tab
+  put_scan_code(keycode.PAGE_DOWN,    &hE07A) ' Page Down
+  put_scan_code(keycode.UP,           &hE075) ' Up Arrow
+  put_scan_code(keycode.LEFT,         &hE06B) ' Left Arrow
+  put_scan_code(keycode.DOWN,         &hE072) ' Down Arrow
+  put_scan_code(keycode.RIGHT,        &hE074) ' Right Arrow
   'put_scan_code(???, &h12)   ' Shift (Left)
   'put_scan_code(???, &h59)   ' Shift (Right)
   'put_scan_code(???, &h7E)   ' Scroll Lock
@@ -196,44 +199,25 @@ Sub on_ps2()
   Poke Var key_map%(), ch%, down%
 
   Print "<0x" Hex$(scan_code%, 6) "> => <0x" Hex$(ch%, 2) "> => ";
-  Print key_code_to_string$(ch%) " " Choice(down%, "[DOWN]", "[UP]")
+  Print keycode_to_string$(ch%) " " Choice(down%, "[DOWN]", "[UP]")
   dump_keys_down()
 End Sub
 
-Function key_code_to_string$(ch%)
-  Select Case ch%
-    Case &h21 To &h7E : key_code_to_string$ = Chr$(ch%)
-    Case &h08 : key_code_to_string$ = "Backspace"
-    Case &h09 : key_code_to_string$ = "Tab"
-    Case &h0A : key_code_to_string$ = "Enter"
-    Case &h1B : key_code_to_string$ = "Escape"
-    Case &h20 : key_code_to_string$ = "Space"
-    Case &h7F : key_code_to_string$ = "Delete"
-    Case &h80 : key_code_to_string$ = "Up"
-    Case &h81 : key_code_to_string$ = "Down"
-    Case &h82 : key_code_to_string$ = "Left"
-    Case &h83 : key_code_to_string$ = "Right"
-    Case &h84 : key_code_to_string$ = "Insert"
-    Case &h86 : key_code_to_string$ = "Home"
-    Case &h87 : key_code_to_string$ = "End"
-    Case &h88 : key_code_to_string$ = "Page Up"
-    Case &h89 : key_code_to_string$ = "Page Down"
-    Case &h8B : key_code_to_string$ = "Alt"
-    Case &h91 : key_code_to_string$ = "F1"
-    Case &h92 : key_code_to_string$ = "F2"
-    Case &h93 : key_code_to_string$ = "F3"
-    Case &h94 : key_code_to_string$ = "F4"
-    Case &h95 : key_code_to_string$ = "F5"
-    Case &h96 : key_code_to_string$ = "F6"
-    Case &h97 : key_code_to_string$ = "F7"
-    Case &h98 : key_code_to_string$ = "F8"
-    Case &h99 : key_code_to_string$ = "F9"
-    Case &h9A : key_code_to_string$ = "F10"
-    Case &h9B : key_code_to_string$ = "F11"
-    Case &h9C : key_code_to_string$ = "F12"
-    Case &h9D : key_code_to_string$ = "Prt Scr"
-    Case Else : key_code_to_string$ = "<unknown>"
-  End Select
+Function keycode_to_string$(ch%)
+  Static initialised% = 0
+  Static to_string$(255) Length 12
+  Local i%
+  If Not initialised% Then
+    Read Save
+    Restore keycode.string_data
+    For i% = 0 To 255
+      Read to_string$(i%)
+    Next
+    Read Restore
+    to_string$(34) = Chr$(34) ' Can't put double-quote in DATA statement.
+    initialised% = 1
+  End If
+  keycode_to_string$ = to_string$(ch%)
 End Function
 
 Sub dump_keys_down()
@@ -242,7 +226,7 @@ Sub dump_keys_down()
   For ch% = 0 To 255
     If Peek(Var key_map%(), ch%) Then
       If count% > 0 Then Print ", ";
-      Print key_code_to_string$(ch%) " ";
+      Print keycode_to_string$(ch%) " ";
       Inc count%
     EndIf
   Next ch%
