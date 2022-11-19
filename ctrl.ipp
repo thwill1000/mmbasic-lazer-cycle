@@ -57,7 +57,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_USE_KEYDOWN defined
 '!endif
 
-Const ctrl.VERSION = 903  ' 0.9.3
+Const ctrl.VERSION = 904  ' 0.9.4
 
 ' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01

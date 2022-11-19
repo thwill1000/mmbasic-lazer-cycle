@@ -14,7 +14,7 @@ Option Explicit On
 #Include "highscr.inc"
 #Include "menu.inc"
 
-Const VERSION$ = "0.9.0"
+Const VERSION$ = "0.9.1"
 
 Select Case Mm.Device$
   Case "Colour Maximite 2", "Colour Maximite 2 G2", "MMBasic for Windows"
