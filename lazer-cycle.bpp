@@ -33,7 +33,7 @@ End Select
 
 ' Text deliberately padded to string width (40 chars).
 If Mm.Device$ = "MMBasic for Windows" Then
-  Const START_TEXT$ = "              Press SPACE               "
+  Const START_TEXT$ = "          Press SPACE to play           "
 Else
   Const START_TEXT$ = "       Press START, FIRE or SPACE       "
 EndIf
