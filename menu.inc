@@ -58,6 +58,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
 
     Call ui_ctrl$, key%
     If key% = 0 Then keys_cursor(key%) ' Always respond to the cursor keys.
+    If key% = ctrl.B Then key% = ctrl.A
     Select Case key%
       Case ctrl.START
         Exit Do
@@ -82,7 +83,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
             If key% = ctrl.A Then menu.show% = 1 : Exit Do
 
           Case 1,2,3,4
-            menu.update_controller(item% - 1, Choice(key% = ctrl.LEFT, -1, +1))
+            menu.update_controller(item% - 1, Choice(key% = ctrl.LEFT, -1, +1), ui_ctrl$)
             update% = 1
 
           Case 5 ' Difficulty
@@ -139,7 +140,7 @@ Function menu.get_controller_name$(idx%)
   Error "Unknown controller: " + menu.ctrls$(idx%)
 End Function
 
-Sub menu.update_controller(idx%, delta%)
+Sub menu.update_controller(idx%, delta%, ui_ctrl$)
   ' Find index of currently selected controller.
   Local i%
   For i% = Bound(CTRL_SUBS$(), 0) To Bound(CTRL_SUBS$(), 1)
@@ -166,10 +167,27 @@ Sub menu.update_controller(idx%, delta%)
       Case "keys_azxc" : ok% = Not menu.has_controller%(idx%, "keys_cegg")
       Case Else        : ok% = 1
     End Select
+
+    ' Check that we can OPEN the controller.
+    If ok% Then
+      If CTRL_SUBS$(i%) <> ui_ctrl$ Then
+        ok% = menu.can_open_controller%(CTRL_SUBS$(i%))
+      EndIf
+    EndIf
   Loop Until ok%
 
   menu.ctrls$(idx%) = CTRL_SUBS$(i%)
 End Sub
+
+' Can we OPEN the given controller ?
+Function menu.can_open_controller%(ctrl$)
+  On Error Ignore
+  Call ctrl$, ctrl.OPEN
+  On Error Abort
+  Local ok% = Mm.ErrNo = 0
+  If ok% Then Call ctrl$, ctrl.CLOSE
+  menu.can_open_controller% = ok%
+End Function
 
 ' Is any player other than idx% using the specified controller ?
 Function menu.has_controller%(idx%, ctrl$)

@@ -111,7 +111,7 @@ Function highscr.show_table$(ctrls$(), duration%)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-    highscr.show_table$ = ctrl.poll_multiple$(ctrls$(), ctrl.A Or ctrl.START, 200)
+    highscr.show_table$ = ctrl.poll_multiple$(ctrls$(), ctrl.A Or ctrl.B Or ctrl.START, 200)
   Loop
 End Function
 

@@ -211,7 +211,7 @@ End Sub
 '                   0 if the duration expired.
 Function wait%(duration%)
   ctrl.init_keys()
-  Local ctrl$ = ctrl.poll_multiple$(CTRLS_TO_POLL$(), ctrl.A Or ctrl.START, duration%)
+  Local ctrl$ = ctrl.poll_multiple$(CTRLS_TO_POLL$(), ctrl.A Or ctrl.B Or ctrl.START, duration%)
   If ctrl$ <> "" Then
     If ui_ctrl$ = "" Then ui_ctrl$ = ctrl$
     wait% = 1
@@ -235,6 +235,18 @@ Sub init_game(attract_mode%)
     Poke Byte p_arena% + (y% + 1) * WIDTH% - 1, 128
   Next
 
+  ' Initialise game ports and keyboard routines.
+  Local i%
+  For i% = 0 To MAX_CYCLE_IDX%
+    cycle.ctrl$(i%) = Choice(attract_mode%, "ai_control", cycle.ctrl_setting$(i%))
+    On Error Ignore
+    Call cycle.ctrl$(i%), ctrl.OPEN
+    If Mm.ErrNo <> 0 Then cycle.ctrl$(i%) = "no_control"
+    On Error Abort
+  Next
+  ctrl.init_keys()
+
+  ' Initialise cycle state.
   cycle.dir%(0) = EAST%
   cycle.dir%(1) = WEST%
   cycle.dir%(2) = SOUTH%
@@ -245,9 +257,7 @@ Sub init_game(attract_mode%)
   cycle.pos%(2) = 5.5 * WIDTH%
   cycle.pos%(3) = WIDTH% * (HEIGHT% - 6) + WIDTH% \ 2
 
-  Local i%
   For i% = 0 To MAX_CYCLE_IDX%
-    cycle.ctrl$(i%) = Choice(attract_mode%, "ai_control", cycle.ctrl_setting$(i%))
     cycle.score%(i%) = 0
     If cycle.ctrl$(i%) = "no_control" Then
       cycle.pos%(i%) = -1
@@ -262,15 +272,6 @@ Sub init_game(attract_mode%)
       cycle.state%(i%) = STATE_OK%
     EndIf
   Next
-
-  ' Initialise game ports and keyboard routines.
-  For i% = 0 To MAX_CYCLE_IDX%
-    On Error Ignore
-    Call cycle.ctrl$(i%), ctrl.OPEN
-    If Mm.ErrNo <> 0 Then cycle.ctrl$(i%) = "no_control"
-    On Error Abort
-  Next
-  ctrl.init_keys()
 End Sub
 
 Sub draw_arena()
@@ -341,7 +342,7 @@ Function game_loop%()
     If num_humans% > 0 Then Continue Do
 
     ' Check for "attract mode" being interrupted.
-    If ctrl.poll_single%(CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1)), ctrl.A Or ctrl.START) Then
+    If ctrl.poll_single%(CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1)), ctrl.A Or ctrl.B Or ctrl.START) Then
       If ui_ctrl$ = "" Then ui_ctrl$ = CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1))
       num_alive% = 0
       game_loop% = 1
@@ -482,6 +483,7 @@ Sub die_control(x%)
 End Sub
 
 Sub no_control(x%)
+  x% = 0
 End Sub
 
 Sub keys_cegg(x%)
