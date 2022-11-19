@@ -476,6 +476,7 @@ End Sub
 
 Sub wii_internal(i2c%, x%, type%)
   Static is_open%(3)
+  If is_open%(i2c%) = -1 Then Error "I2C" + Str$(i2c%) + " failed to open" : Exit Sub
 
   If x% >= 0 Then
     Select Case is_open%(i2c%)
@@ -496,6 +497,7 @@ Sub wii_internal(i2c%, x%, type%)
   Select Case x%
     Case ctrl.OPEN
       If is_open%(i2c%) Then Exit Sub
+      is_open%(i2c%) = -1
       Controller Nunchuk Open i2c%
       If Mm.ErrNo Then
         If InStr(Mm.ErrMsg$, "already OPEN") Then
@@ -510,20 +512,20 @@ Sub wii_internal(i2c%, x%, type%)
         Case &hA4200000
           If Not(type% And &h01) Then
             Controller Nunchuk Close i2c%
-            is_open%(i2c%) = 0
+            is_open%(i2c%) = -1
             Error "Nunchuck controller on I2C" + Str$(i2c%) + " not supported"
           EndIf
         Case &hA4200101
           Controller Nunchuk Close i2c%
           If Not(type% And &h10) Then
-            is_open%(i2c%) = 0
+            is_open%(i2c%) = -1
             Error "Classic controller on I2C" + Str$(i2c%) + " not supported"
           Else
             Controller Classic Open i2c%
           EndIf
         Case Else
           Controller Nunchuck Close i2c%
-          is_open%(i2c%) = 0
+          is_open%(i2c%) = -1
           Error "Unrecognised controller on I2C" + Str$(i2c%)
       End Select
     Case ctrl.CLOSE
