@@ -142,14 +142,14 @@ Sub init_globals()
   End Select
   Local num_ctrl%, num_poll%
   Read num_ctrl%, num_poll%
-  Dim CTRL_NAMES$(num_ctrl% - 1)
-  Dim CTRL_SUBS$(num_ctrl% - 1)
+  Dim CTRL_DESCRIPTION$(num_ctrl% - 1)
+  Dim CTRL_DRIVER$(num_ctrl% - 1)
   Dim CTRLS_TO_POLL$(num_poll% - 1)
   j% = 0
   For i% = 0 To num_ctrl% - 1
-    Read CTRL_NAMES$(i%), CTRL_SUBS$(i%), a%
+    Read CTRL_DESCRIPTION$(i%), CTRL_DRIVER$(i%), a%
     If a% Then
-      CTRLS_TO_POLL$(j%) = CTRL_SUBS$(i%)
+      CTRLS_TO_POLL$(j%) = CTRL_DRIVER$(i%)
       Inc j%
     EndIf
   Next

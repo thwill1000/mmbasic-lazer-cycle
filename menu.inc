@@ -130,9 +130,9 @@ End Sub
 
 Function menu.get_controller_name$(idx%)
   Local i%
-  For i% = Bound(CTRL_SUBS$(), 0) To Bound(CTRL_SUBS$(), 1)
-    If menu.ctrls$(idx%) = CTRL_SUBS$(i%) Then
-      menu.get_controller_name$ = CTRL_NAMES$(i%)
+  For i% = Bound(CTRL_DRIVER$(), 0) To Bound(CTRL_DRIVER$(), 1)
+    If menu.ctrls$(idx%) = CTRL_DRIVER$(i%) Then
+      menu.get_controller_name$ = CTRL_DESCRIPTION$(i%)
       Do While Len(menu.get_controller_name$) < 14 : Cat menu.get_controller_name$, " " : Loop
       Exit Function
     Endif
@@ -143,22 +143,22 @@ End Function
 Sub menu.update_controller(idx%, delta%, ui_ctrl$)
   ' Find index of currently selected controller.
   Local i%
-  For i% = Bound(CTRL_SUBS$(), 0) To Bound(CTRL_SUBS$(), 1)
-    If menu.ctrls$(idx%) = CTRL_SUBS$(i%) Then Exit For
+  For i% = Bound(CTRL_DRIVER$(), 0) To Bound(CTRL_DRIVER$(), 1)
+    If menu.ctrls$(idx%) = CTRL_DRIVER$(i%) Then Exit For
   Next
-  If i% = Bound(CTRL_SUBS$(), 1) + 1 Then Error "Unknown controller: " + menu.ctrls$(idx%)
+  If i% = Bound(CTRL_DRIVER$(), 1) + 1 Then Error "Unknown controller: " + menu.ctrls$(idx%)
 
   Local ok%
   Do
     Inc i%, delta%
-    If i% < 0 Then i% = Bound(CTRL_SUBS$(), 1)
-    If i% > Bound(CTRL_SUBS$(), 1) Then i% = 0
+    If i% < 0 Then i% = Bound(CTRL_DRIVER$(), 1)
+    If i% > Bound(CTRL_DRIVER$(), 1) Then i% = 0
 
     ' Check there is no conflict with other player's controller choice.
-    If Not InStr("ai_control|no_control", CTRL_SUBS$(i%)) Then
-      If menu.has_controller%(idx%, CTRL_SUBS$(i%)) Then Continue Do
+    If Not InStr("ai_control|no_control", CTRL_DRIVER$(i%)) Then
+      If menu.has_controller%(idx%, CTRL_DRIVER$(i%)) Then Continue Do
     EndIf
-    Select Case CTRL_SUBS$(i%)
+    Select Case CTRL_DRIVER$(i%)
       Case "atari_a"   : ok% = Not menu.has_controller%(idx%, "nes_a")
       Case "atari_b"   : ok% = Not menu.has_controller%(idx%, "nes_b")
       Case "nes_a"     : ok% = Not menu.has_controller%(idx%, "atari_a")
@@ -170,13 +170,13 @@ Sub menu.update_controller(idx%, delta%, ui_ctrl$)
 
     ' Check that we can OPEN the controller.
     If ok% Then
-      If CTRL_SUBS$(i%) <> ui_ctrl$ Then
-        ok% = menu.can_open_controller%(CTRL_SUBS$(i%))
+      If CTRL_DRIVER$(i%) <> ui_ctrl$ Then
+        ok% = menu.can_open_controller%(CTRL_DRIVER$(i%))
       EndIf
     EndIf
   Loop Until ok%
 
-  menu.ctrls$(idx%) = CTRL_SUBS$(i%)
+  menu.ctrls$(idx%) = CTRL_DRIVER$(i%)
 End Sub
 
 ' Can we OPEN the given controller ?
