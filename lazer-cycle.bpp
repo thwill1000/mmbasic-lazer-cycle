@@ -97,6 +97,7 @@ Sub outer_loop()
 
   Do
     If attract_mode% Then wipe() : attract_mode% = Not show_title%(5000)
+    If attract_mode% Then wipe() : attract_mode% = Not show_instructions%(15000)
     If attract_mode% Then wipe() : attract_mode% = Not show_highscore%(5000)
     If Not attract_mode% Then
       wipe()
@@ -181,6 +182,29 @@ Function show_title%(duration%)
   Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)
   If IS_CMM2% Then Page Copy 1 To 0, B
   show_title% = wait%(duration%)
+End Function
+
+' Displays the instructions screen for a specified duration or until the user presses
+' START/FIRE/SPACE.
+'
+' @param duration%  duration in milliseconds; if 0 then indefinite.
+' @return           1 if the user pressed button/key,
+'                   0 if the duration expired.
+Function show_instructions%(duration%)
+  Const ch$ = Chr$(205)
+  Local y% = Y_OFFSET% - 95
+  Text X_OFFSET%, y%, ch$ + ch$ + " LAZER CYCLE " + ch$ + ch$, "CT", 1, 1, Rgb(White) : Inc y%, 20
+  Text X_OFFSET%, y%, "An arcade game for 1-4 players.", "CT", 1, 1, Rgb(Red) : Inc y%, 20
+  Text X_OFFSET%, y%, "Pilot your cycle around the", "CT", 1, 1, Rgb(Yellow) : Inc y%, 12
+  Text X_OFFSET%, y%, "arena leaving a trail of light", "CT", 1, 1, Rgb(Yellow) : Inc y%, 12
+  Text X_OFFSET%, y%, "behind, longest trail wins.", "CT", 1, 1, Rgb(Yellow) : Inc y%, 20
+  Text X_OFFSET%, y%, "You are eliminated if you hit the", "CT", 1, 1, Rgb(Cyan) : Inc y%, 12
+  Text X_OFFSET%, y%, "arena wall, or one of the trails.", "CT", 1, 1, Rgb(Cyan) : Inc y%, 20
+  Text X_OFFSET%, y%, "Use keyboard, joystick or gamepad", "CT", 1, 1, Rgb(Green) : Inc y%, 12
+  Text X_OFFSET%, y%, "UP, DOWN, LEFT and RIGHT to steer.", "CT", 1, 1, Rgb(Green) : Inc y%, 20
+  Text X_OFFSET%, y%, "Good Luck!", "CT", 1, 1, Rgb(White)
+  If IS_CMM2% Then Page Copy 1 To 0, B
+  show_instructions% = wait%(duration%)
 End Function
 
 ' Displays the highscore table for a specified duration or until the user presses
