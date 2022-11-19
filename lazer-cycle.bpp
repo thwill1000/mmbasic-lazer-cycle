@@ -155,9 +155,9 @@ Sub init_globals()
   Next
 
   ' Initialise controller settings.
-  For i% = 0 To MAX_CYCLE_IDX%
-    cycle.ctrl_setting$(i%) = "ai_control"
-  Next
+  cycle.ctrl_setting$(0) = "ai_control"
+  cycle.ctrl_setting$(1) = "ai_control"
+  For i% = 2 To MAX_CYCLE_IDX% : cycle.ctrl_setting$(i%) = "no_control" : Next
 
   ' Initialise high-scores.
   Restore highscore_data
