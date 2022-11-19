@@ -31,6 +31,13 @@ Select Case Mm.Device$
     Error "Unsupported device: " + Mm.Device$
 End Select
 
+' Text deliberately padded to string width (40 chars).
+If Mm.Device$ = "MMBasic for Windows" Then
+  Const START_TEXT$ = "              Press SPACE               "
+Else
+  Const START_TEXT$ = "       Press START, FIRE or SPACE       "
+EndIf
+
 Const WIDTH% = Mm.HRes \ 2
 Const HEIGHT% = (Mm.VRes - 20) \ 2
 Const X_OFFSET% = MM.HRes \ 2
@@ -171,8 +178,7 @@ Function show_title%(duration%)
   Text X_OFFSET%, Y_OFFSET% - 15, "LAZER CYCLE", "CM", 1, 2, Rgb(White)
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
-  Local text$ = Choice(Mm.Device$ <> "MMBasic for Windows", "Press START, FIRE or SPACE", "Press SPACE")
-  Text X_OFFSET%, Y_OFFSET% + 40, text$, "CM", 1, 1, Rgb(White)
+  Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)
   If IS_CMM2% Then Page Copy 1 To 0, B
   show_title% = wait%(duration%)
 End Function
@@ -350,12 +356,27 @@ Function game_loop%()
 End Function
 
 Sub draw_score()
-  Local i%, s$ = Str$(score%, 5, 0, "0")
-  For i% = 0 To MAX_CYCLE_IDX%
-    If cycle.state%(i%) < STATE_DYING% Then
-      Text SCORE_X%(i%), SCORE_Y%, s$, , 1, 1, cycle.colour%(i%)
-    EndIf
-  Next
+  If num_humans% > 0 Or ((score% \ 100) And &b1) Then
+    Local i%, s$ = Str$(score%, 5, 0, "0")
+    For i% = 0 To MAX_CYCLE_IDX%
+      If cycle.state%(i%) < STATE_DYING% Then
+        Text SCORE_X%(i%), SCORE_Y%, s$, , 1, 1, cycle.colour%(i%)
+      EndIf
+    Next
+    Exit Sub
+  EndIf
+
+  ' If there are no human players we toggle between the score and the "Press ..." text.
+  If score% Mod 100 = 95 Then
+    Local i%, sc%
+    Text WIDTH%, SCORE_Y%, Space$(40), "C", 1, 1, Rgb(White)
+    For i% = 0 To MAX_CYCLE_IDX%
+      sc% = Choice(cycle.state%(i%) < STATE_DYING%, score%, (cycle.score%(i%) \ 5) * 5)
+      Text SCORE_X%(i%), SCORE_Y%, Str$(sc%, 5, 0, "0"), , 1, 1, cycle.colour%(i%)
+    Next
+  Else
+    Text WIDTH%, SCORE_Y%, START_TEXT$, "C", 1, 1, Rgb(White)
+  EndIf
 End Sub
 
 Sub wipe()
@@ -396,7 +417,7 @@ Sub show_game_over()
   Local dummy%, i%, idx%(MAX_CYCLE_IDX%), j%, k%, winner%
   Sort cycle.score%(), idx%(), 1
   For i% = 0 To MAX_CYCLE_IDX%
-    Do While (cycle.score%(i%) Mod 5) <> 0 : Inc cycle.score%(i%), -1 : Loop
+    cycle.score%(i%) = (cycle.score%(i%) \ 5) * 5 ' Round down to nearest 5.
   Next
   winner% = idx%(0)
 
