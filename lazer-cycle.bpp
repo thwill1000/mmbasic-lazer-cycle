@@ -585,40 +585,43 @@ End Sub
 
 controller_data_cmm2:
 
-Data 10, 6
-Data "KEYS: AZ,.",     "keys_cegg",  1
-Data "KEYS: AZXC",     "keys_azxc",  0
-Data "KEYS: '/,.",     "keys_punc",  0
-Data "JOYSTICK DX",    "atari_dx",   1
-Data "NES GAMEPAD DX", "nes_dx",     1
-Data "WII CTRL I2C1",  "wii_any_1",  1
-Data "WII CTRL I2C2",  "wii_any_2",  1
-Data "WII CTRL I2C3",  "wii_any_3",  1
-Data "AI",             "ai_control", 0
-Data "NONE",           "no_control", 0
+Data 11, 6
+Data "KEYS: CURSOR",   "keys_cursor", 1
+Data "KEYS: AZ,.",     "keys_cegg",   0
+Data "KEYS: AZXC",     "keys_azxc",   0
+Data "KEYS: '/,.",     "keys_punc",   0
+Data "JOYSTICK DX",    "atari_dx",    1
+Data "NES GAMEPAD DX", "nes_dx",      1
+Data "WII CTRL I2C1",  "wii_any_1",   1
+Data "WII CTRL I2C2",  "wii_any_2",   1
+Data "WII CTRL I2C3",  "wii_any_3",   1
+Data "AI",             "ai_control",  0
+Data "NONE",           "no_control",  0
 
 controller_data_pm:
 
-Data 6, 2
-Data "KEYS: AZ,.", "keys_cegg",  1
-Data "KEYS: AZXC", "keys_azxc",  0
-Data "KEYS: '/,.", "keys_punc",  0
-Data "GAMEPAD",    "nes_a",      1
-Data "AI",         "ai_control", 0
-Data "NONE",       "no_control", 0
+Data 7, 2
+Data "KEYS: CURSOR", "keys_cursor", 1
+Data "KEYS: AZ,.",   "keys_cegg",   0
+Data "KEYS: AZXC",   "keys_azxc",   0
+Data "KEYS: '/,.",   "keys_punc",   0
+Data "GAMEPAD",      "nes_a",       1
+Data "AI",           "ai_control",  0
+Data "NONE",         "no_control",  0
 
 controller_data_pmvga:
 
-Data 9, 5
-Data "KEYS: AZ,.", "keys_cegg",  1
-Data "KEYS: AZXC", "keys_azxc",  0
-Data "KEYS: '/,.", "keys_punc",  0
-Data "GAMEPAD A",  "nes_a",      1
-Data "GAMEPAD B",  "nes_b",      1
-Data "JOYSTICK A", "atari_a",    1
-Data "JOYSTICK B", "atari_b",    1
-Data "AI",         "ai_control", 0
-Data "NONE",       "no_control", 0
+Data 10, 5
+Data "KEYS: CURSOR", "keys_cursor", 1
+Data "KEYS: AZ,.",   "keys_cegg",   0
+Data "KEYS: AZXC",   "keys_azxc",   0
+Data "KEYS: '/,.",   "keys_punc",   0
+Data "GAMEPAD A",    "nes_a",       1
+Data "GAMEPAD B",    "nes_b",       1
+Data "JOYSTICK A",   "atari_a",     1
+Data "JOYSTICK B",   "atari_b",     1
+Data "AI",           "ai_control",  0
+Data "NONE",         "no_control",  0
 
 highscore_data:
 
