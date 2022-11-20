@@ -15,7 +15,7 @@ Const scancode.J = &h3B
 Const scancode.K = &h42
 Const scancode.L = &h4B
 Const scancode.M = &h3A
-Const scancode.M = &h31
+Const scancode.N = &h31
 Const scancode.O = &h44
 Const scancode.P = &h4D
 Const scancode.Q = &h15
@@ -41,7 +41,7 @@ Const scancode.8 = &h3E
 Const scancode.9 = &h46
 Const scancode.0 = &h45
 
-' Number pad
+' Keypad
 Const scancode.KEYPAD_1 = &h69
 Const scancode.KEYPAD_2 = &h72
 Const scancode.KEYPAD_3 = &h7A
@@ -52,6 +52,12 @@ Const scancode.KEYPAD_7 = &h6C
 Const scancode.KEYPAD_8 = &h75
 Const scancode.KEYPAD_9 = &h7D
 Const scancode.KEYPAD_0 = &h70
+Const scancode.KEYPAD_ASTERISK = &h7C
+Const scancode.KEYPAD_ENTER    = &hE05A
+Const scancode.KEYPAD_HYPHEN   = &h7B
+Const scancode.KEYPAD_PERIOD   = &h71
+Const scancode.KEYPAD_PLUS     = &h79
+Const scancode.KEYPAD_SLASH    = &hE04A
 
 ' Punctuation
 Const scancode.SEMICOLON     = &h4C
@@ -63,13 +69,9 @@ Const scancode.BACKTICK      = &h0E
 Const scancode.SPACE         = &h29
 Const scancode.HYPHEN        = &h4E
 Const scancode.EQUALS        = &h55
-Const scancode.ASTERISK      = &h7C
-Const scancode.KEYPAD_HYPHEN = &h7B
 Const scancode.SQUARE_BRA    = &h54
-Const scancode.SQUARE_KEY    = &h5B
-Const scancode.PLUS          = &h79
+Const scancode.SQUARE_KET    = &h5B
 Const scancode.HASH          = &h5D
-Const scancode.KEYPAD_PERIOD = &h71
 Const scancode.BACKSLASH     = &h61
 
   ' Function keys
@@ -114,5 +116,4 @@ Const scancode.MENUS        = &hE02F
 Const scancode.CTRL_RIGHT   = &hE014
 Const scancode.NUM_LOCK     = &h77
 Const scancode.CAPS_LOCK    = &h58
-Const scancode.KEYPAD_ENTER = &hE05A
 Const scancode.PAUSE_BREAK  = &hE11477E1F014E077
