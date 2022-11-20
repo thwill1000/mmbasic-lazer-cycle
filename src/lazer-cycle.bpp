@@ -48,6 +48,7 @@ Const SCORE_Y% = 2 * HEIGHT% + 4
 Const STATE_OK%    = &b000 ' 0; values 1-3 are "imminent death"
 Const STATE_DYING% = &b100 ' 4
 Const STATE_DEAD%  = &b101 ' 5
+Const DIRECTION_MASK% = ctrl.UP Or ctrl.DOWN Or ctrl.LEFT Or ctrl.RIGHT
 
 ' These would be constants but MMBasic does not support constant arrays
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
@@ -348,7 +349,7 @@ Function game_loop%()
       cycle.current% = i%
       Call cycle.ctrl$(i%), key%
       d% = cycle.dir%(i%)
-      Select Case key%
+      Select Case key% And DIRECTION_MASK%
         Case ctrl.UP:    If d% <> SOUTH% Then d% = NORTH%
         Case ctrl.DOWN:  If d% <> NORTH% Then d% = SOUTH%
         Case ctrl.LEFT:  If d% <> EAST% Then d% = WEST%
