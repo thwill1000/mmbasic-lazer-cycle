@@ -153,6 +153,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   name$ = str.rpad$("PLAYER " + Str$(player%), highscr.MAX_NAME_LEN%)
 
   ctrl.term_keys() ' Regain control of the keyboard for INKEY$
+  Call ctrl$, ctrl.OPEN
   Do While highscr.get_input%(ctrl$) : Loop ' Wait for player to release controller.
 
   ' PEEKing the font doesn't work in MMB4W.
