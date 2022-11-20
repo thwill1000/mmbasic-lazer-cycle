@@ -148,9 +148,11 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   Cat help$, "and FIRE to confirm"
   Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(White)
 
+  If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
+
   Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, state%
   y% = Y_OFFSET% - 75 + 15 * idx%
-  name$ = str.rpad$("PLAYER " + Str$(player%), highscr.MAX_NAME_LEN%)
+  name$ = Space$(highscr.MAX_NAME_LEN%)
 
   ctrl.term_keys() ' Regain control of the keyboard for INKEY$
   Call ctrl$, ctrl.OPEN
