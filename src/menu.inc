@@ -35,9 +35,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
-  On Error Ignore
   Call ui_ctrl$, ctrl.OPEN
-  On Error Abort
 
   Do
 
@@ -116,7 +114,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
 
   Loop
 
-  close_controller_no_error(ui_ctrl$)
+  Call ui_ctrl$, ctrl.CLOSE
 
   ' Copy controller settings back into parameter.
   For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
@@ -142,6 +140,9 @@ Function menu.get_controller_name$(idx%)
 End Function
 
 Sub menu.update_controller(idx%, delta%, ui_ctrl$)
+  ' Temporarily close UI controller.
+  Call ui_ctrl$, ctrl.CLOSE
+
   ' Find index of currently selected controller.
   Local i%
   For i% = Bound(CTRL_DRIVER$(), 0) To Bound(CTRL_DRIVER$(), 1)
@@ -162,8 +163,10 @@ Sub menu.update_controller(idx%, delta%, ui_ctrl$)
     Select Case CTRL_DRIVER$(i%)
       Case "atari_a"   : ok% = Not menu.has_controller%(idx%, "nes_a")
       Case "atari_b"   : ok% = Not menu.has_controller%(idx%, "nes_b")
+      Case "atari_dx"  : ok% = Not menu.has_controller%(idx%, "nes_dx")
       Case "nes_a"     : ok% = Not menu.has_controller%(idx%, "atari_a")
       Case "nes_b"     : ok% = Not menu.has_controller%(idx%, "atari_b")
+      Case "nes_dx"    : ok% = Not menu.has_controller%(idx%, "atari_dx")
       Case "keys_cegg" : ok% = Not menu.has_controller%(idx%, "keys_azxc", "keys_punc")
       Case "keys_azxc" : ok% = Not menu.has_controller%(idx%, "keys_cegg")
       Case "keys_punc" : ok% = Not menu.has_controller%(idx%, "keys_cegg")
@@ -171,14 +174,13 @@ Sub menu.update_controller(idx%, delta%, ui_ctrl$)
     End Select
 
     ' Check that we can OPEN the controller.
-    If ok% Then
-      If CTRL_DRIVER$(i%) <> ui_ctrl$ Then
-        ok% = menu.can_open_controller%(CTRL_DRIVER$(i%))
-      EndIf
-    EndIf
+    If ok% Then ok% = menu.can_open_controller%(CTRL_DRIVER$(i%))
   Loop Until ok%
 
   menu.ctrls$(idx%) = CTRL_DRIVER$(i%)
+
+  ' Restore UI controller.
+  Call ui_ctrl$, ctrl.OPEN
 End Sub
 
 ' Can we OPEN the given controller ?
