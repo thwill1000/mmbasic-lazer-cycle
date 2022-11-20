@@ -220,6 +220,30 @@ Function ctrl.poll_single%(ctrl$, mask%)
   On Error Abort
 End Function
 
+' Gets a string representation of bits read from a controller driver.
+'
+' @param  x%  bits returned by driver.
+' @return     string representation.
+Function ctrl.bits_to_string$(x%)
+  Static BUTTONS$(14) = ("R","Start","Home","Select","L","Down","Right","Up","Left","ZR","X","A","Y","B","ZL")
+
+  If x% = 0 Then
+    ctrl.bits_to_string$ = "No buttons down"
+    Exit Function
+  EndIf
+
+  ctrl.bits_to_string$ = Str$(x%) + " = "
+  Local count%, i%, s$
+  For i% = 0 To Bound(BUTTONS$(), 1)
+    If x% And 2^i% Then
+      s$ = BUTTONS$(i%)
+      If count% > 0 Then Cat ctrl.bits_to_string$, ", "
+      Cat ctrl.bits_to_string$, s$
+      Inc count%
+    EndIf
+  Next
+End Function
+
 '!ifndef CTRL_NO_CURSORS
 
 ' Reads the keyboard as if it were a controller.

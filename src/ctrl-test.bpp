@@ -131,7 +131,7 @@ Sub main_loop()
 
     If err$ = "" Then
       Call ctrl$, bits%
-      s$ = str.rpad$("Currently reading: " + ctrl_bits_to_string$(bits%), WIDTH%)
+      s$ = str.rpad$("Currently reading: " + ctrl.bits_to_string$(bits%), WIDTH%)
     Else
       s$ = str.rpad$(Mid$(err$, InStr(err$, ":") + 1), WIDTH%)
     EndIf
@@ -180,30 +180,6 @@ Sub print_ctrl_option(idx%, selected%)
   Cat s$, CTRL_DESCRIPTIONS$(idx%)
   print_at(2, idx% + 5, s$, selected%)
 End Sub
-
-' Gets a string representation of bits read from a controller.
-'
-' @param bits%  controller state returned by controller read function.
-Function ctrl_bits_to_string$(bits%)
-  Static BUTTONS$(14) = ("R","Start","Home","Select","L","Down","Right","Up","Left","ZR","X","A","Y","B","ZL")
-
-  If bits% = 0 Then
-    ctrl_bits_to_string$ = "No buttons down"
-    Exit Function
-  EndIf
-
-  ctrl_bits_to_string$ = Str$(bits%) + " = "
-  Local count%, i%, s$
-  For i% = 0 To Bound(BUTTONS$(), 1)
-    If bits% And 2^i% Then
-      s$ = BUTTONS$(i%)
-      If count% > 0 Then Cat ctrl_bits_to_string$, ", "
-      Cat ctrl_bits_to_string$, s$
-      Inc count%
-    EndIf
-  Next
-End Function
-
 
 ' Gets a string "quoted" with given characters.
 '

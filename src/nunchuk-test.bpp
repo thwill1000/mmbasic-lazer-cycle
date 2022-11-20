@@ -40,7 +40,7 @@ Do
   For i% = 1 To 3
     If err$(i%) = "" Then
       Call driver$(i%), bits%
-      out$(i%) = ctrl_bits_to_string$(bits%)
+      out$(i%) = ctrl.bits_to_string$(bits%)
     EndIf
   Next
 Loop
@@ -58,29 +58,6 @@ Sub end_program()
   Next
   End
 End SUb
-
-' Gets a string representation of bits read from a controller.
-'
-' @param bits%  controller state returned by controller read function.
-Function ctrl_bits_to_string$(bits%)
-  Static BUTTONS$(14) = ("R","Start","Home","Select","L","Down","Right","Up","Left","ZR","X","A","Y","B","ZL")
-
-  If bits% = 0 Then
-    ctrl_bits_to_string$ = "No buttons down"
-    Exit Function
-  EndIf
-
-  ctrl_bits_to_string$ = Str$(bits%) + " = "
-  Local count%, i%, s$
-  For i% = 0 To Bound(BUTTONS$(), 1)
-    If bits% And 2^i% Then
-      s$ = BUTTONS$(i%)
-      If count% > 0 Then Cat ctrl_bits_to_string$, ", "
-      Cat ctrl_bits_to_string$, s$
-      Inc count%
-    EndIf
-  Next
-End Function
 
 ' Gets a string padded to a given width with spaces to the right.
 '
