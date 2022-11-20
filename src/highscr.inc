@@ -140,17 +140,20 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
     Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, colour_%, Rgb(Blue))
   Next
 
-  ' Show help text.
-  Inc y%, 25
-  Local y_help% = y%
-  Local help$ = "Use "
-  For i% = 146 To 149 : Cat help$, Chr$(i%) + " " : Next
-  Cat help$, "and FIRE to confirm"
-  Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(White)
+  ' Initialise footer text.
+  Local y_footer% = y% + 25
+  Local footer$(3) Length 40
+  footer$(1) = "   Use * * * * and FIRE to confirm   "
+  Poke Var footer$(1), 8, 146
+  Poke Var footer$(1), 10, 147
+  Poke Var footer$(1), 12, 148
+  Poke Var footer$(1), 14, 149
+  footer$(2) = " Or, type name and ENTER to confirm  "
+  footer$(3) = "     Press FIRE again to confirm     "
 
   If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
 
-  Local cursor% = 1, key%, p% = 1, t% = Timer, bg%, fg%, state%
+  Local count% = 0, key%, p% = 1, t% = Timer, bg%, fg%, state%
   y% = Y_OFFSET% - 75 + 15 * idx%
   name$ = Space$(highscr.MAX_NAME_LEN%)
 
@@ -163,21 +166,25 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   Local confirm% = 0
   Do
     If Timer > t% + 500 Then
-      cursor% = Not cursor%
+      count% = (count% + 1) Mod 10
       t% = Timer
     EndIf
 
     For i% = 1 To highscr.MAX_NAME_LEN%
-      bg% = Choice((i% = p%) And cursor%, colour_%, Rgb(Black))
-      fg% = Choice((i% = p%) And cursor%, Rgb(Black), colour_%)
+      bg% = Choice((i% = p%) And (count% And &b1), colour_%, Rgb(Black))
+      fg% = Choice((i% = p%) And (count% And &b1), Rgb(Black), colour_%)
       ch$ = Mid$(name$, i%, 1)
       x% = X_OFFSET% + (i% - 1.5) * font_width%
       Text x%, y%, ch$, , 1, 1, fg%, bg%
     Next
 
     If confirm% > 0 Then
+      Text X_OFFSET%, y_footer%, footer$(3), "CT", 1, 1, Rgb(Black), Rgb(White)
       Inc confirm%, -1
-      If confirm% = 0 Then Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(White), Rgb(Black) ' Restore the help text.
+    Else If count% < 5 Then
+      Text X_OFFSET%, y_footer%, footer$(1), "CT", 1, 1, Rgb(White), Rgb(Black)
+    Else
+      Text X_OFFSET%, y_footer%, footer$(2), "CT", 1, 1, Rgb(White), Rgb(Black)
     EndIf 
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
@@ -191,8 +198,6 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
           If confirm% > 0 Then
             key% = -1 ' So we exit the DO LOOP.
           Else
-            Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(Black), Rgb(Black)
-            Text X_OFFSET%, y_help%, " Press FIRE again to confirm ", "CT", 1, 1, Rgb(Black), Rgb(White)
             confirm% = 50
           EndIf
         Case &h08 ' Backspace
@@ -229,7 +234,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
     If state% > 0 Then
       If state% = 1 Then sound.start_fx(sound.FX_SELECT%()) Else sound.start_fx(sound.FX_BLART%())
-      If key% <> &h01 Then confirm% = 1 ' So message is cleared
+      If key% <> &h01 Then confirm% = 0 ' So message is cleared
       state% = 0
     EndIf
 
@@ -238,8 +243,8 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
   Loop While key% <> -1
 
-  ' Delete the help text.
-  Text X_OFFSET%, y_help%, help$, "CT", 1, 1, Rgb(Black), Rgb(Black)
+  ' Delete the footer text.
+  Text X_OFFSET%, y_footer%, Space$(40), "CT", 1, 1, Rgb(White), Rgb(Black)
 
   ' Don't allow empty names.
   name$ = str.trim$(name$)
