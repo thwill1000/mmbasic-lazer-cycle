@@ -14,7 +14,7 @@ Option Explicit On
 #Include "highscr.inc"
 #Include "menu.inc"
 
-Const VERSION$ = "0.9.1"
+Const VERSION$ = "0.9.2"
 
 Select Case Mm.Device$
   Case "Colour Maximite 2", "Colour Maximite 2 G2", "MMBasic for Windows"
@@ -408,8 +408,7 @@ End Sub
 
 Sub draw_controller(idx%, x%)
   Local s$ = cycle.ctrl$(idx%) + ": " + ctrl.bits_to_string$(x%)
-  Text 0, SCORE_Y%, Space$(40), , 1, 1, Rgb(White)
-  Text 0, SCORE_Y%, s$, , 1, 1, Rgb(White)
+  Text 0, SCORE_Y%, str.rpad$(s$, 40), , 1, 1, Rgb(White)
 End Sub
 
 Sub wipe()
