@@ -325,7 +325,7 @@ Function game_loop%()
 
   Do While num_alive% > 0
     Inc score%, 1
-    If score% Mod 5 = 0 Then draw_score()
+'    If score% Mod 5 = 0 Then draw_score()
 
     ' When dying the cycle trail deletes at twice the rate.
     For i% = 0 To MAX_CYCLE_IDX%
@@ -358,6 +358,7 @@ Function game_loop%()
       cycle.dir%(i%) = d%
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(d%)
       If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
+      If i% = 0 Then draw_controller(i%, key%)
     Next
 
     ' Wait for next frame.
@@ -403,6 +404,12 @@ Sub draw_score()
   Else
     Text WIDTH%, SCORE_Y%, START_TEXT$, "C", 1, 1, Rgb(White)
   EndIf
+End Sub
+
+Sub draw_controller(idx%, x%)
+  Local s$ = cycle.ctrl$(idx%) + ": " + ctrl.bits_to_string$(x%)
+  Text 0, SCORE_Y%, Space$(40), , 1, 1, Rgb(White)
+  Text 0, SCORE_Y%, s$, , 1, 1, Rgb(White)
 End Sub
 
 Sub wipe()
