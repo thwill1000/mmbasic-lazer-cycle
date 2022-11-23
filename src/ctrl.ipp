@@ -57,7 +57,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_USE_KEYDOWN defined
 '!endif
 
-Const ctrl.VERSION = 904  ' 0.9.4
+Const ctrl.VERSION = 905  ' 0.9.5
 
 ' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01
@@ -506,14 +506,18 @@ Sub wii_internal(i2c%, x%, type%)
     Select Case is_open%(i2c%)
       Case &hA4200101
         x% = Classic(B, i2c%)
+'        Inc x%, (Classic(LY, i2c%) > 200) * ctrl.UP
+'        Inc x%, (Classic(LY, i2c%) < 60)  * ctrl.DOWN
+'        Inc x%, (Classic(LX, i2c%) < 60)  * ctrl.LEFT
+'        Inc x%, (Classic(LX, i2c%) > 200) * ctrl.RIGHT
         If x% = &h7FFF Then x% = 0 ' Ignore this glitch.
       Case &hA4200000
         x% =    Nunchuk(Z,  i2c%) * ctrl.A
         Inc x%, Nunchuk(C,  i2c%) * ctrl.B
-        Inc x%, (Nunchuk(JY, i2c%) > 170) * ctrl.UP
-        Inc x%, (Nunchuk(JY, i2c%) < 90)  * ctrl.DOWN
-        Inc x%, (Nunchuk(JX, i2c%) < 90)  * ctrl.LEFT
-        Inc x%, (Nunchuk(JX, i2c%) > 170) * ctrl.RIGHT
+        Inc x%, (Nunchuk(JY, i2c%) > 200) * ctrl.UP
+        Inc x%, (Nunchuk(JY, i2c%) < 60)  * ctrl.DOWN
+        Inc x%, (Nunchuk(JX, i2c%) < 60)  * ctrl.LEFT
+        Inc x%, (Nunchuk(JX, i2c%) > 200) * ctrl.RIGHT
     End Select
     Exit Sub
   EndIf
