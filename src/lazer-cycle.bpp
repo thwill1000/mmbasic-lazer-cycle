@@ -48,7 +48,9 @@ Const SCORE_Y% = 2 * HEIGHT% + 4
 Const STATE_OK%    = &b000 ' 0; values 1-3 are "imminent death"
 Const STATE_DYING% = &b100 ' 4
 Const STATE_DEAD%  = &b101 ' 5
-Const DIRECTION_MASK% = ctrl.UP Or ctrl.DOWN Or ctrl.LEFT Or ctrl.RIGHT
+Const HORIZONTAL_MASK% = ctrl.LEFT Or ctrl.RIGHT
+Const VERTICAL_MASK%   = ctrl.UP Or ctrl.DOWN
+Const DIRECTION_MASK%  = HORIZONTAL_MASK% Or VERTICAL_MASK%
 
 ' These would be constants but MMBasic does not support constant arrays
 Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, SOUTH%)
@@ -80,6 +82,7 @@ Dim cycle.colour%(MAX_CYCLE_IDX%) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green
 Dim cycle.ctrl$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.ctrl_setting$(MAX_CYCLE_IDX%) Length 32
 Dim cycle.state%(MAX_CYCLE_IDX%)
+Dim cycle.last_key%(MAX_CYCLE_IDX%)
 
 Dim num_alive%
 Dim num_humans%
@@ -284,6 +287,7 @@ Sub init_game(attract_mode%)
 
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
+    cycle.last_key%(i%) = 0
     If cycle.ctrl$(i%) = "no_control" Then
       cycle.pos%(i%) = -1
       cycle.nxt%(i%) = -1
@@ -314,7 +318,7 @@ End Sub
 ' @return  0 - normal game over
 '          1 - game interrupted after all human players died
 Function game_loop%()
-  Local d%, i%, key%, next_frame% = Timer + frame_duration%
+  Local d%, i%, key%, next_frame% = Timer + frame_duration%, tf%
 
   ' num_alive% = 0
   ' cycle.score%(0) = 3175
@@ -324,8 +328,9 @@ Function game_loop%()
   ' score% = 3175
 
   Do While num_alive% > 0
+    tf% = Timer
     Inc score%, 1
-'    If score% Mod 5 = 0 Then draw_score()
+    If score% Mod 5 = 0 Then draw_score()
 
     ' When dying the cycle trail deletes at twice the rate.
     For i% = 0 To MAX_CYCLE_IDX%
@@ -349,21 +354,33 @@ Function game_loop%()
       cycle.current% = i%
       Call cycle.ctrl$(i%), key%
       d% = cycle.dir%(i%)
-      Select Case key% And DIRECTION_MASK%
-        Case ctrl.UP:    If d% <> SOUTH% Then d% = NORTH%
-        Case ctrl.DOWN:  If d% <> NORTH% Then d% = SOUTH%
-        Case ctrl.LEFT:  If d% <> EAST% Then d% = WEST%
-        Case ctrl.RIGHT: If d% <> WEST% Then d% = EAST%
-      End Select
-      cycle.dir%(i%) = d%
+      key% = key% And DIRECTION_MASK%
+      If key% <> cycle.last_key%(i%) Then
+        Select Case d%
+          Case NORTH%, SOUTH%
+            Select Case key% And HORIZONTAL_MASK%
+              Case ctrl.LEFT : d% = WEST%
+              Case ctrl.RIGHT : d% = EAST%
+            End Select
+          Case EAST%, WEST%
+            Select Case key% And VERTICAL_MASK%
+              Case ctrl.UP : d% = NORTH%
+              Case ctrl.DOWN : d% = SOUTH%
+            End Select
+        End Select
+        cycle.dir%(i%) = d%
+        cycle.last_key%(i%) = key%
+      EndIf
       cycle.nxt%(i%) = cycle.pos%(i%) + DIRECTIONS%(d%)
       If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
-      If i% = 0 Then draw_controller(i%, key%)
+'      If i% = 0 Then draw_controller(i%, key%)
     Next
 
     ' Wait for next frame.
     Do While Timer < next_frame% : Loop
     Inc next_frame%, frame_duration%
+
+'    If score% Mod 5 Then draw_framerate(1000 / (Timer - tf%))
 
     If num_humans% > 0 Then Continue Do
 
@@ -373,6 +390,7 @@ Function game_loop%()
       num_alive% = 0
       game_loop% = 1
     EndIf
+
   Loop
 
   ' Ensure display updated at end of loop.
@@ -406,9 +424,18 @@ Sub draw_score()
   EndIf
 End Sub
 
+' Shows controller input in the score area.
+'
+' @param  idx%  player number, 1-4
+' @param  x%    input bitmap from controller driver.
 Sub draw_controller(idx%, x%)
   Local s$ = cycle.ctrl$(idx%) + ": " + ctrl.bits_to_string$(x%)
   Text 0, SCORE_Y%, str.rpad$(s$, 40), , 1, 1, Rgb(White)
+End Sub
+
+' Shows framerate in the score area.
+Sub draw_framerate(rate%)
+  Text 0, SCORE_Y%, str.rpad$("Framerate: " + Str$(rate%) + " fps", 40), , 1, 1, Rgb(White)
 End Sub
 
 Sub wipe()
