@@ -275,11 +275,9 @@ Sub atari_a(x%)
       Inc x%, Not Pin(GP3)  * ctrl.RIGHT
       Exit Sub
     Case ctrl.OPEN
-      SetPin GP14, DIn
-      SetPin GP0, DIn
-      SetPin GP1, DIn
-      SetPin GP2, DIn
-      SetPin GP3, DIn
+      SetPin GP0, DIn : SetPin GP1, DIn : SetPin GP2, DIn : SetPin GP3, DIn : SetPin GP14, DIn
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      SetPin GP0, Off : SetPin GP1, Off : SetPin GP2, Off : SetPin GP3, Off : SetPin GP14, Off
   End Select
 End Sub
 
@@ -296,11 +294,9 @@ Sub atari_b(x%)
       Inc x%, Not Pin(GP22) * ctrl.RIGHT
       Exit Sub
     Case ctrl.OPEN
-      SetPin GP15, DIn
-      SetPin GP28, DIn
-      SetPin GP4, DIn
-      SetPin GP5, DIn
-      SetPin GP22, DIn
+      SetPin GP4, DIn : SetPin GP5, DIn : SetPin GP15, DIn : SetPin GP22, DIn : SetPin GP28, DIn
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      SetPin GP4, Off : SetPin GP5, Off : SetPin GP15, Off : SetPin GP22, Off : SetPin GP28, Off
     End Select
 End Sub
 
@@ -309,6 +305,8 @@ End Sub
 '!ifndef CTRL_NO_SNES
 
 ' SNES gamepad on PicoGAME Port A.
+'
+'   GP2: Latch, GP3: Clock, GP1: Data
 Sub snes_a(x%)
   Select Case x%
     Case Is >= 0
@@ -326,14 +324,16 @@ Sub snes_a(x%)
       Inc x%, Not Pin(GP1) * ctrl.L      : Pulse GP3, ctrl.PULSE
       Inc x%, Not Pin(GP1) * ctrl.R      : Pulse GP3, ctrl.PULSE
       Exit Sub
-    Case ctrl.OPEN
-      nes_a(ctrl.OPEN)
+    Case Else
+      nes_a(x%)
   End Select
 End Sub
 
 '!ifndef CTRL_ONE_PLAYER
 
 ' SNES gamepad on PicoGAME Port B.
+'
+'   GP5: Latch, GP22: Clock, GP4: Data
 Sub snes_b(x%)
   Select Case x%
     Case Is >= 0
@@ -351,8 +351,8 @@ Sub snes_b(x%)
       Inc x%, Not Pin(GP4) * ctrl.L      : Pulse GP22, ctrl.PULSE
       Inc x%, Not Pin(GP4) * ctrl.R      : Pulse GP22, ctrl.PULSE
       Exit Sub
-    Case ctrl.OPEN
-      nes_b(ctrl.OPEN)
+    Case Else
+      nes_b(x%)
   End Select
 End Sub
 
@@ -364,6 +364,8 @@ End Sub
 '
 ' Note that the extra pulse after reading bit 7 (Right) should not be necessary,
 ' but in practice some NES clone controllers require it to behave correctly.
+'
+'   GP2: Latch, GP3: Clock, GP1: Data
 Sub nes_a(x%)
   Select Case x%
     Case Is >= 0
@@ -378,17 +380,19 @@ Sub nes_a(x%)
       Inc x%, Not Pin(GP1) * ctrl.RIGHT  : Pulse GP3, ctrl.PULSE
       Exit Sub
     Case ctrl.OPEN
-      SetPin GP2, Dout ' Latch
-      SetPin GP3, Dout ' Clock
-      SetPin GP1, Din  ' Data
-      Pin(GP2) = 0
-      Pin(GP3) = 0
+      SetPin GP1, Din : SetPin GP2, Dout : SetPin GP3, Dout
+      Pin(GP2) = 0 : Pin(GP3) = 0
+      nes_a(0) ' Discard the first reading.
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      SetPin GP1, Off : SetPin GP2, Off : SetPin GP3, Off
   End Select
 End Sub
 
 '!ifndef CTRL_ONE_PLAYER
 
 ' NES gamepad on PicoGAME Port B.
+'
+'   GP5: Latch, GP22: Clock, GP4: Data
 Sub nes_b(x%)
   Select Case x%
     Case Is >= 0
@@ -403,11 +407,11 @@ Sub nes_b(x%)
       Inc x%, Not Pin(GP4) * ctrl.RIGHT  : Pulse GP22, ctrl.PULSE
       Exit Sub
     Case ctrl.OPEN
-      SetPin GP5,  Dout ' Latch
-      SetPin GP22, Dout ' Clock
-      SetPin GP4,  Din  ' Data
-      Pin(GP5) = 0
-      Pin(GP22) = 0
+      SetPin GP4, Din : SetPin GP5, Dout : SetPin GP22, Dout
+      Pin(GP5) = 0 : Pin(GP22) = 0
+      nes_b(0) ' Discard the first reading.
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      SetPin GP4, Off : SetPin GP5, Off : SetPin GP22, Off
   End Select
 End Sub
 
@@ -429,12 +433,11 @@ Sub atari_dx(x%)
       Inc x%, Not Pin(40) * ctrl.RIGHT
       Exit Sub
     Case ctrl.OPEN
-      SetPin 32, Din, PullUp
-      SetPin 33, Din, PullUp
-      SetPin 35, Din, PullUp
-      SetPin 36, Din, PullUp
-      SetPin 38, Din, PullUp
-      SetPin 40, Din, PullUp
+      SetPin 32, Din, PullUp : SetPin 33, Din, PullUp : SetPin 35, Din, PullUp
+      SetPin 36, Din, PullUp : SetPin 38, Din, PullUp : SetPin 40, Din, PullUp
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      SetPin 32, Off : SetPin 33, Off : SetPin 35, Off
+      SetPin 36, Off : SetPin 38, Off : SetPin 40, Off
   End Select
 End Sub
 
@@ -458,11 +461,11 @@ Sub nes_dx(x%)
       Inc x%, Not Pin(36) * ctrl.RIGHT  : Pulse 40, ctrl.PULSE
       Exit Sub
     Case ctrl.OPEN
-      SetPin 38, Dout
-      SetPin 40, Dout
-      SetPin 36, Din
-      Pin(38) = 0
-      Pin(40) = 0
+      SetPin 36, Din : SetPin 38, Dout : SetPin 40, Dout
+      Pin(38) = 0 : Pin(40) = 0
+      nes_dx(0) ' Discard the first reading.
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      SetPin 36, Off : SetPin 38, Off : SetPin 40, Off
   End Select
 End Sub
 
@@ -491,8 +494,8 @@ Sub snes_dx(x%)
       Inc x%, Not Pin(36) * ctrl.L      : Pulse 40, ctrl.PULSE
       Inc x%, Not Pin(36) * ctrl.R      : Pulse 40, ctrl.PULSE
       Exit Sub
-    Case ctrl.OPEN
-      nes_dx(ctrl.OPEN)
+    Case Else
+      nes_dx(x%)
   End Select
 End Sub
 
