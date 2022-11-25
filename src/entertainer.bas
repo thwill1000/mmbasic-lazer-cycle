@@ -14,19 +14,20 @@ On Key 3, on_break
 
 Const FILENAME$ = "entertainer"
 Const SZ% = 256
-' Const NUM_CHANNELS% = music.prompt_for_num_channels%()
-Const NUM_CHANNELS% = 3
+Const NUM_CHANNELS% = music.prompt_for_num_channels%()
+'Const NUM_CHANNELS% = 3
 Const OCTAVE_SHIFT% = 0
 
 Dim channel1%(SZ%), channel2%(SZ%), channel3%(SZ%), channel4%(SZ%)
 Dim err$
 Dim int_time!
 Dim FREQUENCY!(127)
+Dim music_ptr%
 
 If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
-music.compose()
+music.compose_black_white_rag()
 music.process()
 music.write_data()
 music.play()
@@ -84,6 +85,84 @@ Sub music.compose_wipe()
   music.parse(channel1%(), "qG4,qAb4,qA4,qA#4,qB4,qC5,qC#5,qD5")
   music.parse(channel1%(), "qEb5,qE5,qF5,qF#5,qG5,qAb5,qA5,qA#5")
   music.parse(channel1%(), "qB5,qC6,qC#6,qD6,qEb6,qE6,qF6,q-")
+End Sub
+
+Sub music.compose_black_white_rag()
+  music.parse(channel1%(), "1E5,qD#5,1E5,qC#5,1D5")
+  music.parse(channel1%(), "qA#4,1B4,qF4,qG4,qE4,1D4")
+  music.parse(channel1%(), "qD5,q-,qD5,q-,qD5,q-,qD5,q-")
+  music.parse(channel1%(), "1D5,qD5,q-,1D5,1C#5")
+
+  music.parse(channel2%(), "1A4,qD#4,1E4,qC#3,1D4")
+  music.parse(channel2%(), "qA#3,1B3,qF3,qG3,qE3,1D3")
+  music.parse(channel2%(), "1D4,1D4,1D3,1D4")
+  music.parse(channel2%(), "1D3,1D3,1-,1-")
+
+  music.parse(channel3%(), "4-")
+  music.parse(channel3%(), "4-")
+  music.parse(channel3%(), "4-")
+  music.parse(channel3%(), "4-")
+
+  Local i%
+  For i% = 0 To 1
+  music.parse(channel1%(), "qC5,qD5,qF5,qC5,qD5,qF5,qC5,qD5")
+  music.parse(channel2%(), "1D3,1C4,1A2,1C4")
+  music.parse(channel3%(), "1A1,1D3,1E1,1D3")
+
+  music.parse(channel1%(), "qF5,qC5,qD5,1F5,qE5,qD5,qC5")
+  music.parse(channel1%(), "qA#4,qB4,qE5,qA#4,qB4,qE5,qA#4,qB4")
+  music.parse(channel1%(), "qE5,qA#4,qB4,1E5,qD5,qB4,qG4")
+  music.parse(channel1%(), "1C5,qB4,1C5,qB4,1C5")
+  music.parse(channel1%(), "1A4,qG#4,1A4,qG#4,1A4")
+
+  music.parse(channel2%(), "1D3,1D#3,1E3,1F3")
+  music.parse(channel2%(), "1G3,1B3,1D3,1B3")
+  music.parse(channel2%(), "1G3,1G#3,1A3,1B3")
+  music.parse(channel2%(), "1A3,1C4,1D3,1C4")
+  music.parse(channel2%(), "1A3,1C4,1D3,1C4")
+
+  music.parse(channel3%(), "1D2,1D#2,1E2,1F2")
+  music.parse(channel3%(), "1G2,1D3,1G2,1D3")
+  music.parse(channel3%(), "1G2,1G#2,1A2,1B2")
+  music.parse(channel3%(), "1A2,1D3,1D2,1D3")
+  music.parse(channel3%(), "1A2,1D3,1D2,1D3")
+
+  music.parse(channel1%(), "4-")
+  music.parse(channel1%(), "q-,qG4,qB4,qD5,q-,qG5,qB5,qD6")
+  music.parse(channel1%(), "qC5,qD5,qF5,qC5,qD5,qF5,qC5,qD5")
+  music.parse(channel1%(), "qF5,qC5,qD5,1F5,qE5,qD5,qC5")
+  music.parse(channel1%(), "qA#4,qB4,qE5,qA#4,qB4,qE5,qA#4,qB4")
+
+  music.parse(channel2%(), "q-,qG2,qB2,qD3,q-,qG3,qB3,qD4")
+  music.parse(channel2%(), "4-")
+  music.parse(channel2%(), "1D3,1C4,1A2,1C4")
+  music.parse(channel2%(), "1D3,1D#3,1E3,1F3")
+  music.parse(channel2%(), "1G3,1B3,1D3,1B3")
+
+  music.parse(channel3%(), "4-")
+  music.parse(channel3%(), "4-")
+  music.parse(channel3%(), "1D2,1D3,1A1,1D3")
+  music.parse(channel3%(), "1D2,1D#2,1E2,1F2")
+  music.parse(channel3%(), "1G2,1D3,1D2,1D3")
+
+  music.parse(channel1%(), "qE5,qA#4,qB4,1E5,qD5,qC5,qB4")
+  music.parse(channel1%(), "qE5,qE4,qG#4,1E5,qD5,qC5,qB4")
+  music.parse(channel1%(), "qA4,qG#4,qA4,1E5,qD5,qC5,qA4")
+  music.parse(channel1%(), "qB4,qD4,qG4,1B4,qG4,1A4")
+  music.parse(channel1%(), "2G4,1G5,1-")
+
+  music.parse(channel2%(), "1G3,1G#3,1A3,1B3")
+  music.parse(channel2%(), "1G#3,1D4,1E3,1D4")
+  music.parse(channel2%(), "1A3,1C4,1E3,1C4")
+  music.parse(channel2%(), "1D3,1B3,1D3,1F3")
+  music.parse(channel2%(), "2D4,1D5,1-")
+
+  music.parse(channel3%(), "1G2,1G#2,1A2,1B2")
+  music.parse(channel3%(), "1G#2,1E3,1E2,1E3")
+  music.parse(channel3%(), "1A2,1E3,1E2,1E3")
+  music.parse(channel3%(), "1D2,1D3,1D2,1F2")
+  music.parse(channel3%(), "2B3,1B4,1-")
+  Next
 End Sub
 
 ' Fills channels{1-3}% with musical notes for "The Entertainer".
@@ -399,7 +478,7 @@ End Sub
 
 ' Plays the contents of the music%() array using interrupts.
 Sub music.play()
-  Dim music_ptr% = Peek(VarAddr music%()) + 8
+  music_ptr% = Peek(VarAddr music%()) + 8
   SetTick 200, music.play_interrupt, 1
   Do While music_ptr% <> 0 : Loop
   Play Stop
