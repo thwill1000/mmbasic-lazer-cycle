@@ -27,7 +27,7 @@ Dim music_ptr%
 If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
-music.compose_black_white_rag()
+music.compose_spring()
 music.process()
 music.write_data()
 music.play()
@@ -85,6 +85,68 @@ Sub music.compose_wipe()
   music.parse(channel1%(), "qG4,qAb4,qA4,qA#4,qB4,qC5,qC#5,qD5")
   music.parse(channel1%(), "qEb5,qE5,qF5,qF#5,qG5,qAb5,qA5,qA#5")
   music.parse(channel1%(), "qB5,qC6,qC#6,qD6,qEb6,qE6,qF6,q-")
+End Sub
+
+Sub music.compose_spring()
+  ' Line 1
+  music.parse(channel1%(), "1-,1E5")
+  music.parse(channel2%(), "1-,1B4")
+  music.parse(channel3%(), "1E3,qE3,q-")
+  music.parse(channel4%(), "1E4,qE4,q-")
+  Local i%,j%
+  For i% = 1 To 2
+  music.parse(channel1%(), "qG#5,q-,qG#5,q-,1G#5,qF#5,qE5,2B5,qB5,q-,qB5,qA5")
+  music.parse(channel1%(), "qG#5,q-,qG#5,q-,1G#5,qF#5,qE5,2B5,qB5,q-,qB5,qA5")
+  music.parse(channel1%(), "1G#5,qA5,qB5,1A5,1G#5,1F#5,1D#5,1B4,1E5")
+  music.parse(channel2%(), "qE5,q-,qE5,q-,1E5,1-,2G#5,qG#5,q-,qG#5,qF#5")
+  music.parse(channel2%(), "qE5,q-,qE5,q-,1E5,1-,2G#5,qG#5,q-,qG#5,qF#5")
+  music.parse(channel2%(), "1E5,qF#5,qG#5,1F#5,1E5,1D#5,3-")
+
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-")
+  music.parse(channel3%(), "qE3,q-,qE3,q-,qA2,q-,qA#2,q-,2B2,1-,qE3,q-")
+
+  music.parse(channel4%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-")
+  music.parse(channel4%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-")
+  music.parse(channel4%(), "qE4,q-,qE4,q-,qA3,q-,qA#3,q-,2B3,1-,qE4,q-")
+
+  ' Line 2
+  music.parse(channel1%(), "qG#5,q-,qG#5,q-,1G#5,qF#5,qE5,2B5,qB5,q-,qB5,qA5")
+  music.parse(channel1%(), "qG#5,q-,qG#5,q-,1G#5,qF#5,qE5,2B5,qB5,q-,qB5,qA5")
+  music.parse(channel1%(), "1G#5,qA5,qB5,1A5,1G#5,1F#5,1D#5,1B4,1E5")
+  music.parse(channel2%(), "qE5,q-,qE5,q-,1E5,1-,2G#5,qG#5,q-,qG#5,qF#5")
+  music.parse(channel2%(), "qE5,q-,qE5,q-,1E5,1-,2G#5,qG#5,q-,qG#5,qF#5")
+  music.parse(channel2%(), "1E5,qF#5,qG#5,1F#5,1E5,1D#5,3-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-,1E3,qE3,q-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,1B3,2E3")
+
+  music.parse(channel4%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-")
+  music.parse(channel4%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-,1E4,qE4,q-")
+  music.parse(channel4%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,1B4,2E4")
+
+  For j% = 1 To 2
+  music.parse(channel1%(), "1B5,qA5,qG#5,1A5,1B5,1C#6,2B5,1E5")
+  music.parse(channel2%(), "1G#5,qF#5,qE5,1F#5,1G#5,1A5,2G#5,1-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,1B3,1E3,qE3,q-")
+  music.parse(channel4%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,1B4,1E4,qE4,q-")
+
+  ' Line 3
+  music.parse(channel1%(), "1B5,qA5,qG#5,1A5,1B5,1C#6,2B5,1E5")
+  music.parse(channel1%(), "1C#6,2B5,1A5,1G#5,qF#5,qE5,2F#5")
+  music.parse(channel1%(), "2E5,1-,1E5")
+  music.parse(channel2%(), "1G#5,qF#5,qE5,1F#5,1G#5,1A5,2G#5,1-")
+  music.parse(channel2%(), "1A5,2G#5,1F#5,1E5,qD#5,qB4,2-")
+  music.parse(channel2%(), "2B4,2-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,qE3,q-,1E3,1B3,1E3,qE3,q-")
+  music.parse(channel3%(), "1E3,qE3,q-,1E3,1B2,1E3,1E2,1B3,1B2")
+  music.parse(channel3%(), "3E3,qE3,q-")
+
+  music.parse(channel3%(), "1E4,qE4,q-,1E4,qE4,q-,1E4,1B4,1E4,qE4,q-")
+  music.parse(channel3%(), "1E4,qE4,q-,1E4,1B4,1E4,1E3,1B4,1B3")
+  music.parse(channel3%(), "3E4,qE4,q-")
+  Next j%
+  Next i%
 End Sub
 
 Sub music.compose_black_white_rag()
@@ -479,7 +541,8 @@ End Sub
 ' Plays the contents of the music%() array using interrupts.
 Sub music.play()
   music_ptr% = Peek(VarAddr music%()) + 8
-  SetTick 200, music.play_interrupt, 1
+'  SetTick 200, music.play_interrupt, 1
+  SetTick 175, music.play_interrupt, 1
   Do While music_ptr% <> 0 : Loop
   Play Stop
 End Sub
