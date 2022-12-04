@@ -320,12 +320,15 @@ End Sub
 Function game_loop%()
   Local d%, i%, key%, next_frame% = Timer + frame_duration%, tf%
 
-  ' num_alive% = 0
-  ' cycle.score%(0) = 3175
-  ' cycle.score%(1) = 2175
-  ' cycle.score%(2) = 1175
-  ' cycle.score%(3) = 975
-  ' score% = 3175
+  ' Change 0 => 1 to easily test high-score code.
+  If 0 Then
+    num_alive% = 0
+    cycle.score%(0) = 3175
+    cycle.score%(1) = 2175
+    cycle.score%(2) = 1175
+    cycle.score%(3) = 975
+    score% = 3175
+  EndIf
 
   Do While num_alive% > 0
     tf% = Timer

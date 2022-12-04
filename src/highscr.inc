@@ -271,8 +271,13 @@ Function highscr.get_input%(ctrl$)
       Case ctrl.RIGHT     : highscr.get_input% = &h83 ' Right arrow
     End Select
 
-    ' Wait for controller/key to be released.
-    Do While key% : Pause 5 : Call ctrl$, key% : Loop
+   If highscr.get_input% = &h01 Then
+      ' If fire was pressed then wait for it to be released.
+      Do While key% : Pause 5 : Call ctrl$, key% : Loop
+    Else
+      ' Otherwise 'Key' presses repeat, but not too quickly.
+      Pause 20
+    EndIf
   Else
     highscr.get_input% = key%
   EndIf
