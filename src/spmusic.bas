@@ -25,7 +25,7 @@ EndIf
 Const FILENAME$ = "spmusic"
 Const SZ% = 256
 'Const NUM_CHANNELS% = music.prompt_for_num_channels%()
-Const NUM_CHANNELS% = 4
+Const NUM_CHANNELS% = 3
 Const OCTAVE_SHIFT% = 0
 
 Dim channel1%(SZ%), channel2%(SZ%), channel3%(SZ%), channel4%(SZ%), music%(SZ% * 4)
