@@ -153,9 +153,9 @@ End Sub
 Sub ctrl.on_ps2()
   Local ps2% = Mm.Info(PS2)
   Select Case ps2%
-    Case Is < &hE000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), ps2% And &hFF), 1
-    Case Is < &hF000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), (ps2% And &hFF) + &h80), 1
-    Case Is < &hE0F000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), ps2% And &hFF), 0
+    Case < &hE000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), ps2% And &hFF), 1
+    Case < &hF000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), (ps2% And &hFF) + &h80), 1
+    Case < &hE0F000 : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), ps2% And &hFF), 0
     Case Else : Poke Var ctrl.key_map%(), Peek(Var ctrl.scan_map%(), (ps2% And &hFF) + &h80), 0
   End Select
 End Sub
@@ -267,7 +267,7 @@ End Sub
 ' Atari joystick on PicoGAME Port A.
 Sub atari_a(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       x% =    Not Pin(GP14) * ctrl.A
       Inc x%, Not Pin(GP0)  * ctrl.UP
       Inc x%, Not Pin(GP1)  * ctrl.DOWN
@@ -286,7 +286,7 @@ End Sub
 ' Atari joystick on PicoGAME Port B.
 Sub atari_b(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       x% =    Not Pin(GP15) * ctrl.A
       Inc x%, Not Pin(GP28) * ctrl.UP
       Inc x%, Not Pin(GP4)  * ctrl.DOWN
@@ -309,7 +309,7 @@ End Sub
 '   GP2: Latch, GP3: Clock, GP1: Data
 Sub snes_a(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       Pulse GP2, ctrl.PULSE
       x% =    Not Pin(GP1) * ctrl.B      : Pulse GP3, ctrl.PULSE
       Inc x%, Not Pin(GP1) * ctrl.Y      : Pulse GP3, ctrl.PULSE
@@ -336,7 +336,7 @@ End Sub
 '   GP5: Latch, GP22: Clock, GP4: Data
 Sub snes_b(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       Pulse GP5, ctrl.PULSE
       x% =    Not Pin(GP4) * ctrl.B      : Pulse GP22, ctrl.PULSE
       Inc x%, Not Pin(GP4) * ctrl.Y      : Pulse GP22, ctrl.PULSE
@@ -368,7 +368,7 @@ End Sub
 '   GP2: Latch, GP3: Clock, GP1: Data
 Sub nes_a(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       Pulse GP2, ctrl.PULSE
       x% =    Not Pin(GP1) * ctrl.A      : Pulse GP3, ctrl.PULSE
       Inc x%, Not Pin(GP1) * ctrl.B      : Pulse GP3, ctrl.PULSE
@@ -395,7 +395,7 @@ End Sub
 '   GP5: Latch, GP22: Clock, GP4: Data
 Sub nes_b(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       Pulse GP5, ctrl.PULSE
       x% =    Not Pin(GP4) * ctrl.A      : Pulse GP22, ctrl.PULSE
       Inc x%, Not Pin(GP4) * ctrl.B      : Pulse GP22, ctrl.PULSE
@@ -424,7 +424,7 @@ End Sub
 ' Atari joystick port on CMM2 Deluxe G2.
 Sub atari_dx(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       x% =    Not Pin(32) * ctrl.A
       Inc x%, Not Pin(33) * ctrl.B
       Inc x%, Not Pin(35) * ctrl.UP
@@ -449,7 +449,7 @@ End Sub
 '   Pin 38: Latch, Pin 40: Clock, Pin 36: Data
 Sub nes_dx(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       Pulse 38, ctrl.PULSE
       x% =    Not Pin(36) * ctrl.A      : Pulse 40, ctrl.PULSE
       Inc x%, Not Pin(36) * ctrl.B      : Pulse 40, ctrl.PULSE
@@ -479,7 +479,7 @@ End Sub
 '   Pin 38: Latch, Pin 40: Clock, Pin 36: Data
 Sub snes_dx(x%)
   Select Case x%
-    Case Is >= 0
+    Case >= 0
       Pulse 38, ctrl.PULSE
       x% =    Not Pin(36) * ctrl.B      : Pulse 40, ctrl.PULSE
       Inc x%, Not Pin(36) * ctrl.Y      : Pulse 40, ctrl.PULSE

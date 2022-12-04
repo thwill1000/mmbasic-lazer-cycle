@@ -148,9 +148,9 @@ Sub put_scan_code(key_code%, scan_code%)
 
   Local offset%
   Select Case scan_code%
-    Case Is < &hE000
+    Case < &hE000
       offset% = scan_code% And &hFF
-    Case Is < &hF000
+    Case < &hF000
       offset% = (scan_code% And &hFF) + 128
     Case Else
       Error "Unexpected scan code: " + Hex$(scan_code%)
@@ -186,12 +186,12 @@ End Sub
 Sub on_ps2()
   Local ch%, down%, scan_code% = Mm.Info(PS2), offset% = scan_code% And &hFF
   Select Case scan_code%
-    Case Is < &hE000
+    Case < &hE000
       down% = 1
-    Case Is < &hF000
+    Case < &hF000
       Inc offset%, 128
       down% = 1
-    Case Is < &hE0F000
+    Case < &hE0F000
       down% = 0
     Case Else
       Inc offset%, 128
