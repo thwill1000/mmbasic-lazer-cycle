@@ -86,13 +86,13 @@ End Sub
 '
 ' @param  ctrls$     controllers to poll.
 ' @param  duration%  duration in milliseconds; if 0 then indefinite.
-' @return            controller id if user pressed button/key,
+' @return            controller driver if user pressed button/key,
 '                    empty string if the duration expired.
 Function highscr.show_table$(ctrls$(), duration%)
   Const ch$ = Chr$(205)
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
 
-  Local col_idx%, ctrl$, i%, name$, score$, y%
+  Local col_idx%, i%, name$, score$, y%
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
   Local colours%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 
@@ -120,7 +120,7 @@ End Function
 ' @param  player%   player id, counting from 1.
 ' @param  idx%      index of entry in the highscr.values$ array.
 ' @param  colour_%  player colour.
-' @param  ctrl$     controller id for given player.
+' @param  ctrl$     controller driver for given player.
 Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   ' 256-bit map of characters that can be entered into the high-score table
   ' via gamepad or joystick. For each character 0-255 the character is allowed
@@ -255,7 +255,7 @@ End Sub
 
 ' Gets player input to edit entry in the high-score table.
 '
-' @param  ctrl$    controller for given player.
+' @param  ctrl$    controller driver for given player.
 ' @return          ASCII code of key pressed, or negative of value read
 '                  from player's configured controller port.
 Function highscr.get_input%(ctrl$)

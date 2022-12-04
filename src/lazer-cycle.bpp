@@ -58,7 +58,7 @@ Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
 
-Dim ui_ctrl$ ' Controller id for controlling the UI.
+Dim ui_ctrl$ ' Controller driver for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
 Dim difficulty% = 1

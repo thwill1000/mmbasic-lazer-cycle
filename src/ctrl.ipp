@@ -183,12 +183,12 @@ Function ctrl.keydown%(i%)
 '!endif
 End Function
 
-Function ctrl.poll_multiple$(ctrls$(), mask%, duration%)
+Function ctrl.poll_multiple$(drivers$(), mask%, duration%)
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF), i%
   Do
-    For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
-      If ctrl.poll_single%(ctrls$(i%), mask%) Then
-        ctrl.poll_multiple$ = ctrls$(i%)
+    For i% = Bound(drivers$(), 0) To Bound(drivers$(), 1)
+      If ctrl.poll_single%(drivers$(i%), mask%) Then
+        ctrl.poll_multiple$ = drivers$(i%)
         Exit Do
       EndIf
     Next
@@ -197,25 +197,25 @@ End Function
 
 ' Opens, polls (for a maximum of 5ms) and closes a controller.
 '
-' @param  ctrl$  controller driver function.
-' @param  mask%  bit mask to match against.
-' @return        1 if any of the bits in the mask match what is read from the
-'                controller, otherwise 0.
-Function ctrl.poll_single%(ctrl$, mask%)
+' @param  driver$  controller driver function.
+' @param  mask%    bit mask to match against.
+' @return          1 if any of the bits in the mask match what is read from the
+'                  controller, otherwise 0.
+Function ctrl.poll_single%(driver$, mask%)
   On Error Ignore
-  Call ctrl$, ctrl.OPEN
+  Call driver$, ctrl.OPEN
   If Mm.ErrNo = 0 Then
     Local key%, t% = Timer + 5
     Do
-      Call ctrl$, key%
+      Call driver$, key%
       If key% And mask% Then
         ctrl.poll_single% = 1
         ' Wait for user to release key.
-        Do While key% : Pause 5 : Call ctrl$, key% : Loop
+        Do While key% : Pause 5 : Call driver$, key% : Loop
         Exit Do
       EndIf
     Loop While Timer < t%
-    Call ctrl$, ctrl.SOFT_CLOSE
+    Call driver$, ctrl.SOFT_CLOSE
   EndIf
   On Error Abort
 End Function
