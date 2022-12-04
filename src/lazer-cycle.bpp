@@ -14,29 +14,54 @@ Option Explicit On
 #Include "highscr.inc"
 #Include "menu.inc"
 
-Const VERSION$ = "0.9.2"
+Const VERSION$ = "0.9.3"
+
+If InStr(Mm.Device$, "PicoMite") Then
+  If Val(Mm.Info(CpuSpeed)) < 252000000 Then
+    Error "Requires OPTION CPUSPEED 252000 or 378000"
+  EndIf
+EndIf
 
 Select Case Mm.Device$
-  Case "Colour Maximite 2", "Colour Maximite 2 G2", "MMBasic for Windows"
-    Const HIGHSCORE_FILENAME$ = Mm.Info(Path) + "high-scores/lazer-cycle.csv"
-    Const IS_CMM2% = 1
-    Mode 7
-    Page Write 1
-  Case "PicoMite", "PicoMiteVGA"
-    If Val(Mm.Info(CpuSpeed)) < 252000000 Then Error "Requires OPTION CPUSPEED 252000 or 378000"
-    Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
-    Const IS_CMM2% = 0
-    If Mm.Device$ = "PicoMiteVGA" Then Mode 2
+  Case "Colour Maximite 2", "Colour Maximite 2 G2"
+    Const USE_CONTROLLERS$ = "controller_data_cmm2"
+    Const USE_PAGE_COPY% = 1
+    Const USE_PATH% = 1
+    Const USE_MODE% = 7
+  Case "MMBasic for Windows"
+    Const USE_CONTROLLERS$ = "controller_data_mmb4w"
+    Const USE_PAGE_COPY% = 1
+    Const USE_PATH% = 1
+    Const USE_MODE% = 7
+  Case "PicoMite"
+    Const USE_CONTROLLERS$ = "controller_data_pm"
+    Const USE_PAGE_COPY% = 0
+    Const USE_PATH% = 0
+    Const USE_MODE% = -1
+  Case "PicoMiteVGA"
+    Const USE_CONTROLLERS$ = "controller_data_pmvga"
+    Const USE_PAGE_COPY% = 0
+    Const USE_PATH% = 0
+    Const USE_MODE% = 2
   Case Else
     Error "Unsupported device: " + Mm.Device$
 End Select
 
+If USE_PATH% Then
+  Const HIGHSCORE_FILENAME$ = Mm.Info(Path) + "high-scores/lazer-cycle.csv"
+Else
+  Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
+EndIf
+
 ' Text deliberately padded to string width (40 chars).
-If Mm.Device$ = "MMBasic for Windows" Then
+If USE_CONTROLLERS$ = "controller_data_mmb4w" Then
   Const START_TEXT$ = "          Press SPACE to play           "
 Else
   Const START_TEXT$ = "       Press START, FIRE or SPACE       "
 EndIf
+
+If USE_MODE% >= 0 Then Mode USE_MODE%
+If USE_PAGE_COPY% Then Page Write 1
 
 Const WIDTH% = Mm.HRes \ 2
 Const HEIGHT% = (Mm.VRes - 20) \ 2
@@ -140,16 +165,12 @@ Sub init_globals()
   Local a%, i%, j%
 
   ' Initialise list of controllers.
-  Select Case Mm.Device$
-    Case "PicoMite"    : Restore controller_data_pm
-    Case "PicoMiteVGA" : Restore controller_data_pmvga
-    Case Else          : Restore controller_data_cmm2
-  End Select
+  Restore USE_CONTROLLERS$
   Local num_ctrl%, num_poll%
   Read num_ctrl%, num_poll%
   Dim CTRL_DESCRIPTION$(num_ctrl% - 1)
   Dim CTRL_DRIVER$(num_ctrl% - 1)
-  Dim CTRLS_TO_POLL$(num_poll% - 1)
+  Dim CTRLS_TO_POLL$(Max(1, num_poll% - 1))
   j% = 0
   For i% = 0 To num_ctrl% - 1
     Read CTRL_DESCRIPTION$(i%), CTRL_DRIVER$(i%), a%
@@ -158,6 +179,7 @@ Sub init_globals()
       Inc j%
     EndIf
   Next
+  If num_poll% = 1 Then CTRLS_TO_POLL$(1) = CTRLS_TO_POLL$(0)
 
   ' Initialise controller settings.
   cycle.ctrl_setting$(0) = "ai_control"
@@ -184,7 +206,7 @@ Function show_title%(duration%)
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)
-  If IS_CMM2% Then Page Copy 1 To 0, B
+  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
   show_title% = wait%(duration%)
 End Function
 
@@ -207,7 +229,7 @@ Function show_instructions%(duration%)
   Text X_OFFSET%, y%, "Use keyboard, joystick or gamepad", "CT", 1, 1, Rgb(Green) : Inc y%, 12
   Text X_OFFSET%, y%, "UP, DOWN, LEFT and RIGHT to steer.", "CT", 1, 1, Rgb(Green) : Inc y%, 20
   Text X_OFFSET%, y%, "Good Luck!", "CT", 1, 1, Rgb(White)
-  If IS_CMM2% Then Page Copy 1 To 0, B
+  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
   show_instructions% = wait%(duration%)
 End Function
 
@@ -227,7 +249,7 @@ End Function
 
 Sub clear_display()
    Box 0, 0, Mm.HRes, Mm.VRes, 1, Rgb(Black), Rgb(Black)
-   If IS_CMM2% Then Page Copy 1 To 0, B
+   If USE_PAGE_COPY% Then Page Copy 1 To 0, B
 End Sub
 
 ' Waits a specified duration for the user to press START on a (S)NES gamepad
@@ -345,7 +367,7 @@ Function game_loop%()
       If Not (cycle.state%(i%) And &b11) Then cycle.draw(i%)
     Next
 
-    If IS_CMM2% Then Page Copy 1 To 0, I
+    If USE_PAGE_COPY% Then Page Copy 1 To 0, I
 
     ' Move cycles.
     For i% = 0 To MAX_CYCLE_IDX%
@@ -397,7 +419,7 @@ Function game_loop%()
   Loop
 
   ' Ensure display updated at end of loop.
-  If IS_CMM2% Then Page Copy 1 To 0, B
+  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
 
   ' Wait for current sound effect (if any) to complete.
   sound.wait_for_fx()
@@ -446,7 +468,7 @@ Sub wipe()
   sound.start_fx(sound.FX_WIPE%(), 1)
   For y% = 0 To Mm.VRes \ 2 Step 5
      Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, Rgb(Cyan), Rgb(Black)
-     If IS_CMM2% Then Page Copy 1 To 0, B
+     If USE_PAGE_COPY% Then Page Copy 1 To 0, B
      Pause 30
   Next
   clear_display()
@@ -486,7 +508,7 @@ Sub show_game_over()
   Local txt$ = "PLAYER " + Str$(winner% + 1) + " WINS"
   Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.colour%(winner%)
   Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(cycle.score%(0)), "CM", 1, 2, cycle.colour%(winner%)
-  If IS_CMM2% Then Page Copy 1 To 0, B
+  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
   dummy% = wait%(5000)
 
   wipe()
@@ -632,6 +654,16 @@ Data "NES GAMEPAD DX", "nes_dx",      1
 Data "WII CTRL I2C1",  "wii_any_1",   1
 Data "WII CTRL I2C2",  "wii_any_2",   1
 Data "WII CTRL I2C3",  "wii_any_3",   1
+Data "AI",             "ai_control",  0
+Data "NONE",           "no_control",  0
+
+controller_data_mmb4w:
+
+Data 6, 1
+Data "KEYS: CURSOR",   "keys_cursor", 1
+Data "KEYS: AZ,.",     "keys_cegg",   0
+Data "KEYS: AZXC",     "keys_azxc",   0
+Data "KEYS: '/,.",     "keys_punc",   0
 Data "AI",             "ai_control",  0
 Data "NONE",           "no_control",  0
 
