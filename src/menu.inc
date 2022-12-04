@@ -63,18 +63,16 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
         Exit Do
 
       Case ctrl.UP
-        If item% > 0 Then
-          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Black)
-          Inc item%, -1
-          update% = 1
-        EndIf
+        Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Black)
+        Inc item%, -1
+        If item% < 0 Then item% = 7
+        update% = 1
 
       Case ctrl.DOWN
-        If item% < 7 Then
-          Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Black)
-          Inc item%
-          update% = 1
-        EndIf
+        Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Black)
+        Inc item%
+        If item% > 7 Then item% = 0
+        update% = 1
 
       Case ctrl.LEFT, ctrl.RIGHT, ctrl.A
         Select Case item%
