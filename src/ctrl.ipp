@@ -57,7 +57,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_USE_KEYDOWN defined
 '!endif
 
-Const ctrl.VERSION = 905  ' 0.9.5
+Const ctrl.VERSION = 906  ' 0.9.6
 
 ' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01
@@ -144,8 +144,9 @@ End Sub
 '!endif
 
 '!ifdef CTRL_USE_INKEY
+' TODO: use the 'lower-case' character for all keys, not just letters.
 Sub ctrl.on_key()
-  Poke Var ctrl.key_map%(), Asc(Inkey$), 1
+  Poke Var ctrl.key_map%(), Asc(LCase$(Inkey$)), 1
 End Sub
 '!endif
 
