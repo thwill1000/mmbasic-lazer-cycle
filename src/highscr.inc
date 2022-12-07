@@ -1,4 +1,4 @@
-' Copyright (c) 2022 Thomacs Hugo Williams
+' Copyright (c) 2022 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.05
 
@@ -281,32 +281,4 @@ Function highscr.get_input%(ctrl$)
   Else
     highscr.get_input% = key%
   EndIf
-End Function
-
-' Gets bit i% of x%.
-Function bits.get%(x%, i%)
-  If i% < 0 Or i% > 63 Then Error "i% out of 0 .. 63 range"
-  bits.get% = (x% And 1 << i%) <> 0
-End Function
-
-Function str.lpad$(s$, x%)
-  str.lpad$ = s$
-  If Len(s$) < x% Then str.lpad$ = Space$(x% - Len(s$)) + s$
-End Function
-
-Function str.rpad$(s$, x%)
-  str.rpad$ = s$
-  If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
-End Function
-
-' Returns a copy of s$ with leading and trailing spaces removed.
-Function str.trim$(s$)
-  Local st%, en%
-  For st% = 1 To Len(s$)
-    If Peek(Var s$, st%) <> 32 Then Exit For
-  Next
-  For en% = Len(s$) To 1 Step -1
-    If Peek(Var s$, en%) <> 32 Then Exit For
-  Next
-  If en% >= st% Then str.trim$ = Mid$(s$, st%, en% - st% + 1)
 End Function

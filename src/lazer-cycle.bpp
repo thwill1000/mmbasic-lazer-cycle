@@ -10,6 +10,7 @@ Option Explicit On
 
 '!set CTRL_NO_SNES
 #Include "ctrl.ipp"
+#Include "utility.inc"
 #Include "sound.inc"
 #Include "highscr.inc"
 #Include "menu.inc"
@@ -28,21 +29,25 @@ Select Case Mm.Device$
     Const USE_PAGE_COPY% = 1
     Const USE_PATH% = 1
     Const USE_MODE% = 7
+    Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
   Case "MMBasic for Windows"
     Const USE_CONTROLLERS$ = "controller_data_mmb4w"
     Const USE_PAGE_COPY% = 1
     Const USE_PATH% = 1
     Const USE_MODE% = 7
+    Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
   Case "PicoMite"
     Const USE_CONTROLLERS$ = "controller_data_pm"
     Const USE_PAGE_COPY% = 0
     Const USE_PATH% = 0
     Const USE_MODE% = -1
+    Const START_TEXT$ = str.centre$("Press START to play", 40)
   Case "PicoMiteVGA"
     Const USE_CONTROLLERS$ = "controller_data_pmvga"
     Const USE_PAGE_COPY% = 0
     Const USE_PATH% = 0
     Const USE_MODE% = 2
+    Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
   Case Else
     Error "Unsupported device: " + Mm.Device$
 End Select
@@ -51,13 +56,6 @@ If USE_PATH% Then
   Const HIGHSCORE_FILENAME$ = Mm.Info(Path) + "high-scores/lazer-cycle.csv"
 Else
   Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
-EndIf
-
-' Text deliberately padded to string width (40 chars).
-If USE_CONTROLLERS$ = "controller_data_mmb4w" Then
-  Const START_TEXT$ = "          Press SPACE to play           "
-Else
-  Const START_TEXT$ = "       Press START, FIRE or SPACE       "
 EndIf
 
 If USE_MODE% >= 0 Then Mode USE_MODE%
