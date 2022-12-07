@@ -13,7 +13,14 @@ Option Explicit On
 
 #Include "ctrl.ipp"
 
-Mode 1
+If Mm.Device$ = "PicoMite" Then
+  Const FONT_NUM = 7
+Else
+  Const FONT_NUM = 1
+  Mode 1
+EndIf
+
+Font FONT_NUM
 
 If Mm.Device$ = "MMB4L" Then
   Dim WIDTH%, HEIGHT%
@@ -169,7 +176,7 @@ Sub print_at(col%, row%, s$, inverse%)
     Local y% = row% * Mm.Info(FontHeight) * 1.5
     Local fg% = Choice(inverse%, Rgb(Black), Rgb(White))
     Local bg% = Choice(inverse%, Rgb(White), Rgb(Black))
-    Text x%, y%, s$, LT, 1, 1, fg%, bg%
+    Text x%, y%, s$, LT, FONT_NUM, 1, fg%, bg%
   EndIf
 End Sub
 
