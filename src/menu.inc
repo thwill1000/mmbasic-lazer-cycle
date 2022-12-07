@@ -13,8 +13,9 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Const x% = X_OFFSET% - 100
   Static initialised% = 0
   Local key%, i%, item% = 0, update% = 1
-  Local sounds$(3) = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
+  Local sounds$(3) Length 10 = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
   Local sound_setting% = 3 - sound.get_state%()
+  Local difficulties$(5) Length 6 = ("NOVICE", "1     ", "2     ", "3     ", "4     ", "5     ")
 
   If Not initialised% Then
     Dim menu.ctrls$(Bound(ctrls$(), 1)) Length 32
@@ -31,7 +32,6 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Next
   If count% = 0 Then menu.ctrls$(0) = ui_ctrl$
 
-  ' Text X_OFFSET%, Y_OFFSET% + 75, "Music by Scott Joplin", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
@@ -45,7 +45,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
       menu.txt_for_controller(x%, Y_OFFSET% - 55, 1, colours%(1))
       menu.txt_for_controller(x%, Y_OFFSET% - 35, 2, colours%(2))
       menu.txt_for_controller(x%, Y_OFFSET% - 15, 3, colours%(3))
-      Text x%, Y_OFFSET% + 5,  "DIFFICULTY: " + Str$(difficulty%), , 1, 1, Rgb(White)
+      Text x%, Y_OFFSET% + 5,  "DIFFICULTY: " + difficulties$(difficulty%), , 1, 1, Rgb(White)
       Text x%, Y_OFFSET% + 25, "SOUND:      " + sounds$(sound_setting%), , 1, 1, Rgb(White)
       Text x%, Y_OFFSET% + 45, "QUIT", , 1, 1, Rgb(White)
       Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Cyan)
@@ -85,8 +85,8 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
 
           Case 5 ' Difficulty
             Inc difficulty%, Choice(key% = ctrl.LEFT, -1, 1)
-            If difficulty% < 1 Then difficulty% = 5
-            If difficulty% > 5 Then difficulty% = 1
+            If difficulty% < 0 Then difficulty% = 5
+            If difficulty% > 5 Then difficulty% = 0
             update% = 1
 
           Case 6 ' Sound

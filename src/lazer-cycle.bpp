@@ -84,7 +84,7 @@ Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
 Dim ui_ctrl$ ' Controller driver for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
-Dim difficulty% = 1
+Dim difficulty% = Mm.Device$ <> "PicoMite"
 Dim frame_duration%
 Dim next_frame%
 
