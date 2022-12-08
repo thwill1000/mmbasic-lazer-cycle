@@ -101,13 +101,15 @@ End Sub
 '                    empty string if the duration expired.
 Function highscr.show_table$(ctrls$(), duration%)
   Const ch$ = Chr$(205), X_OFFSET% = MM.HRes \ 2, Y_OFFSET% = MM.VRes \ 2
-  Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
-
   Local col_idx%, i%, name$, score$, y%
   Local expires% = Choice(duration%, Timer + duration%, &h7FFFFFFFFFFFFFFF)
   Local colours%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 
+  Cls
+  Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
+
   ctrl.init_keys()
+
   Do While Timer < expires% And highscr.show_table$ = ""
 
     For i% = 0 To Bound(highscr.values$(), 1) + 1
@@ -133,125 +135,126 @@ End Function
 ' @param  colour_%  player colour.
 ' @param  ctrl$     controller driver for given player.
 Sub highscr.edit(player%, idx%, colour_%, ctrl$)
-  Const X_OFFSET% = MM.HRes \ 2, Y_OFFSET% = MM.VRes \ 2
-  Local ch$ = Chr$(205)
+  Const HEIGHT% = 16, WIDTH% = 16
+  Const X_ORIGIN% = (MM.HRes - 10 * WIDTH%) \ 2
+  Const Y_ORIGIN% = Int(5.5 * HEIGHT%)
+  Const Y_FOOTER% = Mm.VRes - 16
 
-  Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
-
-  ' Draw current high-score table.
-  Local i%, name$, score$, x%, y%
-  For i% = 0 To Bound(highscr.values$(), 1)
-    name$ = str.rpad$(Field$(highscr.values$(i%), 1), highscr.MAX_NAME_LEN%)
-    score$ = str.lpad$(Field$(highscr.values$(i%), 2), 5)
-    y% = Y_OFFSET% - 75 + 15 * i%
-    Text X_OFFSET%, y%, score$ + "  " + name$, "CT", 1, 1, Choice(i% = idx%, colour_%, Rgb(Blue))
-  Next
+  Local bg%, ch%, count%, fg%, grid$, i%, key%, p%, t%
+  Local name$, s$, space_is_fire%, state%, x%, x_new%, y%, y_new%
+  Local footer$(1) Length 40
 
   ' Initialise footer text.
-  Local y_footer% = y% + 25
-  Local footer$(3) Length 40
-  footer$(1) = "   Use * * * * and FIRE to confirm   "
-  Poke Var footer$(1), 8, 146
-  Poke Var footer$(1), 10, 147
-  Poke Var footer$(1), 12, 148
-  Poke Var footer$(1), 14, 149
-  footer$(2) = " Or, type name and ENTER to confirm  "
-  footer$(3) = "     Press FIRE again to confirm     "
+  footer$(0) = "   Use * * * * and FIRE to select    "
+  footer$(1) = " Or, type name and ENTER to confirm  "
+  Poke Var footer$(0), 8, 146
+  Poke Var footer$(0), 10, 147
+  Poke Var footer$(0), 12, 148
+  Poke Var footer$(0), 14, 149
 
-  If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
+  Cls
 
-  Local count% = 0, key%, p% = 1, t% = Timer, bg%, fg%, state%
-  y% = Y_OFFSET% - 75 + 15 * idx%
-  name$ = Space$(highscr.MAX_NAME_LEN%)
+  ' Draw title.
+  s$ = Chr$(205)
+  Text Mm.HRes \ 2, 25, s$ + s$ + " " + Str$(idx% + 1) + "   PLACE HIGH SCORE " + s$ + s$, "CT", 1, 1, Rgb(White)
+  Select Case idx%
+    Case 0 : s$ = "ST"
+    Case 1 : s$ = "ND"
+    Case 2 : s$ = "RD"
+    Case Else : s$ = "TH"
+  End Select
+  Text Choice(idx% = 9, 100, 96), 25, s$, "CT", 7, 1, Rgb(White)
+
+  ' Draw player number.
+  Text Mm.HRes \ 2, 3 * HEIGHT%, "PLAYER " + Str$(player%), "CT", 1, 1, colour_%
+
+  ' Draw the character grid.
+  Restore highscr.grid_data
+  For y% = 0 To 4
+    For x% = 0 To 9
+      Read ch%
+      Cat grid$, Chr$(ch%)
+      If ch% = 10 Then ch% = 32 ' Use space as place-holder for OK / Line Feed.
+      If ch% = 8 Then ch% = 149 ' Use left arrow character for backspace.
+      Text X_ORIGIN% + x% * WIDTH% + 4, Y_ORIGIN% + y% * HEIGHT% + 3, Chr$(ch%), , 1, 1, Rgb(White)
+    Next
+  Next
+  Text X_ORIGIN% + 9 * WIDTH% + 2, Y_ORIGIN + 4 * HEIGHT% + 5, "OK", , 7, 1, Rgb(White)
 
   ctrl.term_keys() ' Regain control of the keyboard for INKEY$
   Call ctrl$, ctrl.OPEN
   Do While highscr.get_input%(ctrl$) : Loop ' Wait for player to release controller.
 
-  ' PEEKing the font doesn't work in MMB4W.
-  Local font_width% = Choice(Mm.Device$ = "MMBasic for Windows", 8, Peek(Byte Mm.Info(Font Address 1)))
-  Local confirm% = 0
+  space_is_fire% = 1 : t% = Timer
+  x% = -1 : x_new% = 0 : y% = -1 : y_new% = 0
   Do
+    ' Draw current name and flashing cursor.
+    p% = Mm.HRes / 2
+    Inc p%, -4 * Min(Len(name$) + 1, highscr.MAX_NAME_LEN%)
+    Text p% - 8, 4 * HEIGHT%, " ", , 1, 1
+    For i% = 1 To Min(Len(name$) + 1, highscr.MAX_NAME_LEN%)
+      bg% = Choice((i% = Len(name$) + 1) And (count% And &b1), colour_%, Rgb(Black))
+      fg% = Choice((i% = Len(name$) + 1) And (count% And &b1), Rgb(Black), colour_%)
+      s$ = Choice(i% = Len(name$) + 1, " ", Mid$(name$, i%, 1))
+      Text p%, 4 * HEIGHT%, s$, , 1, 1, fg%, bg%
+      Inc p%, 8
+    Next
+    Text p%, 4 * HEIGHT%, " ", , 1, 1
+    Inc p%, 8
+
+    ' Draw selection box.
+    If x% <> x_new% Or y% <> y_new% Then
+      If x% <> -1 Then
+        Box X_ORIGIN% + x% * WIDTH%, Y_ORIGIN% + y% * HEIGHT% + 1, WIDTH%, HEIGHT%, 1, Rgb(Black)
+      EndIf
+      x% = x_new% : y% = y_new%
+      Box X_ORIGIN% + x% * WIDTH%, Y_ORIGIN% + y% * HEIGHT% + 1, WIDTH%, HEIGHT%, 1, colour_%
+    EndIf
+
+    ' Draw footer text.
     If Timer > t% + 500 Then
       count% = (count% + 1) Mod 10
       t% = Timer
     EndIf
-
-    For i% = 1 To highscr.MAX_NAME_LEN%
-      bg% = Choice((i% = p%) And (count% And &b1), colour_%, Rgb(Black))
-      fg% = Choice((i% = p%) And (count% And &b1), Rgb(Black), colour_%)
-      ch$ = Mid$(name$, i%, 1)
-      x% = X_OFFSET% + (i% - 1.5) * font_width%
-      Text x%, y%, ch$, , 1, 1, fg%, bg%
-    Next
-
-    If confirm% > 0 Then
-      Text X_OFFSET%, y_footer%, footer$(3), "CT", 1, 1, Rgb(Black), Rgb(White)
-      Inc confirm%, -1
-    Else If count% < 5 Then
-      Text X_OFFSET%, y_footer%, footer$(1), "CT", 1, 1, Rgb(White), Rgb(Black)
-    Else
-      Text X_OFFSET%, y_footer%, footer$(2), "CT", 1, 1, Rgb(White), Rgb(Black)
-    EndIf 
+    Text Mm.HRes \ 2, Y_FOOTER%, footer$(count% >= 5), "CT", 1, 1, Rgb(White), Rgb(Black)
 
     If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
-    Pause 100
 
     key% = highscr.get_input%(ctrl$)
+    state% = key% > 0
+
     If key% > 0 Then
-      state% = 1
+      If key% <> &h20 Then space_is_fire% = (key% > &h7F)
+      If key% = &h20 And space_is_fire% Then key% = ctrl.A << 8
+      If key% = ctrl.A << 8 Then key% = Asc(Mid$(grid$, x% + y% * 10 + 1, 1))
+
       Select Case key%
-        Case &h01 ' Fire
-          If confirm% > 0 Then
-            key% = -1 ' So we exit the DO LOOP.
-          Else
-            confirm% = 50
-          EndIf
-        Case &h08 ' Backspace
-          If p% > 1 Then
-            name$ = Left$(name$, p% - 2) + Mid$(name$, p%) + " "
-            Inc p%, -1
-          Else
-            state% = 2
-          EndIf
-        Case &h7F ' Delete
-          name$ = Left$(name$, p% - 1) + Mid$(name$, p% + 1) + " "
+        Case &h08, &h7F ' Backspace and Delete
+          If Len(name$) > 0 Then name$ = Left$(name$, Len(name$) - 1) Else state% = 2
         Case &h0A, &h0D ' LF and CR
           key% = -1 ' So we exit the DO LOOP.
-        Case &h20 To &h7E
-          Poke Var name$, p%, key%
-          If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1
-        Case &h80, &h81 ' Up and down arrows
-          i% = Asc(Mid$(name$, p%, 1))
-          If i% = 0 Then i% = 64 ' @
-          Do
-            Inc i%, Choice(key% = &h80, 1, -1)
-            If i% < 0 Then i% = 255
-            If i% > 255 Then i% = 0
-          Loop Until bits.get%(highscr.ALLOWED_CHARS%(i% \ 64), i% Mod 64)
-          Poke Var name$, p%, i%
-        Case &h82 ' Left arrow
-          If p% > 1 Then Inc p%, -1 Else state% = 2
-        Case &h83 ' Right arrow
-          If p% < highscr.MAX_NAME_LEN% Then Inc p%, 1 Else state% = 2
-        Case Else
-          state% = 0
+        Case ctrl.UP << 8
+          If y% > 0 Then y_new% = y% - 1 Else y_new% = 4
+        Case ctrl.DOWN << 8
+          If y% < 4 Then y_new% = y% + 1 Else y_new% = 0
+        Case ctrl.LEFT << 8
+          If x% > 0 Then x_new% = x% - 1 Else x_new% = 9
+        Case ctrl.RIGHT << 8
+          If x% < 9 Then x_new% = x% + 1 Else x_new% = 0
+        Case &h20 To &hFF ' ASCII
+          If Len(name$) < highscr.MAX_NAME_LEN% Then Cat name$, Chr$(key%) Else state% = 2
       End Select
     End If
 
-    If state% > 0 Then
+    If state% Then
       If state% = 1 Then sound.play_fx(sound.FX_SELECT%()) Else sound.play_fx(sound.FX_BLART%())
-      If key% <> &h01 Then confirm% = 0 ' So message is cleared
-      state% = 0
+      Pause 150
     EndIf
-
-    ' Sanity check.
-    If Len(name$) <> highscr.MAX_NAME_LEN% Then Error "Invalid name length"
 
   Loop While key% <> -1
 
   ' Delete the footer text.
-  Text X_OFFSET%, y_footer%, Space$(40), "CT", 1, 1, Rgb(White), Rgb(Black)
+  Text Mm.HRes \ 2, Y_FOOTER%, Space$(40), "CT", 1, 1, Rgb(White), Rgb(Black)
 
   ' Don't allow empty names.
   name$ = str.trim$(name$)
@@ -260,32 +263,30 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   highscr.values$(idx%) = name$ + ", " + Field$(highscr.values$(idx%), 2)
 End Sub
 
+highscr.grid_data:
+Data  65,  66,  67,  68,  69,  70,  71,  72, 73,  74  ' A .. J
+Data  75,  76,  77,  78,  79,  80,  78,  82, 83,  84  ' K .. T
+Data  85,  86,  87,  88,  89,  90,  42, 46,  64, 169  ' U .. Z, space, *, period, @
+Data  48,  49,  50,  51,  52,  53,  54,  55, 56,  57  ' 0 .. 9
+Data  63,  45, 137, 138, 139, 140, 159, 32,   8,  10  ' question-mark, hyphen, diamond, club,
+                                                      ' spade, heart, star, backspace, enter
 ' Gets player input to edit entry in the high-score table.
 '
-' @param  ctrl$    controller driver for given player.
-' @return          ASCII code of key pressed, or negative of value read
-'                  from player's configured controller port.
+' @param  ctrl$  controller driver to read - should already be OPEN.
+' @return        ASCII code of key pressed, or value read from
+'                controller shifted left 8 places.
 Function highscr.get_input%(ctrl$)
-  ' Note that controller initialisation should have already occurred.
-  Local key% = Asc(UCase$(Inkey$))
-  If key% = 0 Then
-    Call ctrl$, key%
-    Select Case key%
-      Case ctrl.A, ctrl.B : highscr.get_input% = &h01 ' Magic value to use for fire
-      Case ctrl.UP        : highscr.get_input% = &h80 ' Up arrow
-      Case ctrl.DOWN      : highscr.get_input% = &h81 ' Down arrow
-      Case ctrl.LEFT      : highscr.get_input% = &h82 ' Left arrow
-      Case ctrl.RIGHT     : highscr.get_input% = &h83 ' Right arrow
+  highscr.get_input% = Asc(UCase$(Inkey$))
+  If highscr.get_input% Then
+    Select Case highscr.get_input%
+      Case &h80 : highscr.get_input% = ctrl.UP << 8
+      Case &h81 : highscr.get_input% = ctrl.DOWN << 8
+      Case &h82 : highscr.get_input% = ctrl.LEFT << 8
+      Case &h83 : highscr.get_input% = ctrl.RIGHT << 8
     End Select
-
-    If highscr.get_input% = &h01 Then
-      ' If fire was pressed then wait for it to be released.
-      Do While key% : Pause 5 : Call ctrl$, key% : Loop
-    Else
-      ' Otherwise 'Key' presses repeat, but not too quickly.
-      Pause 20
-    EndIf
   Else
-    highscr.get_input% = key%
+    Call ctrl$, highscr.get_input%
+    If highscr.get_input% = ctrl.B Then highscr.get_input% = ctrl.A
+    If highscr.get_input% Then highscr.get_input% = highscr.get_input% << 8
   EndIf
 End Function

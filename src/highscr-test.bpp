@@ -5,7 +5,7 @@
 Option Base 0
 Option Default None
 Option Explicit On
-Option LcdPanel NoConsole
+' Option LcdPanel NoConsole
 
 #Include "ctrl.ipp"
 #Include "utility.inc"
@@ -16,15 +16,19 @@ Select Case Mm.Device$
   Case "Colour Maximite 2", "Colour Maximite 2 G2"
     Const USE_PATH% = 1
     Const USE_MODE% = 7
+    Const USE_PAGE_COPY% = 1
   Case "MMBasic for Windows"
     Const USE_PATH% = 1
     Const USE_MODE% = 7
+    Const USE_PAGE_COPY% = 1
   Case "PicoMite"
     Const USE_PATH% = 0
-    Const USE_MODE% = -1
+    Const USE_MODE% = 0
+    Const USE_PAGE_COPY% = 0
   Case "PicoMiteVGA"
     Const USE_PATH% = 0
     Const USE_MODE% = 2
+    Const USE_PAGE_COPY% = 0
   Case Else
     Error "Unsupported device: " + Mm.Device$
 End Select
@@ -36,16 +40,24 @@ Else
 EndIf
 
 Dim ctrl$
-Dim CTRLS_TO_POLL$(1) = ("atari_a", "nes_a")
+Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
+If Mm.Device$ = "PicoMite" Then CTRLS_TO_POLL$(0) = "nes_a"
+Dim COLOURS%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
+Dim player%
 
-Mode USE_MODE%
+If USE_MODE% Then Mode USE_MODE%
+If USE_PAGE_COPY% Then Page Write 1
 Cls
 
 sound.init()
 highscr.init(HIGHSCORE_FILENAME$, "highscore_data")
+
 Do
   ctrl$ = highscr.show_table$(CTRLS_TO_POLL$(), 0)
-  highscr.edit(Int(4 * Rnd()) + 1, Int(10 * Rnd()), Rgb(Red), ctrl$)
+  Cls
+  player% = Int(4 * Rnd())
+  highscr.edit(player% + 1, Int(10 * Rnd()), COLOURS%(player%), ctrl$)
+  Cls
 Loop
 
 End

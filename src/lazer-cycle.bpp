@@ -39,7 +39,7 @@ Select Case Mm.Device$
     Const USE_CONTROLLERS$ = "controller_data_pm"
     Const USE_PAGE_COPY% = 0
     Const USE_PATH% = 0
-    Const USE_MODE% = -1
+    Const USE_MODE% = 0
     Const START_TEXT$ = str.centre$("Press START to play", 40)
   Case "PicoMiteVGA"
     Const USE_CONTROLLERS$ = "controller_data_pmvga"
@@ -57,7 +57,7 @@ Else
   Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
 EndIf
 
-If USE_MODE% >= 0 Then Mode USE_MODE%
+If USE_MODE% Then Mode USE_MODE%
 If USE_PAGE_COPY% Then Page Write 1
 
 Const WIDTH% = Mm.HRes \ 2
