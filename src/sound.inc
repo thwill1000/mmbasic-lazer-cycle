@@ -23,7 +23,7 @@ Dim sound.fx_ptr% = Peek(VarAddr sound.FX_NONE%())
 
 ' Initialises sound library.
 Sub sound.init(track1$, track2$)
-  Local i%, j%
+  Local i%
 
   ' sound.F!(0) - rest - 10 Hz, which should be inaudible.
   ' sound.F!(1) - C0   - 16.35 Hz
@@ -32,35 +32,38 @@ Sub sound.init(track1$, track2$)
     sound.F!(i%) = 440 * 2^((i% - 58) / 12.0)
   Next
 
-  If track1$ = "" Then Error "No music tracks"
-  sound.num_tracks% = 2
-  Local tracks$(sound.num_tracks%) Length 32
-  tracks$(1) = track1$
-  tracks$(2) = Choice(track2$ = "", track1$, track2$)
+  If track1$ = "" Then
+    sound.start_music(sound.NO_MUSIC%())
+  Else
+    sound.num_tracks% = 2
+    Local tracks$(sound.num_tracks%) Length 32
+    tracks$(1) = track1$
+    tracks$(2) = Choice(track2$ = "", track1$, track2$)
 
-  ' 2D array indexed (notes, tracks) because that is the way
-  ' incrementing a pointer through the data naturally works.
-  Dim sound.MUSIC%((sound.MAX_TRACK_LEN% \ 8) - 1, sound.num_tracks% - 1)
+    ' 2D array indexed (notes, tracks) because that is the way
+    ' incrementing a pointer through the data naturally works.
+    Dim sound.MUSIC%((sound.MAX_TRACK_LEN% \ 8) - 1, sound.num_tracks% - 1)
 
-  Local count%, num_channels%, track$
-  For i% = 1 to sound.num_tracks%
-    track$ = tracks$(i%)
-    Restore track$
-    Read count%, num_channels%
-    If count% > sound.MAX_TRACK_LEN% Then
-      Local err$ = "Track '" + track$ + "' is too long; "
-      Error err$ + "expected " + Str$(sound.MAX_TRACK_LEN%) + " bytes but found " + Str$(count%)
-    EndIf
-    If num_channels% <> sound.NUM_MUSIC_CHANNELS% Then
-      Local err$ = "Track '" + track$ + "' has wrong number of channels; "
-      Error err$ + "expected " + Str$(sound.NUM_CHANNELS%) + ", but found " + Str$(num_channels%)
-    EndIf
-    For j% = 1 To count% \ 8
-      Read sound.MUSIC%(j% - 1, i% - 1)
-    Next j%
-  Next
+    Local count%, j%, num_channels%, track$
+    For i% = 1 to sound.num_tracks%
+      track$ = tracks$(i%)
+      Restore track$
+      Read count%, num_channels%
+      If count% > sound.MAX_TRACK_LEN% Then
+        Local err$ = "Track '" + track$ + "' is too long; "
+        Error err$ + "expected " + Str$(sound.MAX_TRACK_LEN%) + " bytes but found " + Str$(count%)
+      EndIf
+      If num_channels% <> sound.NUM_MUSIC_CHANNELS% Then
+        Local err$ = "Track '" + track$ + "' has wrong number of channels; "
+        Error err$ + "expected " + Str$(sound.NUM_CHANNELS%) + ", but found " + Str$(num_channels%)
+      EndIf
+      For j% = 1 To count% \ 8
+        Read sound.MUSIC%(j% - 1, i% - 1)
+      Next j%
+    Next
 
-  sound.start_music(sound.MUSIC%())
+    sound.start_music(sound.MUSIC%())
+  EndIf
 
   ' Music and sound effects are played on SetTick interrupts.
   SetTick 200, sound.music_int, 1

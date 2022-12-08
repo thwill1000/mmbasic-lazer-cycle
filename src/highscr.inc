@@ -6,16 +6,27 @@ Const highscr.MAX_NAME_LEN% = 8
 
 Dim highscr.values$(9) Length highscr.MAX_NAME_LEN% + 7
 
-Sub highscr.load(filename$, defaults$())
+' 256-bit map of characters that can be entered into the high-score table
+' via gamepad or joystick. For each character 0-255 the character is allowed
+' if the corresponding bit is set.
+'  Dim highscr.ALLOWED_CHARS%(3) = (&h03FF440100000000, &h000000007FFFFFF, &h0000020080001E00, &h8000000000000000)
+Dim highscr.ALLOWED_CHARS%(3) = (&h03FF440100000000, &h000000007FFFFFF, &h0000020080001E00, &h0)
+
+' Initialises high-score library.
+'
+' @param  filename$    file to read/write high-scores to.
+' @param  data_label$  label for DATA to read default high-scores from.
+Sub highscr.init(filename$, data_label$)
+  Local i%
+
   ' It is convenient to always fill with the defaults
   ' even if we end up overwriting them immediately.
-  If Bound(highscr.values$(), 1) <> Bound(defaults$()) Then
-    Error "Invalid number of high-score defaults"
-  EndIf
-  Local i%
-  For i% = 0 To Bound(highscr.values$())
-    highscr.values$(i%) = defaults$(i%)
+  Read Save
+  Restore data_label$
+  For i% = 0 To Bound(highscr.values$(), 1)
+    Read highscr.values$(i%)
   Next
+  Read Restore
 
   ' If there is no SD Card then do not load high-scores.
   If Not highscr.has_sdcard%() Then Exit Sub
@@ -89,7 +100,7 @@ End Sub
 ' @return            controller driver if user pressed button/key,
 '                    empty string if the duration expired.
 Function highscr.show_table$(ctrls$(), duration%)
-  Const ch$ = Chr$(205)
+  Const ch$ = Chr$(205), X_OFFSET% = MM.HRes \ 2, Y_OFFSET% = MM.VRes \ 2
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
 
   Local col_idx%, i%, name$, score$, y%
@@ -122,13 +133,9 @@ End Function
 ' @param  colour_%  player colour.
 ' @param  ctrl$     controller driver for given player.
 Sub highscr.edit(player%, idx%, colour_%, ctrl$)
-  ' 256-bit map of characters that can be entered into the high-score table
-  ' via gamepad or joystick. For each character 0-255 the character is allowed
-  ' if the corresponding bit is set.
-'  Static ALLOWED_CHARS%(3) = (&h03FF440100000000, &h000000007FFFFFF, &h0000020080001E00, &h8000000000000000)
-  Static ALLOWED_CHARS%(3) = (&h03FF440100000000, &h000000007FFFFFF, &h0000020080001E00, &h0)
-
+  Const X_OFFSET% = MM.HRes \ 2, Y_OFFSET% = MM.VRes \ 2
   Local ch$ = Chr$(205)
+
   Text X_OFFSET%, Y_OFFSET% - 95, ch$ + ch$ + " HIGH SCORES " + ch$ + ch$, "CT", 1, 1, Rgb(White)
 
   ' Draw current high-score table.
@@ -221,7 +228,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
             Inc i%, Choice(key% = &h80, 1, -1)
             If i% < 0 Then i% = 255
             If i% > 255 Then i% = 0
-          Loop Until bits.get%(ALLOWED_CHARS%(i% \ 64), i% Mod 64)
+          Loop Until bits.get%(highscr.ALLOWED_CHARS%(i% \ 64), i% Mod 64)
           Poke Var name$, p%, i%
         Case &h82 ' Left arrow
           If p% > 1 Then Inc p%, -1 Else state% = 2
@@ -271,7 +278,7 @@ Function highscr.get_input%(ctrl$)
       Case ctrl.RIGHT     : highscr.get_input% = &h83 ' Right arrow
     End Select
 
-   If highscr.get_input% = &h01 Then
+    If highscr.get_input% = &h01 Then
       ' If fire was pressed then wait for it to be released.
       Do While key% : Pause 5 : Call ctrl$, key% : Loop
     Else

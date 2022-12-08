@@ -5,7 +5,6 @@
 Option Base 0
 Option Default None
 Option Explicit On
-
 ' Option LcdPanel NoConsole
 
 '!set CTRL_NO_SNES
@@ -185,12 +184,7 @@ Sub init_globals()
   For i% = 2 To MAX_CYCLE_IDX% : cycle.ctrl_setting$(i%) = "no_control" : Next
 
   ' Initialise high-scores.
-  Restore highscore_data
-  Local defaults$(Bound(highscr.values$(), 1))
-  For i% = 0 To Bound(defaults$(), 1)
-    Read defaults$(i%)
-  Next
-  highscr.load(HIGHSCORE_FILENAME$, defaults$())
+  highscr.init(HIGHSCORE_FILENAME$, "highscore_data")
 End Sub
 
 ' Displays the title screen for a specified duration or until the user presses
