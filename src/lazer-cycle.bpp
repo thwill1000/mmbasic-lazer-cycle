@@ -521,10 +521,43 @@ Sub show_game_over()
   Next
   winner% = idx%(0)
 
-  Local txt$ = "PLAYER " + Str$(winner% + 1) + " WINS"
-  Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.colour%(winner%)
-  Text X_OFFSET%, Y_OFFSET% + 5, "SCORE: " + Str$(cycle.score%(0)), "CM", 1, 2, cycle.colour%(winner%)
-  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+  If cycle.ctrl_setting$(winner%) = "ai_control" Then
+    Text X_OFFSET%, Y_OFFSET% - 10, " COMPUTER WINS ", "CM", 1, 2, cycle.colour%(winner%)
+    If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+  Else
+    Local txt$ = " PLAYER " + Str$(winner% + 1) + " WINS "
+    Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.colour%(winner%)
+    Text X_OFFSET%, Y_OFFSET% + 5, " SCORE: " + Str$(cycle.score%(0)) + " ", "CM", 1, 2, cycle.colour%(winner%)
+    If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+
+    ' Determine bonus.
+    Local multiplier% = -30 + 10 * difficulty%
+    For i% = 0 To MAX_CYCLE_IDX%
+      If cycle.ctrl_setting$(i%) <> "no_control" Then Inc multiplier%, 10
+    Next
+
+    If multiplier% > 1 Then
+      Pause 1500
+      Local s$ = " BONUS +" + Str$(multiplier%) + "% "
+      Text X_OFFSET%, Y_OFFSET% + 5, s$ , "CM", 1, 2, RGB(White)
+      If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+      Pause 1500
+      Local bonus% = cycle.score%(0) * (1 + multiplier% / 100)
+      Do While cycle.score%(0) < bonus%
+        Select Case bonus% - cycle.score%(0)
+          Case > 60 : Inc cycle.score%(0), 50
+          Case > 15 : Inc cycle.score%(0), 10
+          Case Else : Inc cycle.score%(0), 5
+        End Select
+        s$ = " SCORE: " + Str$(cycle.score%(0)) + " "
+        Text X_OFFSET%, Y_OFFSET% + 5, s$, "CM", 1, 2, cycle.colour%(winner%)
+        If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+        sound.play_fx(sound.FX_SELECT%(), 1)
+        Pause 100
+      Loop
+    EndIf
+  EndIf
+
   dummy% = wait%(5000)
 
   wipe()
@@ -710,16 +743,16 @@ Data "NONE",         "no_control",  0
 
 highscore_data:
 
-Data "TOM, 2000"
-Data "MICKEY, 1500"
-Data "MIKE, 1250"
-Data "PETER, 1000"
-Data "DAVEY, 800"
-Data "JOHN, 600"
-Data "PAUL, 400"
-Data "GEORGE, 200"
-Data "RINGO, 100"
-Data "MOOSE, 50"
+Data "MICKEY, 4000"
+Data "MIKE, 3000"
+Data "PETER, 2000"
+Data "DAVEY, 1500"
+Data "JOHN, 1250"
+Data "PAUL, 1000"
+Data "GEORGE, 800"
+Data "RINGO, 600"
+Data "MIDDLE, 400"
+Data "MODAL, 200"
 
 entertainer_music_data:
 
