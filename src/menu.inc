@@ -4,11 +4,13 @@
 
 ' Shows the game settings menu.
 '
-' @param[in]      ui_ctrl$    controller driver to use to navigate the menu.
-' @param[in,out]  ctrls$()    on entry the current controller driver per player,
-'                             on exit the new controller driver per player.
-' @param[in]      colours%()  the player colours
-' @return                     1 to continue, or 0 to QUIT.
+' @param[in, out]  ui_ctrl$    on entry the controller driver to use to navigate the menu,
+'                              on exit the controller driver for first human player,
+'                              unchanged if there are no human players.
+' @param[in,out]   ctrls$()    on entry the current controller driver per player,
+'                              on exit the new controller driver per player.
+' @param[in]       colours%()  the player colours
+' @return                      1 to continue, or 0 to QUIT.
 Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Const x% = X_OFFSET% - 100
   Static initialised% = 0
@@ -117,6 +119,14 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   ' Copy controller settings back into parameter.
   For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
     ctrls$(i%) = menu.ctrls$(i%)
+  Next
+
+  ' Update ui_ctrl$ parameter to be controller chosen for first human player.
+  For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
+    If ctrls$(i%) <> "ai_control" And ctrls$(i%) <> "no_control" Then
+      ui_ctrl$ = ctrls$(i%)
+      Exit For
+    EndIf
   Next
 End Function
 
