@@ -133,6 +133,7 @@ Sub outer_loop()
     wipe()
     init_game(attract_mode%)
     draw_arena()
+    If Not attract_mode% Then ready_steady_go()
 
     If game_loop%() Then
       ' Game loop interrupted after all human players dead.
@@ -153,6 +154,7 @@ Sub on_exit()
   On Key 3, 0
   Option Break 3
   close_controllers()
+  If Mm.Device$ = "PicoMiteVGA" Then Mode 1
   Cls
   End
 End Sub
@@ -329,6 +331,28 @@ Sub draw_arena()
   Next
 End Sub
 
+Sub ready_steady_go()
+  If sound.get_state%() And &b1 Then sound.stop_music()
+  sound.play_fx(sound.FX_READY_STEADY_GO%(), 1)
+
+  ' Draw cycle starting positions.
+  Local i%
+  For i% = 0 To MAX_CYCLE_IDX%
+    If Not (cycle.state%(i%) And &b11) Then cycle.draw(i%)
+  Next
+
+  Local msg$(2) = ("READY", "STEADY", "GO!")
+  For i% = 0 To 2
+    Text X_OFFSET%, Y_OFFSET% - 10, msg$(i%), "CM", 1, 2, Rgb(White)
+    If USE_PAGE_COPY% Then Page Copy 1 To 0, I
+    Pause 1280
+    If i% = 2 Then Pause 240
+    Text X_OFFSET%, Y_OFFSET% - 10, msg$(i%), "CM", 1, 2, Rgb(Black)
+  Next
+
+  sound.start_music()
+End Sub
+
 ' @return  0 - normal game over
 '          1 - game interrupted after all human players died
 Function game_loop%()
@@ -457,7 +481,7 @@ End Sub
 
 Sub wipe()
   Local y%
-  sound.start_fx(sound.FX_WIPE%(), 1)
+  sound.play_fx(sound.FX_WIPE%(), 1)
   For y% = 0 To Mm.VRes \ 2 Step 5
      Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, Rgb(Cyan), Rgb(Black)
      If USE_PAGE_COPY% Then Page Copy 1 To 0, B
@@ -618,7 +642,7 @@ Sub cycle.check_collision(idx%)
   cycle.ctrl$(idx%) = "die_control"
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
-  sound.start_fx(sound.FX_DIE%(), 0)
+  sound.play_fx(sound.FX_DIE%(), 0)
 End Sub
 
 Sub close_controllers()

@@ -94,9 +94,9 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
             If sound_setting% < 0 Then sound_setting% = 3
             If sound_setting% > 3 Then sound_setting% = 0
             If sound_setting% And &b10 Then
-              sound.start_music(sound.NO_MUSIC%())
+              sound.play_music(sound.NO_MUSIC%())
             Else
-              sound.start_music(sound.MUSIC%())
+              sound.play_music(sound.MUSIC%())
             EndIf
             sound.enable_fx(Not (sound_setting% And &b01))
             update% = 1
@@ -108,7 +108,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
 
     End Select
 
-    If update% = 1 Then sound.start_fx(sound.FX_SELECT%(), 1)
+    If update% = 1 Then sound.play_fx(sound.FX_SELECT%(), 1)
 
   Loop
 

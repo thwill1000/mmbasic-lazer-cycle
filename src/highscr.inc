@@ -240,7 +240,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
     End If
 
     If state% > 0 Then
-      If state% = 1 Then sound.start_fx(sound.FX_SELECT%()) Else sound.start_fx(sound.FX_BLART%())
+      If state% = 1 Then sound.play_fx(sound.FX_SELECT%()) Else sound.play_fx(sound.FX_BLART%())
       If key% <> &h01 Then confirm% = 0 ' So message is cleared
       state% = 0
     EndIf

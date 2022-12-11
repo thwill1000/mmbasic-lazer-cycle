@@ -24,9 +24,12 @@ EndIf
 
 Const FILENAME$ = "spmusic"
 Const SZ% = 256
-'Const NUM_CHANNELS% = music.prompt_for_num_channels%()
+' Const NUM_CHANNELS% = music.prompt_for_num_channels%()
+' Const NUM_CHANNELS% = 1
 Const NUM_CHANNELS% = 3
 Const OCTAVE_SHIFT% = 0
+' Const TICK_DURATION% = 40
+Const TICK_DURATION% = 200
 
 Dim channel1%(SZ%), channel2%(SZ%), channel3%(SZ%), channel4%(SZ%), music%(SZ% * 4)
 Dim err$
@@ -38,6 +41,7 @@ If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
 
+' music.run("ready_steady_go")
 music.run("spring")
 music.run("entertainer")
 music.run("black_white_rag")
@@ -249,7 +253,7 @@ End Sub
 ' Plays the contents of the music%() array using interrupts.
 Sub music.play()
   music_ptr% = Peek(VarAddr music%()) + 8
-  SetTick 200, music.play_interrupt, 1
+  SetTick TICK_DURATION%, music.play_interrupt, 1
   Do While music_ptr% <> 0 : Loop
   SetTick 0, 0, 1
   Play Stop
@@ -288,6 +292,10 @@ End Sub
 
 Sub music.compose_select()
   music.parse(1, "qB4,qG5,qB5,q-")
+End Sub
+
+Sub music.compose_ready_steady_go()
+  music.parse(1, "4B4,4B4,4-,4-,4B4,4B4,4-,4-,4B5,4B5,4B5,2B5,2-")
 End Sub
 
 Sub music.compose_wipe()

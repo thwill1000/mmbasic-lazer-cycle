@@ -13,6 +13,7 @@ Dim sound.FX_BLART%(1)  = (&hFFFFFF0036373C3D, &hFFFFFFFFFFFFFFFF)
 Dim sound.FX_SELECT%(1) = (&hFFFFFFFF0048443C, &hFFFFFFFFFFFFFFFF)
 Dim sound.FX_DIE%(3)    = (&h4748494A4B4C4D4E, &h3F40414243444546, &h0038393A3B3C3D3E, &hFFFFFFFFFFFFFFFF)
 Dim sound.FX_WIPE%(3)   = (&h3F3E3D3C3B3A3938, &h4746454443424140, &h004E4D4C4B4A4948, &hFFFFFFFFFFFFFFFF)
+Dim sound.FX_READY_STEADY_GO%(12)
 
 Dim sound.music_start_ptr%
 Dim sound.music_ptr%
@@ -32,8 +33,15 @@ Sub sound.init(track1$, track2$)
     sound.F!(i%) = 440 * 2^((i% - 58) / 12.0)
   Next
 
+  Read Save
+  Restore sound.ready_steady_go_data:
+  For i% = 0 To 12
+    Read sound.FX_READY_STEADY_GO%(i%)
+  Next
+  Read Restore
+
   If track1$ = "" Then
-    sound.start_music(sound.NO_MUSIC%())
+    sound.play_music(sound.NO_MUSIC%())
   Else
     sound.num_tracks% = 2
     Local tracks$(sound.num_tracks%) Length 32
@@ -62,11 +70,11 @@ Sub sound.init(track1$, track2$)
       Next j%
     Next
 
-    sound.start_music(sound.MUSIC%())
+    sound.play_music(sound.MUSIC%())
   EndIf
 
   ' Music and sound effects are played on SetTick interrupts.
-  SetTick 200, sound.music_int, 1
+  sound.start_music()
   SetTick 40, sound.fx_int, 2
 End Sub
 
@@ -84,11 +92,24 @@ Function sound.get_state%()
   Inc sound.get_state%, (sound.music_start_ptr% = Peek(VarAddr sound.MUSIC%())) * 2
 End Function
 
-' Starts a music score.
-Sub sound.start_music(music%())
+' Plays a music score.
+Sub sound.play_music(music%())
   sound.music_start_ptr% = Peek(VarAddr music%())
   sound.music_ptr% = sound.music_start_ptr%
   sound.current_track% = 1
+End Sub
+
+' Starts music playing interrupt.
+Sub sound.start_music()
+  SetTick 200, sound.music_int, 1
+End Sub
+
+' Stops music playing interrupt.
+Sub sound.stop_music()
+  SetTick 0, 0, 1
+  Play Sound 1, B, O
+  Play Sound 2, B, O
+  Play Sound 3, B, O
 End Sub
 
 ' Called from interrupt to play next note of music.
@@ -111,8 +132,8 @@ Sub sound.music_int()
   EndIf
 End Sub
 
-' Starts a new sound effect.
-Sub sound.start_fx(fx%(), wait_%)
+' Plays a new sound effect.
+Sub sound.play_fx(fx%(), wait_%)
   If Not sound.fx_enabled% Then Exit Sub
   If wait_% Then sound.wait_for_fx()
   sound.fx_ptr% = Peek(VarAddr fx%())
@@ -134,3 +155,9 @@ Sub sound.fx_int()
   Play Sound 4, B, S, sound.F!(n%), (n% <> 0) * 25
   Inc sound.fx_ptr%
 End Sub
+
+sound.ready_steady_go_data:
+Data &h3C3C3C3C3C3C3C3C, &h3C3C3C3C3C3C3C3C, &h0000000000000000, &h0000000000000000
+Data &h3C3C3C3C3C3C3C3C, &h3C3C3C3C3C3C3C3C, &h0000000000000000, &h0000000000000000
+Data &h4848484848484848, &h4848484848484848, &h4848484848484848, &h0000000048484848
+Data &hFFFFFFFFFFFFFFFF
