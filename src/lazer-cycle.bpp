@@ -59,14 +59,19 @@ EndIf
 
 If USE_MODE% Then Mode USE_MODE%
 If USE_PAGE_COPY% Then Page Write 1
-
+'!ifdef NARROW_TRACES
 Const WIDTH% = Mm.HRes \ 2
 Const HEIGHT% = (Mm.VRes - 20) \ 2
+'!endif
+'!ifndef NARROW_TRACES
+Const WIDTH% = Mm.HRes \ 3
+Const HEIGHT% = (Mm.VRes - 20) \ 3
+'!endif
 Const X_OFFSET% = MM.HRes \ 2
 Const Y_OFFSET% = MM.VRes \ 2
 Const NORTH% = 0, EAST% = 1, SOUTH% = 2, WEST% = 3
 Const MAX_CYCLE_IDX% = 3
-Const SCORE_Y% = 2 * HEIGHT% + 4
+Const SCORE_Y% = Mm.VRes - 16
 Const STATE_OK%    = &b000 ' 0; values 1-3 are "imminent death"
 Const STATE_DYING% = &b100 ' 4
 Const STATE_DEAD%  = &b101 ' 5
@@ -79,6 +84,12 @@ Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, S
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
+'!ifdef NARROW_TRACES
+Dim FRAME_DURATIONS%(5) = (33, 30, 27, 24, 21, 18)
+'!endif
+'!ifndef NARROW_TRACES
+Dim FRAME_DURATIONS%(5) = (42, 38, 34, 30, 26, 22)
+'!endif
 
 Dim ui_ctrl$ ' Controller driver for controlling the UI.
 Dim attract_mode% = 1
@@ -263,7 +274,7 @@ Function wait%(duration%)
 End Function
 
 Sub init_game(attract_mode%)
-  frame_duration% = 3 * (5 + (6 - difficulty%))
+  frame_duration% = FRAME_DURATIONS%(difficulty%)
   num_alive% = 0 ' Incremented later.
   num_humans% = 0
   score% = 0
@@ -320,6 +331,7 @@ Sub init_game(attract_mode%)
 End Sub
 
 Sub draw_arena()
+'!ifdef NARROW_TRACES
   Local a%, i%, j%
   For i% = 0 To Bound(arena%(), 1) - 1
     a% = arena%(i%)
@@ -329,6 +341,14 @@ Sub draw_arena()
       Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), Rgb(Grey)
     Next
   Next
+'!endif
+'!ifndef NARROW_TRACES
+  Local x%
+  For x% = 0 To (HEIGHT% * WIDTH%) - 1
+    If Peek(Var arena%(), x%) <> 128 Then Continue For
+    Box 3 * (x% Mod WIDTH%), 3 * (x% \ WIDTH%), 2, 2, , Rgb(Grey)
+  Next
+'!endif
 End Sub
 
 Sub ready_steady_go()
@@ -455,13 +475,13 @@ Sub draw_score()
   ' If there are no human players we toggle between the score and the "Press ..." text.
   If score% Mod 100 = 95 Then
     Local i%, sc%
-    Text WIDTH%, SCORE_Y%, Space$(40), "C", 1, 1, Rgb(White)
+    Text Mm.HRes \ 2, SCORE_Y%, Space$(40), "C", 1, 1, Rgb(White)
     For i% = 0 To MAX_CYCLE_IDX%
       sc% = Choice(cycle.state%(i%) < STATE_DYING%, score%, (cycle.score%(i%) \ 5) * 5)
       Text SCORE_X%(i%), SCORE_Y%, Str$(sc%, 5, 0, "0"), , 1, 1, cycle.colour%(i%)
     Next
   Else
-    Text WIDTH%, SCORE_Y%, START_TEXT$, "C", 1, 1, Rgb(White)
+    Text Mm.HRes \ 2, SCORE_Y%, START_TEXT$, "C", 1, 1, Rgb(White)
   EndIf
 End Sub
 
@@ -483,7 +503,7 @@ Sub wipe()
   Local y%
   sound.play_fx(sound.FX_WIPE%(), 1)
   For y% = 0 To Mm.VRes \ 2 Step 5
-     Box WIDTH% - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, Rgb(Cyan), Rgb(Black)
+     Box Mm.HRes \ 2 - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, Rgb(Cyan), Rgb(Black)
      If USE_PAGE_COPY% Then Page Copy 1 To 0, B
      Pause 30
   Next
@@ -492,8 +512,16 @@ End Sub
 
 ' Draw cycle if STATE_OK% or STATE_DYING%.
 Sub cycle.draw(idx%)
+'!ifdef NARROW_TRACES
   Local p% = cycle.pos%(idx%), n% = cycle.nxt%(idx%)
   Line 2*(p% Mod WIDTH%), 2*(p%\WIDTH%), 2*(n% Mod WIDTH%), 2*(n%\WIDTH%), 1, cycle.colour%(idx%) * (cycle.state%(idx%) <> STATE_DYING%)
+'!endif
+'!ifndef NARROW_TRACES
+  Local p% = cycle.pos%(idx%), n% = cycle.nxt%(idx%), xn% = 3*(n% Mod WIDTH%), yn% = 3*(n%\WIDTH%)
+  Local colour_% = cycle.colour%(idx%) * (cycle.state%(idx%) <> STATE_DYING%)
+  Line 3*(p% Mod WIDTH%), 3*(p%\WIDTH%), xn%, yn%, 2, colour_%
+  Box xn%, yn%, 2, 2, , colour_% ' BOX necessary to avoid missing pixel artefact in trace.
+'!endif
 End Sub
 
 Sub cycle.dying(idx%)
