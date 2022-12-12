@@ -462,7 +462,7 @@ Sub nes_dx(x%)
       Inc x%, Not Pin(36) * ctrl.RIGHT  : Pulse 40, ctrl.PULSE
       Exit Sub
     Case ctrl.OPEN
-      SetPin 36, Din : SetPin 38, Dout : SetPin 40, Dout
+      SetPin 36, Din, PullUp : SetPin 38, Dout : SetPin 40, Dout
       Pin(38) = 0 : Pin(40) = 0
       nes_dx(0) ' Discard the first reading.
     Case ctrl.CLOSE, ctrl.SOFT_CLOSE
