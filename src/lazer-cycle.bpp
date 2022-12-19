@@ -8,6 +8,13 @@ Option Explicit On
 ' Option LcdPanel NoConsole
 
 '!set CTRL_NO_SNES
+'!ifdef BINTENDO
+' Preprocessor flag BINTENDO defined
+'!set PICOMITE
+'!set CTRL_USE_INKEY
+'!set SOUND_USE_PWM
+'!endif
+
 #Include "ctrl.ipp"
 #Include "utility.inc"
 #Include "sound.inc"
@@ -161,7 +168,7 @@ End Sub
 
 ' Break handler to stop music & fx when Ctrl-C pressed.
 Sub on_exit()
-  Play Stop
+  sound.term()
   On Key 3, 0
   Option Break 3
   close_controllers()
@@ -207,7 +214,18 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_title%(duration%)
-  Text X_OFFSET%, Y_OFFSET% - 15, "LAZER CYCLE", "CM", 1, 2, Rgb(White)
+  Local platform$ = "Colour Maximite 2"
+'!ifdef PICOMITE
+  '!ifdef BINTENDO
+  platform$ = "Bintendo Tomboy"
+  '!endif
+  '!ifndef BINTENDO
+  platform$ = "PicoMiteVGA"
+  '!endif
+'!endif
+
+  Text X_OFFSET%, Y_OFFSET% - 27, "LAZER CYCLE", "CM", 1, 2, Rgb(White) 
+  Text X_OFFSET%, Y_OFFSET% - 10, platform$ + " Version", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)

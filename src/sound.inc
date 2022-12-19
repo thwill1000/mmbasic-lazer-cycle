@@ -2,6 +2,15 @@
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.05
 
+'!ifdef SOUND_USE_PWM
+' Preprocessor flag SOUND_USE_PWM defined
+'!endif
+
+'!ifdef SOUND_USE_PWM
+SetPin GP4,PWM2A
+SetPin GP6,PWM3A
+'!endif
+
 Const sound.MAX_TRACK_LEN% = 1024
 Const sound.NUM_MUSIC_CHANNELS% = 3
 
@@ -22,14 +31,13 @@ Dim sound.num_tracks%
 Dim sound.fx_enabled% = 1
 Dim sound.fx_ptr% = Peek(VarAddr sound.FX_NONE%())
 
-' Initialises sound library.
+' Initialises sound engine.
 Sub sound.init(track1$, track2$)
   Local i%
 
-  ' sound.F!(0) - rest - 10 Hz, which should be inaudible.
+  ' sound.F!(0) - rest
   ' sound.F!(1) - C0   - 16.35 Hz
-  sound.F!(0) = 10.0
-  For i% = 1 To 127
+  For i% = 0 To 127
     sound.F!(i%) = 440 * 2^((i% - 58) / 12.0)
   Next
 
@@ -78,6 +86,17 @@ Sub sound.init(track1$, track2$)
   SetTick 40, sound.fx_int, 2
 End Sub
 
+' Terminates sound engine.
+Sub sound.term()
+'!ifdef SOUND_USE_PWM
+  Pwm 2, Off
+  Pwm 3, Off
+'!endif
+'!ifndef SOUND_USE_PWM
+  Play Stop
+'!endif
+End Sub
+
 ' Enables/disables sound fx.
 Sub sound.enable_fx(z%)
   sound.fx_enabled% = z%
@@ -107,18 +126,32 @@ End Sub
 ' Stops music playing interrupt.
 Sub sound.stop_music()
   SetTick 0, 0, 1
+'!ifdef SOUND_USE_PWM
+  Pwm 2, sound.F!(0), 0
+'!endif
+'!ifndef SOUND_USE_PWM
   Play Sound 1, B, O
   Play Sound 2, B, O
   Play Sound 3, B, O
+'!endif
 End Sub
 
 ' Called from interrupt to play next note of music.
 Sub sound.music_int()
   Local n% = Peek(Byte sound.music_ptr%)
   If n% < 255 Then
-    Play Sound 1, B, S, sound.F!(n%), 15
-    Play Sound 2, B, S, sound.F!(Peek(Byte sound.music_ptr% + 1)), 15
-    Play Sound 3, B, S, sound.F!(Peek(Byte sound.music_ptr% + 2)), 15
+'!ifdef SOUND_USE_PWM
+    If n% = 0 Then n% = Peek(Byte sound.music_ptr% + 1)
+    If n% = 0 Then n% = Peek(Byte sound.music_ptr% + 2)
+    Pwm 2, sound.F!(n%), (n% > 0) * 2
+'!endif
+'!ifndef SOUND_USE_PWM
+    Play Sound 1, B, S, sound.F!(n%), (n% > 0) * 15
+    n% = Peek(Byte sound.music_ptr% + 1)
+    Play Sound 2, B, S, sound.F!(n%), (n% > 0) * 15
+    n% = Peek(Byte sound.music_ptr% + 2)
+    Play Sound 3, B, S, sound.F!(n%), (n% > 0) * 15
+'!endif
     Inc sound.music_ptr%, 3
     Exit Sub
   EndIf
@@ -152,7 +185,12 @@ End Sub
 Sub sound.fx_int()
   Local n% = Peek(Byte sound.fx_ptr%)
   If n% = 255 Then Exit Sub
-  Play Sound 4, B, S, sound.F!(n%), (n% <> 0) * 25
+'!ifdef SOUND_USE_PWM
+  Pwm 3, sound.F!(n%), (n% > 0) * 5
+'!endif
+'!ifndef SOUND_USE_PWM
+  Play Sound 4, B, S, sound.F!(n%), (n% > 0) * 25
+'!endif
   Inc sound.fx_ptr%
 End Sub
 
