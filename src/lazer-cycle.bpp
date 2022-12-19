@@ -14,7 +14,7 @@ Option Explicit On
 #Include "highscr.inc"
 #Include "menu.inc"
 
-Const VERSION$ = "0.9.3"
+Const VERSION$ = "0.9.4"
 
 If InStr(Mm.Device$, "PicoMite") Then
   If Val(Mm.Info(CpuSpeed)) < 252000000 Then
