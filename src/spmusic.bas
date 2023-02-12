@@ -1,4 +1,4 @@
-' Code Copyright (c) 2022 Thomas Hugo Williams
+' Code Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.03
 
@@ -12,14 +12,18 @@ Option Explicit On
 Option Break 4
 On Key 3, on_exit
 
-' Set to 1 to use PWM command to play music, or 0 to use PLAY SOUND.
-Const RAW_PWM% = 0
-
-If RAW_PWM% Then
+' 0 - use PLAY SOUND
+' 1 - use PWM on 4 channels
+' 2 - use PWM on 2 channels (Bintendo)
+Const PLAY_MODE% = 20
+If PLAY_MODE% = 1 Then
   SetPin GP2,PWM1A
   SetPin GP4,PWM2A
   SetPin GP6,PWM3A
   SetPin GP8,PWM4A
+ElseIf PLAY_MODE% = 2 Then
+  SetPin GP4,PWM2A
+  SetPin GP6,PWM3A
 EndIf
 
 Const FILENAME$ = "spmusic"
@@ -28,8 +32,8 @@ Const SZ% = 256
 ' Const NUM_CHANNELS% = 1
 Const NUM_CHANNELS% = 3
 Const OCTAVE_SHIFT% = 0
-' Const TICK_DURATION% = 40
-Const TICK_DURATION% = 200
+Const MUSIC_TICK_DURATION% = 200
+Const FX_TICK_DURATION% = 40
 
 Dim channel1%(SZ%), channel2%(SZ%), channel3%(SZ%), channel4%(SZ%), music%(SZ% * 4)
 Dim err$
@@ -41,10 +45,21 @@ If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
 
-' music.run("ready_steady_go")
-music.run("spring")
-music.run("entertainer")
-music.run("black_white_rag")
+' music.run("spring", MUSIC_TICK_DURATION%)
+' Pause 2000
+music.run("entertainer", MUSIC_TICK_DURATION%)
+Pause 2000
+music.run("black_white_rag", MUSIC_TICK_DURATION%)
+Pause 2000
+music.run("blart", FX_TICK_DURATION%)
+Pause 2000
+music.run("select", FX_TICK_DURATION%)
+Pause 2000
+music.run("die", FX_TICK_DURATION%)
+Pause 2000
+music.run("wipe", FX_TICK_DURATION%)
+Pause 2000
+music.run("ready_steady_go", FX_TICK_DURATION%)
 
 Print "Time in interrupt:" int_time!
 
@@ -52,14 +67,35 @@ on_exit()
 
 ' Interrupt routine to stop music and restore default Break Key.
 Sub on_exit()
-  If RAW_PWM% Then
-    Local channel%
-    For channel% = 1 To 4 : Pwm channel%, Off : Next
-  Else
-    Play Stop
-  EndIf
+  music.term()
   Option Break 3
   End
+End Sub
+
+Sub music.term()
+  Local channel%
+  SetTick 0, 0, 1
+  Select Case PLAY_MODE%
+    Case 0
+      Play Stop
+    Case 1
+      For channel% = 1 To 4 : Pwm channel%, Off : Next
+    Case 2
+      For channel% = 2 To 3 : Pwm channel%, Off : Next
+  End Select
+End Sub
+
+Sub music.stop()
+  Local channel%
+  SetTick 0, 0, 1
+  Select Case PLAY_MODE%
+    Case 0
+      For channel% = 1 To 4 : Play Sound channel%, B, O : Next
+    Case 1
+      For channel% = 1 To 4 : Pwm channel%, FREQUENCY!(0), 0 : Next
+    Case 2
+      For channel% = 2 To 3 : Pwm channel%, FREQUENCY!(0), 0 : Next
+  End Select
 End Sub
 
 ' Prompts user for number of channels to encode / play.
@@ -77,20 +113,19 @@ End Function
 ' Initialises global variables.
 Sub music.init_globals()
   Local i%
-  FREQUENCY!(0) = 10.0 ' rest
   ' FREQUENCY!(1) - C0   - 16.35 Hz
-  For i% = 1 To 127
+  For i% = 0 To 127
     FREQUENCY!(i%) = 440 * 2^((i% - 58) / 12.0)
   Next
 End Sub
 
 ' Composes, processes, saves and plays the named tune.
-Sub music.run(name$)
+Sub music.run(name$, tick_duration%)
   music.clear()
   Call "music.compose_" + name$
   music.process()
   music.write_data(name$)
-  music.play()
+  music.play(tick_duration%)
 End Sub
 
 ' Clears the tune data.
@@ -251,31 +286,37 @@ Sub music.write_data(name$)
 End Sub
 
 ' Plays the contents of the music%() array using interrupts.
-Sub music.play()
+Sub music.play(tick_duration%)
   music_ptr% = Peek(VarAddr music%()) + 8
-  SetTick TICK_DURATION%, music.play_interrupt, 1
+  SetTick tick_duration%, music.play_interrupt, 1
   Do While music_ptr% <> 0 : Loop
-  SetTick 0, 0, 1
-  Play Stop
+  music.stop()
 End Sub
 
 ' Interrupt routine playing a single half-beat (per channel) from the music%() array.
 Sub music.play_interrupt()
   Local i%, n%, t! = Timer
-  For i% = 1 To NUM_CHANNELS%
+  For i% = 1 To Choice(PLAY_MODE% = 2, 1,  NUM_CHANNELS%)
     n% = Peek(Byte music_ptr%)
     If n% = 255 Then
       Print Str$(i%) ": Halted"
       music_ptr% = 0
       Exit For
     EndIf
-    If RAW_PWM% Then
-      Pwm i%, FREQUENCY!(n%), (n% > 0) * 5
-    Else
-      Play Sound i%, B, S, FREQUENCY!(n%), (n% > 0) * 15
-    EndIf
+    Select Case PLAY_MODE%
+      Case 0
+        Play Sound i%, B, S, FREQUENCY!(n%), (n% > 0) * 15
+      Case 1
+        Pwm i%, FREQUENCY!(n%), (n% > 0) * 5
+      Case 2
+        ' If the 1st channel is a rest then try the 2nd.
+        If n% = 0 And NUM_CHANNELS% > 1 Then n% = Peek(Byte music_ptr% + 1)
+        ' If the 2nd channel is also a rest then try the 3rd.
+        If n% = 0 And NUM_CHANNELS% > 2 Then n% = Peek(Byte music_ptr% + 2)
+        Pwm 2, FREQUENCY!(n%), (n% > 0) * 5
+    End Select
     Print Str$(i%) ": " Choice(n% = 0, "Rest", Str$(FREQUENCY!(n%)) + " hz")
-    Inc music_ptr%
+    Inc music_ptr%, Choice(PLAY_MODE% = 2, NUM_CHANNELS%, 1)
   Next
   Inc int_time!, Timer - t!
 End Sub
