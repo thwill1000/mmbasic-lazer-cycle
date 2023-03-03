@@ -1,6 +1,6 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.05
+' For MMBasic 5.07.06
 
 Const highscr.MAX_NAME_LEN% = 8
 
@@ -28,8 +28,8 @@ Sub highscr.init(filename$, data_label$)
   Next
   Read Restore
 
-  ' If there is no SD Card then do not load high-scores.
-  If Not highscr.has_sdcard%() Then Exit Sub
+  ' If there is no file-system then do not load high-scores.
+  If Not highscr.has_fs%() Then Exit Sub
 
   ' Check filename$ is absolute.
   Local ok% = 0
@@ -71,18 +71,19 @@ Sub highscr.init(filename$, data_label$)
   Close #1
 End Sub
 
-Function highscr.has_sdcard%()
-  If Mm.Device$ = "MMBasic for Windows" Then
-    highscr.has_sdcard% = 1
+' Does the device have a file-system ?
+Function highscr.has_fs%()
+  If Mm.Device$ = "MMBasic for Windows" Or InStr(Mm.Device$, "PicoMite") Then
+    highscr.has_fs% = 1
   Else
-    highscr.has_sdcard% = (UCase$(Mm.Info$(SdCard)) = "READY")
+    highscr.has_fs% = (UCase$(Mm.Info$(SdCard)) = "READY")
   EndIf
 End Function
 
 ' Assumes parent directory of filename$ already exists.
 Sub highscr.save(filename$)
-  ' If there is no SD Card then do not save high-scores.
-  If Not highscr.has_sdcard%() Then Exit Sub
+  ' If there is no file-system then do not save high-scores.
+  If Not highscr.has_fs%() Then Exit Sub
 
   Open filename$ For Output As #1
   Local i%
