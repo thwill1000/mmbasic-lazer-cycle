@@ -571,6 +571,8 @@ Sub show_game_over()
   Next
   winner% = idx%(0)
 
+  Box X_OFFSET% - 130, Y_OFFSET% - 50, 260, 80, 0, Rgb(Black), Rgb(Black)
+
   If cycle.ctrl_setting$(winner%) = "ai_control" Then
     Text X_OFFSET%, Y_OFFSET% - 10, " COMPUTER WINS ", "CM", 1, 2, cycle.colour%(winner%)
     If USE_PAGE_COPY% Then Page Copy 1 To 0, B
