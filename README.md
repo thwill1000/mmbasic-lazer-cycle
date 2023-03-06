@@ -24,21 +24,21 @@ A 1-4 player implementation of the classic ["Light Cycle"](https://en.wikipedia.
 
 ## How do I install it ?
 
- - Download the .bas file for the desired platform:
-     - Colour Maximite 2 or MMBasic for Windows: [lazer-cycle-cmm2-100.bas](lazer-cycle-cmm2-100.bas)
-     - PicoMiteVGA / PicoGAME VGA: [lazer-cycle-pmvga-100.bas](lazer-cycle-pmvga-100.bas)
-     - PicoMite with LCD display / PicoGAME LCD: [lazer-cycle-pglcd-100.bas](lazer-cycle-pglcd-100.bas)
- - Copy it to a directory of your choice, perhaps renaming it to ```lazer-cycle.bas```.
+ - Download the appropriate `lazer-cycle-<platform>-<version>.bas` file:
+     - [Colour Maximite 2 or MMBasic for Windows](../../releases/download/1.0.0/lazer-cycle-cmm2-100.bas)
+     - [PicoMiteVGA / PicoGAME VGA](../../releases/download/1.0.0/lazer-cycle-pmvga-100.bas)
+     - [PicoMite with LCD display / PicoGAME LCD](../../releases/download/1.0.0/lazer-cycle-pglcd-100.bas)
+ - Copy it to a directory of your choice, optionally renaming it to ```lazer-cycle.bas```.
  - That's it!
 
 ## How do I run it ?
- - Navigate to the directory the file is in and type: ```*lazer-cycle```
+ - Navigate to the directory containing the .bas file and type: ```*lazer-cycle```
  - **IMPORTANT**: Be aware of what hardware you have attached to the GPIO when running Lazer Cycle. To detect attached NES controllers the game sends pulses to pins 38 & 40 on the Colour Maximite 2 and GP2, GP3, GP5 and GP22 on the PicoMite. The PicoMite LCD version also transmits audio via PWM on pins GP4 and GP6.
 
 ## How do I play it ?
 
  1. Watch the attract mode to see the in-game instructions.
- 2. When you are ready to play press START (on your gamepad), FIRE (on your joystick) or SPACE (on your keyboard).
+ 2. When you are ready to play, press START (on your gamepad), FIRE (on your joystick) or SPACE (on your keyboard).
 
 **Keyboard controls - all platforms:**
 
@@ -57,8 +57,8 @@ A 1-4 player implementation of the classic ["Light Cycle"](https://en.wikipedia.
      - Compatible with the DB9 port on the [Colour Maximite 2 Deluxe Edition GEN2](https://github.com/pslabs-ps/CMM2-DeluxeEdition-GEN2).
      - Pin 35: Up, Pin 36: Down, Pin 38: Left, Pin 40: Right, Pin 32: Fire A, Pin 33: Fire B (not required)
  - NES gamepad
-     - Requires an adapter when used with the DB9 port on the [Colour Maximite 2 Deluxe Edition GEN2](https://github.com/pslabs-ps/CMM2-DeluxeEdition-GEN2).
-         - Swap the Male DB9 (CMM2) +5V supply on Pin 7 to Pin 6 on the Female DB9 (Gamepad).
+     - Useable via an adapter attached to the DB9 port on the [Colour Maximite 2 Deluxe Edition GEN2](https://github.com/pslabs-ps/CMM2-DeluxeEdition-GEN2).
+         - The adapter needs to swap the Male DB9 (CMM2) +5V supply on Pin 7 to Pin 6 on the Female DB9 (Gamepad).
      - Pin 38: Latch, Pin 40: Clock, Pin 36: Data
 
 **Additional PicoMiteVGA / PicoGAME VGA controls:**
