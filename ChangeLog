@@ -1,5 +1,10 @@
 ChangeLog
 ---------
 
-Version 1.0.0 - ??-???-2023:
-  - Initial public release for <platforms>.
+Version 1.0.0 - 6-Mar-2023:
+  - Initial public release for:
+    - CMM2          (lazer-cycle-cmm2-100.bas)
+    - PicoMiteVGA   (lazer-cycle-pmvga-100.bas)
+    - PicoGAME VGA  (lazer-cycle-pmvga-100.bas)
+    - PicoGAME LCD  (lazer-cycle-pglcd-100.bas)
+    - MMB4W         (lazer-cycle-cmm2-100.bas)

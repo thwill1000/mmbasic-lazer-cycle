@@ -1,7 +1,8 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
+
 '!ifdef PICOMITE
-' For PicoGAME VGA 1.4 running PicoMiteVGA MMBasic 5.07.05
+' For PicoGAME VGA 1.4 running PicoMiteVGA MMBasic 5.07.06
 '!endif
 '!ifdef CMM2
 ' For CMM2 running MMBasic 5.07.02b6
@@ -11,7 +12,14 @@ Option Base 0
 Option Default None
 Option Explicit On
 
-#Include "ctrl.ipp"
+'!ifdef PICOGAME_LCD
+' Preprocessor flag PICOGAME_LCD defined
+'!set PICOMITE
+'!set CTRL_USE_INKEY
+'!endif
+
+#Include "ctrl.inc"
+#Include "utility.inc"
 
 If Mm.Device$ = "PicoMite" Then
   Const FONT_NUM = 7
@@ -84,6 +92,8 @@ Sub restore_controller_data()
       Restore controller_data_cmm2
     Case "MMB4L"
       Restore controller_data_mmb4l
+    Case "MMBasic for Windows"
+      Restore controller_data_mmb4w
     Case Else
       Error "Unsupported device: " + Mm.Device$
   End Select
@@ -93,7 +103,7 @@ Sub show_menu()
   Cls
   print_at(0, 0, "MMBasic Controller Driver Test " + format_version$(ctrl.VERSION))
   print_at(0, 1, "Running on " + Mm.Device$ + " " + Str$(Mm.Info(Version)))
-  print_at(0, 3,  "Select driver using the function keys")
+  print_at(0, 3,  "Select driver using [A-Z]")
   print_at(0, 4,  "Then 'play' with controller to test response")
   Local i%
   For i% = 1 To NUM_CTRL%
@@ -101,13 +111,6 @@ Sub show_menu()
   Next
   print_at(2, i% + 5, "[Esc]  Quit")
 End Sub
-
-Function format_version$(version%)
-  Local major% = version% \ 10000
-  Local minor% = (version% - major% * 10000) \ 100
-  Local micro% = version% - major% * 10000 - minor% * 100
-  format_version$ = Str$(major%) + "." + Str$(minor%) + "." + Str$(micro%)
-End Function
 
 Sub main_loop()
   Local bits%, current%, i%, s$
@@ -188,29 +191,6 @@ Sub print_ctrl_option(idx%, selected%)
   print_at(2, idx% + 5, s$, selected%)
 End Sub
 
-' Gets a string "quoted" with given characters.
-'
-' @param  s$      the string.
-' @param  begin$  the character to put at the start, defaults to double-quote.
-' @param  end$    the character to put at the end, defaults to double-quote.
-' @return         the "quoted" string.
-Function str.quote$(s$, begin$, end$)
-  Local begin_$ = Choice(begin$ = "", Chr$(34), Left$(begin$, 1))
-  Local end_$ = Choice(end$ = "", begin_$, Left$(end$, 1))
-  str.quote$ = begin_$ + s$ + end_$
-End Function
-
-' Gets a string padded to a given width with spaces to the right.
-'
-' @param  s$  the string.
-' @param  w%  the width.
-' @return     the padded string.
-'             If Len(s$) > w% then returns the unpadded string.
-Function str.rpad$(s$, x%)
-  str.rpad$ = s$
-  If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
-End Function
-
 controller_data_picomite:
 
 Data "keys_cursor", "Keyboard: Cursor keys & Space"
@@ -240,6 +220,11 @@ Data "wii_nunchuk_3", "Wii Nunchuk Controller (I2C3)"
 Data "", ""
 
 controller_data_mmb4l:
+
+Data "keys_cursor", "Keyboard: Cursor keys & Space"
+Data "", ""
+
+controller_data_mmb4w:
 
 Data "keys_cursor", "Keyboard: Cursor keys & Space"
 Data "", ""

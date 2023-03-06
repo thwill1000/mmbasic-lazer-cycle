@@ -1,31 +1,28 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 '
 ' MMBasic Controller Library
-'
-'!ifndef SPTRANS
-Error "File 'ctrl.ipp' requires transpiling"
-'!endif
+
 '!ifdef PICOMITE
   '!set CTRL_PLATFORM_SET
 ' Preprocessor flag PICOMITE defined
 '!endif
 '!ifdef CMM2
   '!ifdef CTRL_PLATFORM_SET
-    '!error "File 'ctrl.ipp' was transpiled with more than one of the CMM2, MMB4L or PICOMITE flags set"
+    '!error "File 'ctrl.inc' was transpiled with more than one of the CMM2, MMB4L or PICOMITE flags set"
   '!endif
   '!set CTRL_PLATFORM_SET
 ' Preprocessor flag CMM2 defined
 '!endif
 '!ifdef MMB4L
   '!ifdef CTRL_PLATFORM_SET
-    '!error "File 'ctrl.ipp' was transpiled with more than one of the CMM2, MMB4L or PICOMITE flags set"
+    '!error "File 'ctrl.inc' was transpiled with more than one of the CMM2, MMB4L or PICOMITE flags set"
   '!endif
   '!set CTRL_PLATFORM_SET
 ' Preprocessor flag MMB4L defined
 '!endif
 '!ifndef CTRL_PLATFORM_SET
-  '!error "File 'ctrl.ipp' was transpiled without CMM2, MMB4L or PICOMITE flags set"
+  '!error "File 'ctrl.inc' was transpiled without CMM2, MMB4L or PICOMITE flags set"
 '!endif
 '!ifndef CTRL_USE_INKEY
   '!ifdef CMM2
@@ -57,7 +54,7 @@ Error "File 'ctrl.ipp' requires transpiling"
 ' Preprocessor flag CTRL_USE_KEYDOWN defined
 '!endif
 
-Const ctrl.VERSION = 906  ' 0.9.6
+Const ctrl.VERSION = 907  ' 0.9.7
 
 ' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01
@@ -110,18 +107,18 @@ Dim ctrl.tick_nbr%
 ' @param  nbr%     CMM2 only - timer nbr to read KEYDOWN state, default 4.
 Sub ctrl.init_keys(period%, nbr%)
   ctrl.term_keys()
-'!ifdef CTRL_USE_INKEY
-  On Key ctrl.on_key()
+'!uncomment_if CTRL_USE_INKEY
+'  On Key ctrl.on_key()
 '!endif
-'!ifdef CTRL_USE_ON_PS2
-  Read Save
-  Restore ctrl.scan_map_data
-  Local i%
-  For i% = Bound(ctrl.scan_map%(), 0) To Bound(ctrl.scan_map%(), 1)
-    Read ctrl.scan_map%(i%)
-  Next
-  Read Restore
-  On Ps2 ctrl.on_ps2()
+'!uncomment_if CTRL_USE_ON_PS2
+  ' Read Save
+  ' Restore ctrl.scan_map_data
+  ' Local i%
+  ' For i% = Bound(ctrl.scan_map%(), 0) To Bound(ctrl.scan_map%(), 1)
+  '   Read ctrl.scan_map%(i%)
+  ' Next
+  ' Read Restore
+  ' On Ps2 ctrl.on_ps2()
 '!endif
 '!ifdef CTRL_USE_KEYDOWN
   ctrl.tick_nbr% = Choice(nbr% = 0, 4, nbr%)
@@ -164,11 +161,11 @@ End Sub
 
 ' Terminates keyboard reading.
 Sub ctrl.term_keys()
-'!ifdef CTRL_USE_INKEY
-  On Key 0
+'!uncomment_if CTRL_USE_INKEY
+  ' On Key 0
 '!endif
-'!ifdef CTRL_USE_ON_PS2
-  On Ps2 0
+'!uncomment_if CTRL_USE_ON_PS2
+  ' On Ps2 0
 '!endif
 '!ifdef CTRL_USE_KEYDOWN
   If ctrl.tick_nbr% <> 0 Then SetTick 0, 0, ctrl.tick_nbr%
@@ -179,8 +176,8 @@ End Sub
 
 Function ctrl.keydown%(i%)
   ctrl.keydown% = Peek(Var ctrl.key_map%(), i%)
-'!ifdef CTRL_USE_INKEY
-  Poke Var ctrl.key_map%(), i%, 0
+'!uncomment_if CTRL_USE_INKEY
+  ' Poke Var ctrl.key_map%(), i%, 0
 '!endif
 End Function
 

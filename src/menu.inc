@@ -34,7 +34,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Next
   If count% = 0 Then menu.ctrls$(0) = ui_ctrl$
 
-  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + VERSION$, "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + format_version$(VERSION%), "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
   Call ui_ctrl$, ctrl.OPEN

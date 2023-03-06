@@ -1,13 +1,21 @@
-' Code Copyright (c) 2022 Thomas Hugo Williams
+' Code Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.03
+' For MMBasic 5.07.06
 
 Option Base 0
 Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
-#Include "ctrl.ipp"
+'!ifdef PICOGAME_LCD
+' Preprocessor flag PICOGAME_LCD defined
+'!set PICOMITE
+'!set CTRL_USE_INKEY
+'!set SOUND_USE_PWM
+'!set CTRL_ONE_PLAYER
+'!endif
+
+#Include "ctrl.inc"
 #Include "utility.inc"
 #Include "highscr.inc"
 #Include "sound.inc"
@@ -17,18 +25,22 @@ Select Case Mm.Device$
     Const USE_PATH% = 1
     Const USE_MODE% = 7
     Const USE_PAGE_COPY% = 1
+    Dim CTRLS_TO_POLL$(3) = ("atari_dx", "nes_dx", "wii_any_3", "keys_cursor")
   Case "MMBasic for Windows"
     Const USE_PATH% = 1
     Const USE_MODE% = 7
     Const USE_PAGE_COPY% = 1
+    Dim CTRLS_TO_POLL$(1) = ("keys_cursor", "")
   Case "PicoMite"
     Const USE_PATH% = 0
     Const USE_MODE% = 0
     Const USE_PAGE_COPY% = 0
+    Dim CTRLS_TO_POLL$(1) = ("nes_a", "keys_cursor")
   Case "PicoMiteVGA"
     Const USE_PATH% = 0
     Const USE_MODE% = 2
     Const USE_PAGE_COPY% = 0
+    Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
   Case Else
     Error "Unsupported device: " + Mm.Device$
 End Select
@@ -40,8 +52,6 @@ Else
 EndIf
 
 Dim ctrl$
-Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
-If Mm.Device$ = "PicoMite" Then CTRLS_TO_POLL$(0) = "nes_a"
 Dim COLOURS%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 Dim player%
 

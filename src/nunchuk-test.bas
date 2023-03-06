@@ -1,4 +1,4 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For CMM2 running MMBasic 5.07.02b6
 
@@ -6,7 +6,7 @@ Option Base 0
 Option Default None
 Option Explicit On
 
-#Include "ctrl.ipp"
+#Include "ctrl.inc"
 
 Mode 1
 Cls

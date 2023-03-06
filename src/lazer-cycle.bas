@@ -8,20 +8,24 @@ Option Explicit On
 ' Option LcdPanel NoConsole
 
 '!set CTRL_NO_SNES
-'!ifdef BINTENDO
-' Preprocessor flag BINTENDO defined
+'!ifdef PICOGAME_LCD
+' Preprocessor flag PICOGAME_LCD defined
 '!set PICOMITE
 '!set CTRL_USE_INKEY
 '!set SOUND_USE_PWM
+'!set CTRL_ONE_PLAYER
+'!endif
+'!ifdef NARROW_TRACES
+' Preprocessor flag NARROW_TRACES defined
 '!endif
 
-#Include "ctrl.ipp"
+#Include "ctrl.inc"
 #Include "utility.inc"
 #Include "sound.inc"
 #Include "highscr.inc"
 #Include "menu.inc"
 
-Const VERSION$ = "0.9.5"
+Const VERSION% = 10000 ' 1.0.0
 
 If InStr(Mm.Device$, "PicoMite") Then
   If Val(Mm.Info(CpuSpeed)) < 252000000 Then
@@ -70,9 +74,9 @@ EndIf
 
 If USE_MODE% Then Mode USE_MODE%
 If USE_PAGE_COPY% Then Page Write 1
-'!ifdef NARROW_TRACES
-Const WIDTH% = Mm.HRes \ 2
-Const HEIGHT% = (Mm.VRes - 20) \ 2
+'!uncomment_if NARROW_TRACES
+' Const WIDTH% = Mm.HRes \ 2
+' Const HEIGHT% = (Mm.VRes - 20) \ 2
 '!endif
 '!ifndef NARROW_TRACES
 Const WIDTH% = Mm.HRes \ 3
@@ -95,8 +99,8 @@ Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, S
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
-'!ifdef NARROW_TRACES
-Dim FRAME_DURATIONS%(5) = (33, 30, 27, 24, 21, 18)
+'!uncomment_if NARROW_TRACES
+' Dim FRAME_DURATIONS%(5) = (33, 30, 27, 24, 21, 18)
 '!endif
 '!ifndef NARROW_TRACES
 Dim FRAME_DURATIONS%(5) = (42, 38, 34, 30, 26, 22)
@@ -219,14 +223,15 @@ End Sub
 '                   0 if the duration expired.
 Function show_title%(duration%)
   Local platform$ = "Colour Maximite 2"
-'!ifdef PICOMITE
-  '!ifdef BINTENDO
-  platform$ = "PicoGAME LCD"
-  '!endif
-  '!ifndef BINTENDO
-  platform$ = "PicoMiteVGA"
-  '!endif
+  Select Case Mm.Device$
+    Case "PicoMite"
+      platform$ = "PicoMite"
+'!uncomment_if PICOGAME_LCD
+'      platform$ = "PicoGAME LCD"
 '!endif
+    Case "PicoMiteVGA"
+      platform$ = "PicoGAME VGA"
+  End Select
 
   Text X_OFFSET%, Y_OFFSET% - 27, "LAZER CYCLE", "CM", 1, 2, Rgb(White) 
   Text X_OFFSET%, Y_OFFSET% - 10, platform$ + " Version", "CM", 7, 1, Rgb(Cyan)
@@ -353,16 +358,16 @@ Sub init_game(attract_mode%)
 End Sub
 
 Sub draw_arena()
-'!ifdef NARROW_TRACES
-  Local a%, i%, j%
-  For i% = 0 To Bound(arena%(), 1) - 1
-    a% = arena%(i%)
-    If a% = 0 Then Continue For
-    For j% = 0 To 7
-      If Peek(Var a%, j%) <> 128 Then Continue For
-      Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), Rgb(Grey)
-    Next
-  Next
+'!uncomment_if NARROW_TRACES
+  ' Local a%, i%, j%
+  ' For i% = 0 To Bound(arena%(), 1) - 1
+  '   a% = arena%(i%)
+  '   If a% = 0 Then Continue For
+  '   For j% = 0 To 7
+  '     If Peek(Var a%, j%) <> 128 Then Continue For
+  '     Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), Rgb(Grey)
+  '   Next
+  ' Next
 '!endif
 '!ifndef NARROW_TRACES
   Local x%
@@ -534,9 +539,9 @@ End Sub
 
 ' Draw cycle if STATE_OK% or STATE_DYING%.
 Sub cycle.draw(idx%)
-'!ifdef NARROW_TRACES
-  Local p% = cycle.pos%(idx%), n% = cycle.nxt%(idx%)
-  Line 2*(p% Mod WIDTH%), 2*(p%\WIDTH%), 2*(n% Mod WIDTH%), 2*(n%\WIDTH%), 1, cycle.colour%(idx%) * (cycle.state%(idx%) <> STATE_DYING%)
+'!uncomment_if NARROW_TRACES
+  ' Local p% = cycle.pos%(idx%), n% = cycle.nxt%(idx%)
+  ' Line 2*(p% Mod WIDTH%), 2*(p%\WIDTH%), 2*(n% Mod WIDTH%), 2*(n%\WIDTH%), 1, cycle.colour%(idx%) * (cycle.state%(idx%) <> STATE_DYING%)
 '!endif
 '!ifndef NARROW_TRACES
   Local p% = cycle.pos%(idx%), n% = cycle.nxt%(idx%), xn% = 3*(n% Mod WIDTH%), yn% = 3*(n%\WIDTH%)

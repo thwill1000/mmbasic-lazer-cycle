@@ -1,6 +1,6 @@
 ' Code Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.03
+' For MMBasic 5.07.06
 
 ' Musical compositions in MMBasic played via PWM or PLAY SOUND
 '   - also encodes music as DATA statements for playing outside of this program.
@@ -14,8 +14,14 @@ On Key 3, on_exit
 
 ' 0 - use PLAY SOUND
 ' 1 - use PWM on 4 channels
-' 2 - use PWM on 2 channels (Bintendo)
-Const PLAY_MODE% = 20
+' 2 - use PWM on 2 channels (PicoGAME LCD)
+'!comment_if PICOGAME_LCD
+Const PLAY_MODE% = 0
+'!endif
+'!uncomment_if PICOGAME_LCD
+' Const PLAY_MODE% = 2
+'!endif
+
 If PLAY_MODE% = 1 Then
   SetPin GP2,PWM1A
   SetPin GP4,PWM2A

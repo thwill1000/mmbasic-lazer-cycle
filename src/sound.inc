@@ -1,14 +1,14 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.05
+' For MMBasic 5.07.06
 
 '!ifdef SOUND_USE_PWM
 ' Preprocessor flag SOUND_USE_PWM defined
 '!endif
 
-'!ifdef SOUND_USE_PWM
-SetPin GP4,PWM2A
-SetPin GP6,PWM3A
+'!uncomment_if SOUND_USE_PWM
+'SetPin GP4,PWM2A
+'SetPin GP6,PWM3A
 '!endif
 
 Const sound.MAX_TRACK_LEN% = 1024
@@ -88,9 +88,9 @@ End Sub
 
 ' Terminates sound engine.
 Sub sound.term()
-'!ifdef SOUND_USE_PWM
-  Pwm 2, Off
-  Pwm 3, Off
+'!uncomment_if SOUND_USE_PWM
+  ' Pwm 2, Off
+  ' Pwm 3, Off
 '!endif
 '!ifndef SOUND_USE_PWM
   Play Stop
@@ -126,8 +126,8 @@ End Sub
 ' Stops music playing interrupt.
 Sub sound.stop_music()
   SetTick 0, 0, 1
-'!ifdef SOUND_USE_PWM
-  Pwm 2, sound.F!(0), 0
+'!uncomment_if SOUND_USE_PWM
+  ' Pwm 2, sound.F!(0), 0
 '!endif
 '!ifndef SOUND_USE_PWM
   Play Sound 1, B, O
@@ -140,10 +140,10 @@ End Sub
 Sub sound.music_int()
   Local n% = Peek(Byte sound.music_ptr%)
   If n% < 255 Then
-'!ifdef SOUND_USE_PWM
-    If n% = 0 Then n% = Peek(Byte sound.music_ptr% + 1)
-    If n% = 0 Then n% = Peek(Byte sound.music_ptr% + 2)
-    Pwm 2, sound.F!(n%), (n% > 0) * 2
+'!uncomment_if SOUND_USE_PWM
+  ' If n% = 0 Then n% = Peek(Byte sound.music_ptr% + 1)
+  ' If n% = 0 Then n% = Peek(Byte sound.music_ptr% + 2)
+  ' Pwm 2, sound.F!(n%), (n% > 0) * 2
 '!endif
 '!ifndef SOUND_USE_PWM
     Play Sound 1, B, S, sound.F!(n%), (n% > 0) * 15
@@ -185,8 +185,8 @@ End Sub
 Sub sound.fx_int()
   Local n% = Peek(Byte sound.fx_ptr%)
   If n% = 255 Then Exit Sub
-'!ifdef SOUND_USE_PWM
-  Pwm 3, sound.F!(n%), (n% > 0) * 5
+'!uncomment_if SOUND_USE_PWM
+  ' Pwm 3, sound.F!(n%), (n% > 0) * 5
 '!endif
 '!ifndef SOUND_USE_PWM
   Play Sound 4, B, S, sound.F!(n%), (n% > 0) * 25

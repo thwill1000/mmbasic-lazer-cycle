@@ -1,6 +1,6 @@
-' Copyright (c) 2020-22 Thomas Hugo Williams
+' Copyright (c) 2020-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.05
+' For MMBasic 5.07.06
 
 ' Utility code lifted from 'splib'.
 
@@ -31,6 +31,24 @@ Function str.lpad$(s$, x%)
   If Len(s$) < x% Then str.lpad$ = Space$(x% - Len(s$)) + s$
 End Function
 
+' Gets a string "quoted" with given characters.
+'
+' @param  s$      the string.
+' @param  begin$  the character to put at the start, defaults to double-quote.
+' @param  end$    the character to put at the end, defaults to double-quote.
+' @return         the "quoted" string.
+Function str.quote$(s$, begin$, end$)
+  Local begin_$ = Choice(begin$ = "", Chr$(34), Left$(begin$, 1))
+  Local end_$ = Choice(end$ = "", begin_$, Left$(end$, 1))
+  str.quote$ = begin_$ + s$ + end_$
+End Function
+
+' Gets a string padded to a given width with spaces to the right.
+'
+' @param  s$  the string.
+' @param  w%  the width.
+' @return     the padded string.
+'             If Len(s$) > w% then returns the unpadded string.
 Function str.rpad$(s$, x%)
   str.rpad$ = s$
   If Len(s$) < x% Then str.rpad$ = s$ + Space$(x% - Len(s$))
@@ -46,4 +64,11 @@ Function str.trim$(s$)
     If Peek(Var s$, en%) <> 32 Then Exit For
   Next
   If en% >= st% Then str.trim$ = Mid$(s$, st%, en% - st% + 1)
+End Function
+
+Function format_version$(version%)
+  Local major% = version% \ 10000
+  Local minor% = (version% - major% * 10000) \ 100
+  Local micro% = version% - major% * 10000 - minor% * 100
+  format_version$ = Str$(major%) + "." + Str$(minor%) + "." + Str$(micro%)
 End Function
