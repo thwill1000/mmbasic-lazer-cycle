@@ -61,7 +61,7 @@ A 1-4 player implementation of the classic ["Light Cycle"](https://en.wikipedia.
          - The adapter needs to swap the Male DB9 (CMM2) +5V supply on Pin 7 to Pin 6 on the Female DB9 (Gamepad).
      - Pin 38: Latch, Pin 40: Clock, Pin 36: Data
 
-**Additional PicoMiteVGA / PicoGAME VGA controls:**
+**PicoMiteVGA / PicoGAME VGA controls:**
 
 Compatible with the game ports on a [PicoGAME VGA](https://github.com/thwill1000/pico-game-vga).
 
