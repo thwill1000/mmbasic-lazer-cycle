@@ -7,17 +7,15 @@ Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
-'!set CTRL_NO_SNES
+'!define CTRL_NO_SNES
+'!info defined PICOGAME_LCD
 '!ifdef PICOGAME_LCD
-' Preprocessor flag PICOGAME_LCD defined
-'!set PICOMITE
-'!set CTRL_USE_INKEY
-'!set SOUND_USE_PWM
-'!set CTRL_ONE_PLAYER
+'!define PICOMITE
+'!define CTRL_USE_INKEY
+'!define SOUND_USE_PWM
+'!define CTRL_ONE_PLAYER
 '!endif
-'!ifdef NARROW_TRACES
-' Preprocessor flag NARROW_TRACES defined
-'!endif
+'!info defined NARROW_TRACES
 
 #Include "ctrl.inc"
 #Include "utility.inc"

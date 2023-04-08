@@ -12,10 +12,10 @@ Option Base 0
 Option Default None
 Option Explicit On
 
+'!info defined PICOGAME_LCD
 '!ifdef PICOGAME_LCD
-' Preprocessor flag PICOGAME_LCD defined
-'!set PICOMITE
-'!set CTRL_USE_INKEY
+'!define PICOMITE
+'!define CTRL_USE_INKEY
 '!endif
 
 #Include "ctrl.inc"

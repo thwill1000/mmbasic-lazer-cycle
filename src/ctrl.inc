@@ -3,56 +3,34 @@
 '
 ' MMBasic Controller Library
 
-'!ifdef PICOMITE
-  '!set CTRL_PLATFORM_SET
-' Preprocessor flag PICOMITE defined
+'!if not(defined(PICOMITE) or defined(CMM2) or defined(MMB4L))
+  '!error "File 'ctrl.inc' was transpiled without CMM2, MMB4L or PICOMITE defined"
 '!endif
-'!ifdef CMM2
-  '!ifdef CTRL_PLATFORM_SET
-    '!error "File 'ctrl.inc' was transpiled with more than one of the CMM2, MMB4L or PICOMITE flags set"
-  '!endif
-  '!set CTRL_PLATFORM_SET
-' Preprocessor flag CMM2 defined
+
+'!if not(defined(PICOMITE) xor defined(CMM2) xor defined(MMB4L))
+  '!error "File 'ctrl.inc' was transpiled with more than one of CMM2, MMB4L or PICOMITE defined"
 '!endif
-'!ifdef MMB4L
-  '!ifdef CTRL_PLATFORM_SET
-    '!error "File 'ctrl.inc' was transpiled with more than one of the CMM2, MMB4L or PICOMITE flags set"
-  '!endif
-  '!set CTRL_PLATFORM_SET
-' Preprocessor flag MMB4L defined
-'!endif
-'!ifndef CTRL_PLATFORM_SET
-  '!error "File 'ctrl.inc' was transpiled without CMM2, MMB4L or PICOMITE flags set"
-'!endif
-'!ifndef CTRL_USE_INKEY
-  '!ifdef CMM2
-    '!set CTRL_USE_KEYDOWN
-  '!endif
-  '!ifdef MMB4L
-    '!set CTRL_USE_INKEY
-  '!endif
-  '!ifdef PICOMITE
-    '!set CTRL_USE_ON_PS2
+
+'!info defined CMM2
+'!info defined MMB4L
+'!info defined PICOMITE
+
+'!if not defined(CTRL_USE_INKEY)
+  '!if defined(CMM2)
+    '!define CTRL_USE_KEYDOWN
+  '!elif defined(MMB4L)
+    '!define CTRL_USE_INKEY
+  '!elif defined(PICOMITE)
+    '!define CTRL_USE_ON_PS2
   '!endif
 '!endif
-'!ifdef CTRL_ONE_PLAYER
-' Preprocessor flag CTRL_ONE_PLAYER defined
-'!endif
-'!ifdef CTRL_NO_CURSORS
-' Preprocessor flag CTRL_NO_CURSORS defined
-'!endif
-'!ifdef CTRL_NO_SNES
-' Preprocessor flag CTRL_NO_SNES defined
-'!endif
-'!ifdef CTRL_USE_INKEY
-' Preprocessor flag CTRL_USE_INKEY defined
-'!endif
-'!ifdef CTRL_USE_ON_PS2
-' Preprocessor flag CTRL_USE_ON_PS2 defined
-'!endif
-'!ifdef CTRL_USE_KEYDOWN
-' Preprocessor flag CTRL_USE_KEYDOWN defined
-'!endif
+
+'!info defined CTRL_ONE_PLAYER
+'!info defined CTRL_NO_CURSORS
+'!info defined CTRL_NO_SNES
+'!info defined CTRL_USE_INKEY
+'!info defined CTRL_USE_ON_PS2
+'!info defined CTRL_USE_KEYDOWN
 
 Const ctrl.VERSION = 907  ' 0.9.7
 

@@ -1,4 +1,4 @@
-' Code Copyright (c) 2022-2023 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07.06
 
@@ -7,12 +7,12 @@ Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
+'!info defined PICOGAME_LCD
 '!ifdef PICOGAME_LCD
-' Preprocessor flag PICOGAME_LCD defined
-'!set PICOMITE
-'!set CTRL_USE_INKEY
-'!set SOUND_USE_PWM
-'!set CTRL_ONE_PLAYER
+'!define PICOMITE
+'!define CTRL_USE_INKEY
+'!define SOUND_USE_PWM
+'!define CTRL_ONE_PLAYER
 '!endif
 
 #Include "ctrl.inc"
