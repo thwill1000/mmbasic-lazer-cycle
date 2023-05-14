@@ -38,7 +38,7 @@ Sub sound.init(track1$, track2$)
   ' sound.F!(0) - rest
   ' sound.F!(1) - C0   - 16.35 Hz
   For i% = 0 To 127
-    sound.F!(i%) = 440 * 2^((i% - 58) / 12.0)
+    sound.F!(i%) = 440 * 2^((i% - 58 + 12) / 12.0)
   Next
 
   Read Save
@@ -130,9 +130,9 @@ Sub sound.stop_music()
   ' Pwm 2, sound.F!(0), 0
 '!endif
 '!ifndef SOUND_USE_PWM
-  Play Sound 1, B, O
-  Play Sound 2, B, O
-  Play Sound 3, B, O
+  Play Sound 1, M, O
+  Play Sound 2, M, O
+  Play Sound 3, M, O
 '!endif
 End Sub
 
@@ -146,11 +146,11 @@ Sub sound.music_int()
   ' Pwm 2, sound.F!(n%), (n% > 0) * 2
 '!endif
 '!ifndef SOUND_USE_PWM
-    Play Sound 1, B, S, sound.F!(n%), (n% > 0) * 15
+    Play Sound 1, B, T, sound.F!(n%), (n% > 0) * 15
     n% = Peek(Byte sound.music_ptr% + 1)
-    Play Sound 2, B, S, sound.F!(n%), (n% > 0) * 15
+    Play Sound 2, B, T, sound.F!(n%), (n% > 0) * 15
     n% = Peek(Byte sound.music_ptr% + 2)
-    Play Sound 3, B, S, sound.F!(n%), (n% > 0) * 15
+    Play Sound 3, B, T, sound.F!(n%), (n% > 0) * 15
 '!endif
     Inc sound.music_ptr%, 3
     Exit Sub
@@ -189,7 +189,7 @@ Sub sound.fx_int()
   ' Pwm 3, sound.F!(n%), (n% > 0) * 5
 '!endif
 '!ifndef SOUND_USE_PWM
-  Play Sound 4, B, S, sound.F!(n%), (n% > 0) * 25
+  Play Sound 4, B, T, sound.F!(n%), (n% > 0) * 25
 '!endif
   Inc sound.fx_ptr%
 End Sub

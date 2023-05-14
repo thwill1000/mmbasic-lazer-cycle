@@ -3,17 +3,27 @@
 '
 ' MMBasic Controller Library
 
-'!if not(defined(PICOMITE) or defined(CMM2) or defined(MMB4L))
-  '!error "File 'ctrl.inc' was transpiled without CMM2, MMB4L or PICOMITE defined"
+'!if not(defined(PGLCD1) or defined(PGLCD2) or defined(PICOMITE) or defined(CMM2) or defined(MMB4L))
+  '!error "File 'ctrl.inc' was transpiled without CMM2, MMB4L, PGLCD_1, PGLCD2 or PICOMITE defined"
 '!endif
 
-'!if not(defined(PICOMITE) xor defined(CMM2) xor defined(MMB4L))
-  '!error "File 'ctrl.inc' was transpiled with more than one of CMM2, MMB4L or PICOMITE defined"
+'!if not(defined(PGLCD1) xor defined(PGLCD2) xor defined(PICOMITE) xor defined(CMM2) xor defined(MMB4L))
+  '!error "File 'ctrl.inc' was transpiled with more than one of CMM2, MMB4L, PGLCD1, PGLCD2 and PICOMITE defined"
 '!endif
 
 '!info defined CMM2
 '!info defined MMB4L
+'!info defined PGLCD1
+'!info defined PGLCD2
 '!info defined PICOMITE
+
+'!if defined(PGLCD1) Or defined(PGLCD2)
+  '!if !defined(CTRL_NO_SNES)
+    '!define CTRL_NO_SNES
+  '!endif
+  '!define CTRL_ONE_PLAYER
+  '!define CTRL_USE_INKEY
+'!endif
 
 '!if not defined(CTRL_USE_INKEY)
   '!if defined(CMM2)
@@ -32,7 +42,7 @@
 '!info defined CTRL_USE_ON_PS2
 '!info defined CTRL_USE_KEYDOWN
 
-Const ctrl.VERSION = 907  ' 0.9.7
+Const ctrl.VERSION = 908  ' 0.9.8
 
 ' Button values as returned by controller driver subroutines.
 Const ctrl.R      = &h01
@@ -238,7 +248,7 @@ End Sub
 
 '!endif ' CTRL_NO_CURSORS
 
-'!ifdef PICOMITE
+'!if defined(PICOMITE) && !defined(PGLCD2)
 
 ' Atari joystick on PicoGAME Port A.
 Sub atari_a(x%)
@@ -394,6 +404,26 @@ End Sub
 '!endif ' CTRL_ONE_PLAYER
 
 '!endif ' PICOMITE
+
+'!ifdef PGLCD2
+' Gamepad on PicoGAME LCD 2
+' The single 'crazy' PORT call efficiently reads the buttons in the correct
+' order for the return bitmap but we then have to mask out filler values.
+Sub ctrl.pglcd2(x%)
+  Select Case x%
+    Case >= 0
+      x% = Port(GP12,2,GP11,2,GP8,1,GP8,1,GP11,1,GP10,1,GP9,1,GP13,3,GP13,3)
+      x% = (x% Xor &h7FFF) And &h29EA
+      Exit Sub
+    Case ctrl.OPEN
+      Local i%
+      For i% = 8 To 15 : SetPin Mm.Info(PinNo "GP" + Str$(i%)), Din, PullUp : Next
+    Case ctrl.CLOSE, ctrl.SOFT_CLOSE
+      Local i%
+      For i% = 8 To 15 : SetPin Mm.Info(PinNo "GP" + Str$(i%)), Off : Next
+  End Select
+End Sub
+'!endif
 
 '!ifdef CMM2
 

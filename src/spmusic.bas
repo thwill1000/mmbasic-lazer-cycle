@@ -121,7 +121,7 @@ Sub music.init_globals()
   Local i%
   ' FREQUENCY!(1) - C0   - 16.35 Hz
   For i% = 0 To 127
-    FREQUENCY!(i%) = 440 * 2^((i% - 58) / 12.0)
+    FREQUENCY!(i%) = 440 * 2^((i% + 12 - 58) / 12.0)
   Next
 End Sub
 
@@ -305,13 +305,13 @@ Sub music.play_interrupt()
   For i% = 1 To Choice(PLAY_MODE% = 2, 1,  NUM_CHANNELS%)
     n% = Peek(Byte music_ptr%)
     If n% = 255 Then
-      Print Str$(i%) ": Halted"
+      'Print Str$(i%) ": Halted"
       music_ptr% = 0
       Exit For
     EndIf
     Select Case PLAY_MODE%
       Case 0
-        Play Sound i%, B, S, FREQUENCY!(n%), (n% > 0) * 15
+        Play Sound i%, B, T, FREQUENCY!(n%), (n% > 0) * 15
       Case 1
         Pwm i%, FREQUENCY!(n%), (n% > 0) * 5
       Case 2
@@ -321,7 +321,7 @@ Sub music.play_interrupt()
         If n% = 0 And NUM_CHANNELS% > 2 Then n% = Peek(Byte music_ptr% + 2)
         Pwm 2, FREQUENCY!(n%), (n% > 0) * 5
     End Select
-    Print Str$(i%) ": " Choice(n% = 0, "Rest", Str$(FREQUENCY!(n%)) + " hz")
+    'Print Str$(i%) ": " Choice(n% = 0, "Rest", Str$(FREQUENCY!(n%)) + " hz")
     Inc music_ptr%, Choice(PLAY_MODE% = 2, NUM_CHANNELS%, 1)
   Next
   Inc int_time!, Timer - t!

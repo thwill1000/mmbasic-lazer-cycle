@@ -1,21 +1,18 @@
 ' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 
-'!ifdef PICOMITE
-' For PicoGAME VGA 1.4 running PicoMiteVGA MMBasic 5.07.06
-'!endif
-'!ifdef CMM2
-' For CMM2 running MMBasic 5.07.02b6
-'!endif
-
 Option Base 0
 Option Default None
 Option Explicit On
 
-'!info defined PICOGAME_LCD
-'!ifdef PICOGAME_LCD
-'!define PICOMITE
-'!define CTRL_USE_INKEY
+'!if defined(PGLCD1)
+' For PicoGAME LCD 1 running PicoMite MMBasic 5.07.07
+'!if defined(PGLCD2)
+' For PicoGAME LCD 2 running PicoMite MMBasic 5.07.07
+'!elif defined(PICOMITE)
+' For PicoGAME VGA 1.4 running PicoMiteVGA MMBasic 5.07.07
+'!elif defined(CMM2)
+' For CMM2 running MMBasic 5.07.02b6
 '!endif
 
 #Include "ctrl.inc"
@@ -87,7 +84,11 @@ End Sub
 Sub restore_controller_data()
   Select Case Mm.Device$
     Case "PicoMite", "PicoMiteVGA"
+'!if defined(PGLCD2)
+      Restore controller_data_pglcd2
+'!elif true
       Restore controller_data_picomite
+'!endif
     Case "Colour Maximite 2", "Colour Maximite 2 G2"
       Restore controller_data_cmm2
     Case "MMB4L"
@@ -190,6 +191,12 @@ Sub print_ctrl_option(idx%, selected%)
   Cat s$, CTRL_DESCRIPTIONS$(idx%)
   print_at(2, idx% + 5, s$, selected%)
 End Sub
+
+controller_data_pglcd2:
+
+Data "keys_cursor", "Keyboard: Cursor keys & Space"
+Data "ctrl.pglcd2", "PicoGAME LCD 2 gamepad"
+Data "", ""
 
 controller_data_picomite:
 

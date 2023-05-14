@@ -1,6 +1,6 @@
 ' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.06
+' For MMBasic 5.07
 
 Option Base 0
 Option Default None
@@ -8,13 +8,11 @@ Option Explicit On
 ' Option LcdPanel NoConsole
 
 '!define CTRL_NO_SNES
-'!info defined PICOGAME_LCD
-'!ifdef PICOGAME_LCD
-'!define PICOMITE
-'!define CTRL_USE_INKEY
-'!define SOUND_USE_PWM
-'!define CTRL_ONE_PLAYER
+
+'!ifdef PGLCD1
+  '!define SOUND_USE_PWM
 '!endif
+
 '!info defined NARROW_TRACES
 
 #Include "ctrl.inc"
@@ -23,7 +21,7 @@ Option Explicit On
 #Include "highscr.inc"
 #Include "menu.inc"
 
-Const VERSION% = 10000 ' 1.0.0
+Const VERSION% = 10001 ' 1.0.1
 
 If InStr(Mm.Device$, "PicoMite") Then
   If Val(Mm.Info(CpuSpeed)) < 252000000 Then
@@ -45,7 +43,11 @@ Select Case Mm.Device$
     Const USE_MODE% = 7
     Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
   Case "PicoMite"
+'!if defined(PGLCD2)
+    Const USE_CONTROLLERS$ = "controller_data_pglcd2"
+'!elif true
     Const USE_CONTROLLERS$ = "controller_data_pm"
+'!endif
     Const USE_PAGE_COPY% = 0
     Const USE_PATH% = 0
     Const USE_MODE% = 0
@@ -223,9 +225,12 @@ Function show_title%(duration%)
   Local platform$ = "Colour Maximite 2"
   Select Case Mm.Device$
     Case "PicoMite"
+'!if defined(PGLCD1)
+      platform$ = "PicoGAME LCD v1"
+'!elif defined(PGLCD2)
+      platform$ = "PicoGAME LCD v2"
+'!elif true
       platform$ = "PicoMite"
-'!uncomment_if PICOGAME_LCD
-'      platform$ = "PicoGAME LCD"
 '!endif
     Case "PicoMiteVGA"
       platform$ = "PicoGAME VGA"
@@ -779,6 +784,12 @@ Data "KEYS: AZ,.",   "keys_cegg",   0
 Data "KEYS: AZXC",   "keys_azxc",   0
 Data "KEYS: '/,.",   "keys_punc",   0
 Data "GAMEPAD",      "nes_a",       1
+Data "AI",           "ai_control",  0
+Data "NONE",         "no_control",  0
+
+controller_data_pglcd2:
+Data 3, 1
+Data "GAMEPAD",      "ctrl.pglcd2", 1
 Data "AI",           "ai_control",  0
 Data "NONE",         "no_control",  0
 
