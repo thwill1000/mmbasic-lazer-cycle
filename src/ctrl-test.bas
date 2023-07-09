@@ -15,8 +15,9 @@ Option Explicit On
 ' For CMM2 running MMBasic 5.07.02b6
 '!endif
 
+#Include "splib/system.inc"
+#Include "splib/string.inc"
 #Include "ctrl.inc"
-#Include "utility.inc"
 
 If Mm.Device$ = "PicoMite" Then
   Const FONT_NUM = 7

@@ -7,6 +7,8 @@ Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
+Const VERSION = 10002 ' 1.0.2
+
 '!define CTRL_NO_SNES
 
 '!ifdef PGLCD1
@@ -15,65 +17,59 @@ Option Explicit On
 
 '!info defined NARROW_TRACES
 
-#Include "ctrl.inc"
-#Include "utility.inc"
-#Include "sound.inc"
+#Include "splib/system.inc"
+
+'!if defined(PICOMITEVGA) || defined(PICOMITE)
+  '!replace { Page Copy 0 To 1 , B } { NOP }
+  '!replace { Page Copy 1 To 0 , B } { NOP }
+  '!replace { Page Copy 1 To 0 , I } { NOP }
+  '!replace { Page Write 1 } { NOP }
+  '!replace { Page Write 0 } { NOP }
+  '!replace { NOP } { ? ; }
+'!endif
+'!if defined(PICOMITEVGA)
+  '!replace { Mode 7 } { Mode 2 }
+'!elif defined(PICOMITE)
+  '!replace { Mode 7 } { }
+'!endif
+
+#Include "splib/ctrl.inc"
+#Include "splib/sound.inc"
+#Include "splib/string.inc"
+#Include "splib/msgbox.inc"
 #Include "highscr.inc"
 #Include "menu.inc"
+'!if defined(PGLCD) || defined(PGLCD2)
+#Include "splib/pglcd.inc"
+'!endif
 
-Const VERSION% = 10001 ' 1.0.1
-
-If InStr(Mm.Device$, "PicoMite") Then
+If sys.is_device%("pm*") Then
   If Val(Mm.Info(CpuSpeed)) < 252000000 Then
     Error "Requires OPTION CPUSPEED 252000 or 378000"
   EndIf
 EndIf
 
-Select Case Mm.Device$
-  Case "Colour Maximite 2", "Colour Maximite 2 G2"
-    Const USE_CONTROLLERS$ = "controller_data_cmm2"
-    Const USE_PAGE_COPY% = 1
-    Const USE_PATH% = 1
-    Const USE_MODE% = 7
-    Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
-  Case "MMBasic for Windows"
-    Const USE_CONTROLLERS$ = "controller_data_mmb4w"
-    Const USE_PAGE_COPY% = 1
-    Const USE_PATH% = 1
-    Const USE_MODE% = 7
-    Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
-  Case "PicoMite"
-'!if defined(PGLCD2)
-    Const USE_CONTROLLERS$ = "controller_data_pglcd2"
-'!elif true
-    Const USE_CONTROLLERS$ = "controller_data_pm"
-'!endif
-    Const USE_PAGE_COPY% = 0
-    Const USE_PATH% = 0
-    Const USE_MODE% = 0
-    Const START_TEXT$ = str.centre$("Press START to play", 40)
-  Case "PicoMiteVGA"
-    Const USE_CONTROLLERS$ = "controller_data_pmvga"
-    Const USE_PAGE_COPY% = 0
-    Const USE_PATH% = 0
-    Const USE_MODE% = 2
-    Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
-  Case Else
-    Error "Unsupported device: " + Mm.Device$
-End Select
-
-If USE_PATH% Then
-  On Error Skip
-  MkDir Mm.Info(Path) + "high-scores"
-  Const HIGHSCORE_FILENAME$ = Mm.Info(Path) + "high-scores/lazer-cycle.csv"
+If sys.is_device%("cmm2*") Then
+  Const USE_CONTROLLERS$ = "controller_data_cmm2"
+  Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
+ElseIf sys.is_device%("mmb4w") Then
+  Const USE_CONTROLLERS$ = "controller_data_mmb4w"
+  Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
+ElseIf sys.is_device%("pglcd") Then
+  Const USE_CONTROLLERS$ = "controller_data_pglcd"
+  Const START_TEXT$ = str.centre$("Press START to play", 40)
+ElseIf sys.is_device%("pmvga") Then
+  Const USE_CONTROLLERS$ = "controller_data_pmvga"
+  Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
 Else
-  On Error Skip
-  MkDir "/high-scores"
-  Const HIGHSCORE_FILENAME$ = "/high-scores/lazer-cycle.csv"
+  Error "Unsupported device: " + Mm.Device$
 EndIf
 
-If USE_MODE% Then Mode USE_MODE%
-If USE_PAGE_COPY% Then Page Write 1
+Const HIGHSCORE_FILENAME$ = highscr.get_directory$() + "/lazer-cycle.csv"
+Const A_START_SELECT = ctrl.A Or ctrl.START Or ctrl.SELECT
+
+Mode 7
+Page Write 1
 '!uncomment_if NARROW_TRACES
 ' Const WIDTH% = Mm.HRes \ 2
 ' Const HEIGHT% = (Mm.VRes - 20) \ 2
@@ -105,13 +101,16 @@ Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
 '!ifndef NARROW_TRACES
 Dim FRAME_DURATIONS%(5) = (42, 38, 34, 30, 26, 22)
 '!endif
+Dim MUSIC_ENTERTAINER%(792 \ 8)
+Dim MUSIC_BLACK_WHITE_RAG%(888 \ 8)
 
 Dim ui_ctrl$ ' Controller driver for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
-Dim difficulty% = Mm.Device$ <> "PicoMite"
+Dim difficulty% = Not sys.is_device%("pglcd")
 Dim frame_duration%
 Dim next_frame%
+Dim music_track% = 1 ' 1 = The Entertainer, 2 = The Black & White Rag.
 
 ' Each cell of the arena takes up 1 byte:
 '   bit  0   - occupied by cycle
@@ -135,12 +134,12 @@ Dim cycle.last_key%(MAX_CYCLE_IDX%)
 Dim num_alive%
 Dim num_humans%
 
-Option Break 4
-On Key 3, on_exit
+sys.override_break("on_break")
 
 init_globals()
 clear_display()
-sound.init("entertainer_music_data", "black_white_rag_music_data")
+sound.init()
+sound.play_music(MUSIC_ENTERTAINER%(), "on_music_done")
 outer_loop()
 End
 
@@ -153,12 +152,13 @@ Sub outer_loop()
     If attract_mode% Then wipe() : attract_mode% = Not show_highscore%(5000)
     If Not attract_mode% Then
       wipe()
-      If Not menu.show%(ui_ctrl$, cycle.ctrl_setting$(), cycle.colour%()) Then on_exit()
+      If Not menu.show%(ui_ctrl$, cycle.ctrl_setting$(), cycle.colour%()) Then end_program()
     EndIf
 
     wipe()
     init_game(attract_mode%)
     draw_arena()
+    draw_score()
     If Not attract_mode% Then ready_steady_go()
 
     If game_loop%() Then
@@ -170,19 +170,37 @@ Sub outer_loop()
       attract_mode% = Not show_highscore%(5000)
     EndIf
 
-    close_controllers()
+    ctrl.term()
   Loop
 End Sub
 
-' Break handler to stop music & fx when Ctrl-C pressed.
-Sub on_exit()
-  sound.term()
-  On Key 3, 0
-  Option Break 3
-  close_controllers()
-  If Mm.Device$ = "PicoMiteVGA" Then Mode 1
-  Cls
-  End
+Sub on_break()
+  end_program(1)
+End Sub
+
+Sub end_program(break%)
+  If sys.is_device%("pglcd") Then
+    pglcd.end(break%)
+  Else
+    If sys.is_device%("pmvga") Then Mode 1
+    Page Write 0
+    Colour Rgb(White), Rgb(Black)
+    Cls
+    sys.restore_break()
+    sound.term()
+    ctrl.term()
+    End
+  EndIf
+End Sub
+
+Sub on_music_done()
+  If music_track% = 1 Then
+    sound.play_music(MUSIC_BLACK_WHITE_RAG%(), "on_music_done")
+    music_track% = 2
+  Else
+    sound.play_music(MUSIC_ENTERTAINER%(), "on_music_done")
+    music_track% = 1
+  EndIf
 End Sub
 
 ' Initialises global variables.
@@ -213,6 +231,10 @@ Sub init_globals()
 
   ' Initialise high-scores.
   highscr.init(HIGHSCORE_FILENAME$, "highscore_data")
+
+  ' Initialise music data.
+  sound.load_data("entertainer_music_data", MUSIC_ENTERTAINER%())
+  sound.load_data("black_white_rag_music_data", MUSIC_BLACK_WHITE_RAG%())
 End Sub
 
 ' Displays the title screen for a specified duration or until the user presses
@@ -222,26 +244,22 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_title%(duration%)
-  Local platform$ = "Colour Maximite 2"
-  Select Case Mm.Device$
-    Case "PicoMite"
-'!if defined(PGLCD1)
-      platform$ = "PicoGAME LCD v1"
-'!elif defined(PGLCD2)
-      platform$ = "PicoGAME LCD v2"
-'!elif true
-      platform$ = "PicoMite"
-'!endif
-    Case "PicoMiteVGA"
-      platform$ = "PicoGAME VGA"
-  End Select
+  If sys.is_device%("pglcd") Then
+    Const platform$ = "PicoGAME LCD"
+  ElseIf sys.is_device%("pm") Then
+    Const platform$ = "PicoMite"
+  ElseIf sys.is_device%("pmvga") Then
+    Const platform$ = "PicoGAME VGA"
+  Else
+    Const platform$ = "Colour Maximite 2"
+  EndIf
 
   Text X_OFFSET%, Y_OFFSET% - 27, "LAZER CYCLE", "CM", 1, 2, Rgb(White) 
   Text X_OFFSET%, Y_OFFSET% - 10, platform$ + " Version", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022-2023 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)
-  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+  Page Copy 1 To 0, B
   show_title% = wait%(duration%)
 End Function
 
@@ -264,7 +282,7 @@ Function show_instructions%(duration%)
   Text X_OFFSET%, y%, "Use keyboard, joystick or gamepad", "CT", 1, 1, Rgb(Green) : Inc y%, 12
   Text X_OFFSET%, y%, "UP, DOWN, LEFT and RIGHT to steer.", "CT", 1, 1, Rgb(Green) : Inc y%, 20
   Text X_OFFSET%, y%, "Good Luck!", "CT", 1, 1, Rgb(White)
-  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+  Page Copy 1 To 0, B
   show_instructions% = wait%(duration%)
 End Function
 
@@ -284,23 +302,54 @@ End Function
 
 Sub clear_display()
    Box 0, 0, Mm.HRes, Mm.VRes, 1, Rgb(Black), Rgb(Black)
-   If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+   Page Copy 1 To 0, B
 End Sub
 
-' Waits a specified duration for the user to press START on a (S)NES gamepad
-' connected to Port A, or FIRE on an ATARI joystick connected to Port A or
-' SPACE on the keyboard.
+' Waits a specified duration for the user to press START, SELECT, A or SPACE.
 '
 ' @param duration%  duration in milliseconds; if 0 then indefinite.
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function wait%(duration%)
   ctrl.init_keys()
-  Local ctrl$ = ctrl.poll_multiple$(CTRLS_TO_POLL$(), ctrl.A Or ctrl.B Or ctrl.START, duration%)
-  If ctrl$ <> "" Then
-    If ui_ctrl$ = "" Then ui_ctrl$ = ctrl$
-    wait% = 1
+  Local ctrl$ = ctrl.poll_multiple$(CTRLS_TO_POLL$(), A_START_SELECT, duration%)
+  If Len(ctrl$) Then ui_ctrl$ = Choice(ui_ctrl$ = "", ctrl$, ui_ctrl$)
+  wait% = Len(ctrl$)
+End Function
+
+' Handler for the SELECT button that shows the Quit dialog.
+'
+' @param   ctrl$  controller driver to query.
+' @return  1      if the user selected the 'Quit' option, otherwise 0.
+Function on_select%(ctrl$)
+  msgbox.beep(1)
+  Local buttons$(1) Length 3 = ("Yes", "No")
+  Const msg$ = Choice(num_alive%, "Return to game menu?", "    Quit game?")
+  Const x% = 9, y% = 5, fg% = Rgb(White), bg% = Rgb(Black), frame% = Rgb(Cyan)
+
+  Page Copy 0 To 1, B ' Store screen
+  If sys.is_device%("pm*") Then
+    FrameBuffer Create
+    If sys.is_device%("pmvga") Then FrameBuffer Copy N, F, B Else FrameBuffer Copy N, F
   EndIf
+
+  Const a% = msgbox.show%(x%, y%, 22, 9, msg$, buttons$(), 1, ctrl$, fg%, bg%, frame%, msgbox.NO_PAGES)
+  If buttons$(a%) = "Yes" Then
+    If num_alive% > 0 Then
+      on_select% = 1
+      num_alive% = 0
+    Else
+      end_program()
+    EndIf
+  EndIf
+
+  Page Copy 1 To 0, B ' Restore screen.
+  If sys.is_device%("pm*") Then
+    If sys.is_device%("pmvga") Then FrameBuffer Copy F, N, B Else FrameBuffer Copy F, N
+    FrameBuffer Close F
+  EndIf
+
+  ctrl.wait_until_idle(ctrl$)
 End Function
 
 Sub init_game(attract_mode%)
@@ -368,7 +417,7 @@ Sub draw_arena()
   '   If a% = 0 Then Continue For
   '   For j% = 0 To 7
   '     If Peek(Var a%, j%) <> 128 Then Continue For
-  '     Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), Rgb(Grey)
+  '     Pixel 2 * (((i% * 8) Mod WIDTH%) + j%), 2 * ((i% * 8) \ WIDTH%), Rgb(Lilac)
   '   Next
   ' Next
 '!endif
@@ -376,14 +425,15 @@ Sub draw_arena()
   Local x%
   For x% = 0 To (HEIGHT% * WIDTH%) - 1
     If Peek(Var arena%(), x%) <> 128 Then Continue For
-    Box 3 * (x% Mod WIDTH%), 3 * (x% \ WIDTH%), 2, 2, , Rgb(Grey)
+    Box 3 * (x% Mod WIDTH%), 3 * (x% \ WIDTH%), 2, 2, , Rgb(Lilac)
   Next
 '!endif
 End Sub
 
 Sub ready_steady_go()
-  If sound.get_state%() And &b1 Then sound.stop_music()
-  sound.play_fx(sound.FX_READY_STEADY_GO%(), 1)
+  Local music_ptr_bak% = sound.music_ptr%, enabled_bak% = sound.enabled%  
+  sound.enable(sound.enabled% Xor sound.MUSIC_FLAG%)
+  sound.play_fx(sound.FX_READY_STEADY_GO%())
 
   ' Draw cycle starting positions.
   Local i%
@@ -394,19 +444,20 @@ Sub ready_steady_go()
   Local msg$(2) = ("READY", "STEADY", "GO!")
   For i% = 0 To 2
     Text X_OFFSET%, Y_OFFSET% - 10, msg$(i%), "CM", 1, 2, Rgb(White)
-    If USE_PAGE_COPY% Then Page Copy 1 To 0, I
+    Page Copy 1 To 0, I
     Pause 1280
     If i% = 2 Then Pause 240
     Text X_OFFSET%, Y_OFFSET% - 10, msg$(i%), "CM", 1, 2, Rgb(Black)
   Next
 
-  sound.start_music()
+  sound.enable(enabled_bak%)
+  sound.music_ptr% = music_ptr_bak%
 End Sub
 
 ' @return  0 - normal game over
 '          1 - game interrupted after all human players died
 Function game_loop%()
-  Local d%, i%, key%, next_frame% = Timer + frame_duration%, tf%
+  Local d%, i%, key%, next_frame% = Timer + frame_duration%, tf%, tmp$
 
   ' Change 0 => 1 to easily test high-score code.
   If 0 Then
@@ -433,7 +484,7 @@ Function game_loop%()
       If Not (cycle.state%(i%) And &b11) Then cycle.draw(i%)
     Next
 
-    If USE_PAGE_COPY% Then Page Copy 1 To 0, I
+    Page Copy 1 To 0, I
 
     ' Move cycles.
     For i% = 0 To MAX_CYCLE_IDX%
@@ -445,6 +496,7 @@ Function game_loop%()
       cycle.current% = i%
       Call cycle.ctrl$(i%), key%
       d% = cycle.dir%(i%)
+      If key% And ctrl.SELECT Then game_loop% = on_select%(cycle.ctrl$(i%))
       key% = key% And DIRECTION_MASK%
       If key% <> cycle.last_key%(i%) Then
         Select Case d%
@@ -469,15 +521,16 @@ Function game_loop%()
 
     ' Wait for next frame.
     Do While Timer < next_frame% : Loop
-    Inc next_frame%, frame_duration%
+    next_frame% = Timer + frame_duration%
 
 '    If score% Mod 5 Then draw_framerate(1000 / (Timer - tf%))
 
     If num_humans% > 0 Then Continue Do
 
     ' Check for "attract mode" being interrupted.
-    If ctrl.poll_single%(CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1)), ctrl.A Or ctrl.B Or ctrl.START) Then
-      If ui_ctrl$ = "" Then ui_ctrl$ = CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1))
+    tmp$ = CTRLS_TO_POLL$(score% Mod (Bound(CTRLS_TO_POLL$(), 1) + 1))
+    If ctrl.poll_single%(tmp$, A_START_SELECT) Then
+      ui_ctrl$ = Choice(ui_ctrl$ = "", tmp$, ui_ctrl$)
       num_alive% = 0
       game_loop% = 1
     EndIf
@@ -485,10 +538,10 @@ Function game_loop%()
   Loop
 
   ' Ensure display updated at end of loop.
-  If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+  Page Copy 1 To 0, B
 
   ' Wait for current sound effect (if any) to complete.
-  sound.wait_for_fx()
+  Do While sound.is_playing%(sound.FX_FLAG%) : Loop
 End Function
 
 Sub draw_score()
@@ -531,10 +584,10 @@ End Sub
 
 Sub wipe()
   Local y%
-  sound.play_fx(sound.FX_WIPE%(), 1)
+  sound.play_fx(sound.FX_WIPE%())
   For y% = 0 To Mm.VRes \ 2 Step 5
      Box Mm.HRes \ 2 - y% * 1.2, Mm.VRes \ 2 - y%, 2.4 * y%, 2 * y%, 5, Rgb(Cyan), Rgb(Black)
-     If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+     Page Copy 1 To 0, B
      Pause 30
   Next
   clear_display()
@@ -583,12 +636,12 @@ Sub show_game_over()
 
   If cycle.ctrl_setting$(winner%) = "ai_control" Then
     Text X_OFFSET%, Y_OFFSET% - 10, " COMPUTER WINS ", "CM", 1, 2, cycle.colour%(winner%)
-    If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+    Page Copy 1 To 0, B
   Else
     Local txt$ = " PLAYER " + Str$(winner% + 1) + " WINS "
     Text X_OFFSET%, Y_OFFSET% - 25, txt$, "CM", 1, 2, cycle.colour%(winner%)
     Text X_OFFSET%, Y_OFFSET% + 5, " SCORE: " + Str$(cycle.score%(0)) + " ", "CM", 1, 2, cycle.colour%(winner%)
-    If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+    Page Copy 1 To 0, B
 
     ' Determine bonus.
     Local multiplier% = -30 + 10 * difficulty%
@@ -600,7 +653,7 @@ Sub show_game_over()
       Pause 1500
       Local s$ = " BONUS +" + Str$(multiplier%) + "% "
       Text X_OFFSET%, Y_OFFSET% + 5, s$ , "CM", 1, 2, RGB(White)
-      If USE_PAGE_COPY% Then Page Copy 1 To 0, B
+      Page Copy 1 To 0, B
       Pause 1500
       Local bonus% = cycle.score%(0) * (1 + multiplier% / 100)
       Do While cycle.score%(0) < bonus%
@@ -611,8 +664,8 @@ Sub show_game_over()
         End Select
         s$ = " SCORE: " + Str$(cycle.score%(0)) + " "
         Text X_OFFSET%, Y_OFFSET% + 5, s$, "CM", 1, 2, cycle.colour%(winner%)
-        If USE_PAGE_COPY% Then Page Copy 1 To 0, B
-        sound.play_fx(sound.FX_SELECT%(), 1)
+        Page Copy 1 To 0, B
+        sound.play_fx(sound.FX_SELECT%())
         Pause 100
       Loop
     EndIf
@@ -735,20 +788,7 @@ Sub cycle.check_collision(idx%)
   cycle.ctrl$(idx%) = "die_control"
   cycle.nxt%(idx%) = cycle.pos%(idx%)
   cycle.score%(idx%) = score%
-  sound.play_fx(sound.FX_DIE%(), 0)
-End Sub
-
-Sub close_controllers()
-  Local i%
-  For i% = 0 To MAX_CYCLE_IDX%
-    close_controller_no_error(cycle.ctrl_setting$(i%))
-  Next
-End Sub
-
-Sub close_controller_no_error(ctrl$)
-  On Error Ignore
-  Call ctrl$, ctrl.CLOSE
-  On Error Abort
+  sound.play_fx(sound.FX_DIE%())
 End Sub
 
 controller_data_cmm2:
@@ -776,18 +816,7 @@ Data "KEYS: '/,.",     "keys_punc",   0
 Data "AI",             "ai_control",  0
 Data "NONE",           "no_control",  0
 
-controller_data_pm:
-
-Data 7, 2
-Data "KEYS: CURSOR", "keys_cursor", 1
-Data "KEYS: AZ,.",   "keys_cegg",   0
-Data "KEYS: AZXC",   "keys_azxc",   0
-Data "KEYS: '/,.",   "keys_punc",   0
-Data "GAMEPAD",      "nes_a",       1
-Data "AI",           "ai_control",  0
-Data "NONE",         "no_control",  0
-
-controller_data_pglcd2:
+controller_data_pglcd:
 Data 3, 1
 Data "GAMEPAD",      "ctrl.pglcd2", 1
 Data "AI",           "ai_control",  0

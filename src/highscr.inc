@@ -73,7 +73,7 @@ End Sub
 
 ' Does the device have a file-system ?
 Function highscr.has_fs%()
-  If Mm.Device$ = "MMBasic for Windows" Or InStr(Mm.Device$, "PicoMite") Then
+  If sys.is_device%("mmb4w", "pm*") Then
     highscr.has_fs% = 1
   Else
     highscr.has_fs% = (UCase$(Mm.Info$(SdCard)) = "READY")
@@ -123,9 +123,9 @@ Function highscr.show_table$(ctrls$(), duration%)
       col_idx% = (col_idx% + 1) Mod 4
     Next
 
-    If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
+    Page Copy 1 To 0, B
 
-    highscr.show_table$ = ctrl.poll_multiple$(ctrls$(), ctrl.A Or ctrl.B Or ctrl.START, 200)
+    highscr.show_table$ = ctrl.poll_multiple$(ctrls$(), ctrl.A Or ctrl.SELECT Or ctrl.START, 200)
   Loop
 End Function
 
@@ -219,7 +219,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
     EndIf
     Text Mm.HRes \ 2, Y_FOOTER%, footer$(count% >= 5), "CT", 1, 1, Rgb(White), Rgb(Black)
 
-    If Not(InStr(Mm.Device$, "PicoMite")) Then Page Copy 1 To 0, B
+    Page Copy 1 To 0, B
 
     key% = highscr.get_input%(ctrl$)
     state% = key% > 0
@@ -244,12 +244,14 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
           If x% < 9 Then x_new% = x% + 1 Else x_new% = 0
         Case &h20 To &hFF ' ASCII
           If Len(name$) < highscr.MAX_NAME_LEN% Then Cat name$, Chr$(key%) Else state% = 2
+        Case Else
+          state% = 2
       End Select
     End If
 
     If state% Then
       If state% = 1 Then sound.play_fx(sound.FX_SELECT%()) Else sound.play_fx(sound.FX_BLART%())
-      Pause 150
+      Pause ctrl.UI_DELAY
     EndIf
 
   Loop While key% <> -1
@@ -287,7 +289,16 @@ Function highscr.get_input%(ctrl$)
     End Select
   Else
     Call ctrl$, highscr.get_input%
-    If highscr.get_input% = ctrl.B Then highscr.get_input% = ctrl.A
     If highscr.get_input% Then highscr.get_input% = highscr.get_input% << 8
   EndIf
+End Function
+
+Function highscr.get_directory$()
+  Const drive$ = Choice(sys.is_device%("pm*"), Mm.Info$(Drive), "A:")
+  Const root$ = Choice(sys.is_device%("pm*"), "A:/", Mm.Info$(Path))
+  highscr.get_directory$ = root$ + "high-scores"
+  If drive$ <> "A:" Then Drive "A:"
+  On Error Skip
+  MkDir highscr.get_directory$
+  If drive$ <> "A:" Then Drive drive$
 End Function

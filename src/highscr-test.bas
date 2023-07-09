@@ -15,48 +15,47 @@ Option Explicit On
 '!define CTRL_ONE_PLAYER
 '!endif
 
-#Include "ctrl.inc"
-#Include "utility.inc"
+#Include "splib/system.inc"
+
+'!if defined(PICOMITEVGA) || defined(PICOMITE)
+  '!replace { Page Copy 0 To 1 , B } { NOP }
+  '!replace { Page Copy 1 To 0 , B } { NOP }
+  '!replace { Page Copy 1 To 0 , I } { NOP }
+  '!replace { Page Write 1 } { NOP }
+  '!replace { Page Write 0 } { NOP }
+  '!replace { NOP } { ? ; }
+'!endif
+'!if defined(PICOMITEVGA)
+  '!replace { Mode 7 } { Mode 2 }
+'!elif defined(PICOMITE)
+  '!replace { Mode 7 } { }
+'!endif
+
+#Include "splib/string.inc"
+#Include "splib/ctrl.inc"
+#Include "splib/sound.inc"
 #Include "highscr.inc"
-#Include "sound.inc"
 
-Select Case Mm.Device$
-  Case "Colour Maximite 2", "Colour Maximite 2 G2"
-    Const USE_PATH% = 1
-    Const USE_MODE% = 7
-    Const USE_PAGE_COPY% = 1
-    Dim CTRLS_TO_POLL$(3) = ("atari_dx", "nes_dx", "wii_any_3", "keys_cursor")
-  Case "MMBasic for Windows"
-    Const USE_PATH% = 1
-    Const USE_MODE% = 7
-    Const USE_PAGE_COPY% = 1
-    Dim CTRLS_TO_POLL$(1) = ("keys_cursor", "")
-  Case "PicoMite"
-    Const USE_PATH% = 0
-    Const USE_MODE% = 0
-    Const USE_PAGE_COPY% = 0
-    Dim CTRLS_TO_POLL$(1) = ("nes_a", "keys_cursor")
-  Case "PicoMiteVGA"
-    Const USE_PATH% = 0
-    Const USE_MODE% = 2
-    Const USE_PAGE_COPY% = 0
-    Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
-  Case Else
-    Error "Unsupported device: " + Mm.Device$
-End Select
-
-If USE_PATH% Then
-  Const HIGHSCORE_FILENAME$ = Mm.Info(Path) + "high-scores/test.csv"
+If sys.is_device%("cmm2*") Then
+  Dim CTRLS_TO_POLL$(3) = ("atari_dx", "nes_dx", "wii_any_3", "keys_cursor")
+ElseIf sys.is_device%("mmb4w") Then
+  Dim CTRLS_TO_POLL$(1) = ("keys_cursor", "")
+ElseIf sys.is_device%("pglcd") Then
+  Dim CTRLS_TO_POLL$(1) = ("ctrl.pglcd2", "keys_cursor")
+ElseIf sys.is_device%("pmvga") Then
+  Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
 Else
-  Const HIGHSCORE_FILENAME$ = "/high-scores/test.csv"
+  Error "Unsupported device: " + Mm.Device$
 EndIf
+
+Const HIGHSCORE_FILENAME$ = highscr.get_directory$() + "/lazer-cycle.csv"
 
 Dim ctrl$
 Dim COLOURS%(3) = (Rgb(Red), Rgb(Yellow), Rgb(Cyan), Rgb(Green))
 Dim player%
 
-If USE_MODE% Then Mode USE_MODE%
-If USE_PAGE_COPY% Then Page Write 1
+Mode 7
+Page Write 1
 Cls
 
 sound.init()

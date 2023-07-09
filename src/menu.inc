@@ -1,6 +1,6 @@
-' Copyright (c) 2022 Thomas Hugo Williams
+' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.05
+' For MMBasic 5.07.08
 
 ' Shows the game settings menu.
 '
@@ -15,8 +15,9 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Const x% = X_OFFSET% - 100
   Static initialised% = 0
   Local key%, i%, item% = 0, update% = 1
-  Local sounds$(3) Length 10 = ("MUSIC & FX", "MUSIC ONLY", "FX ONLY   ", "NONE      ")
-  Local sound_setting% = 3 - sound.get_state%()
+  Local sounds$(3) Length 10 = ("NONE      ", "FX ONLY   ", "MUSIC ONLY", "MUSIC & FX")
+  Local sound_setting% = sound.enabled%
+  Local music_ptr_bak%
   Local difficulties$(5) Length 6 = ("NOVICE", "1     ", "2     ", "3     ", "4     ", "5     ")
 
   If Not initialised% Then
@@ -34,7 +35,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Next
   If count% = 0 Then menu.ctrls$(0) = ui_ctrl$
 
-  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + format_version$(VERSION%), "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + sys.format_version$(VERSION), "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
   Call ui_ctrl$, ctrl.OPEN
@@ -51,14 +52,17 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
       Text x%, Y_OFFSET% + 25, "SOUND:      " + sounds$(sound_setting%), , 1, 1, Rgb(White)
       Text x%, Y_OFFSET% + 45, "QUIT", , 1, 1, Rgb(White)
       Text x% - 15, Y_OFFSET% - 95 + item% * 20, Chr$(137), , 1, 1, Rgb(Cyan)
-      If Not InStr(Mm.Device$, "PicoMite") Then Page Copy 1 To 0, B
-      Pause 200
+      Page Copy 1 To 0, B
       update% = 0
+      Pause ctrl.UI_DELAY
     EndIf
 
-    Call ui_ctrl$, key%
-    If key% = 0 Then keys_cursor(key%) ' Always respond to the cursor keys.
-    If key% = ctrl.B Then key% = ctrl.A
+    key% = 0
+    Do While Not key%
+      Call ui_ctrl$, key%
+      If Not key% Then keys_cursor(key%) ' Always respond to the cursor keys.
+    Loop
+
     Select Case key%
       Case ctrl.START
         menu.show% = 1
@@ -92,15 +96,12 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
             update% = 1
 
           Case 6 ' Sound
+            If sound_setting% And sound.MUSIC_FLAG% Then music_ptr_bak% = sound.music_ptr%
             Inc sound_setting%, Choice(key% = ctrl.LEFT, -1, 1)
             If sound_setting% < 0 Then sound_setting% = 3
             If sound_setting% > 3 Then sound_setting% = 0
-            If sound_setting% And &b10 Then
-              sound.play_music(sound.NO_MUSIC%())
-            Else
-              sound.play_music(sound.MUSIC%())
-            EndIf
-            sound.enable_fx(Not (sound_setting% And &b01))
+            sound.enable(sound_setting%)
+            If sound_setting% And sound.MUSIC_FLAG% Then sound.music_ptr% = music_ptr_bak%
             update% = 1
 
           Case 7 ' Quit
@@ -108,9 +109,13 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
 
         End Select
 
+      Case Else
+        sound.play_fx(sound.FX_BLART%())
+        Pause ctrl.UI_DELAY
+
     End Select
 
-    If update% = 1 Then sound.play_fx(sound.FX_SELECT%(), 1)
+    If update% Then sound.play_fx(sound.FX_SELECT%())
 
   Loop
 
