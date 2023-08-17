@@ -51,8 +51,10 @@ If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
 
-' music.run("spring", MUSIC_TICK_DURATION%)
-' Pause 2000
+music.run("mo_li_hua", MUSIC_TICK_DURATION%)
+Pause 2000
+music.run("spring", MUSIC_TICK_DURATION%)
+Pause 2000
 music.run("entertainer", MUSIC_TICK_DURATION%)
 Pause 2000
 music.run("black_white_rag", MUSIC_TICK_DURATION%)
@@ -249,6 +251,7 @@ Sub music.process()
   For i% = 1 To NUM_CHANNELS%
     max_len% = Max(max_len%, Eval("LLen(channel" + Str$(i%) + "%())"))
   Next
+  Inc max_len%, 1 ' Always pad with at least one rest.
 
   ' Pad each channel with rests until they are all the maximum length.
   For i% = 1 To NUM_CHANNELS%
@@ -648,4 +651,24 @@ Sub music.compose_black_white_rag()
   music.parse(3, "1D2,1D3,1D2,1F2")
   music.parse(3, "2B3,1B4,1-")
   Next
+End Sub
+
+' Mo Li Hua
+Sub music.compose_mo_li_hua()
+
+  music.parse(1, "1E4,qE4,q-,1E4,1G4,1A4,qC5,q-,qC5,q-,1A4,1G4,qG4,q-,1G4,1A4,4G4")
+  music.parse(1, "1E4,qE4,q-,1E4,1G4,1A4,qC5,q-,qC5,q-,1A4,1G4,qG4,q-,1G4,1A4,3G4,qG4,q-")
+  music.parse(1, "1G4,qG4,q-,1G4,qG4,q-,1G4,qG4,q-,1E4,1G4,1A4,qA4,q-,1A4,qA4,q-,4G4")
+  music.parse(1, "2E4,1D4,1E4,2G4,1E4,1D4,1C4,qC4,q-,1C4,1D4,4C4")
+  music.parse(1, "1E4,1D4,1C4,1E4,3D4,1E4,2G4,1A4,1C5,4G4")
+  music.parse(1, "2D4,1E4,1G4,1D4,1E4,1C4,1A3,4G3,4-")
+  music.parse(1, "2A3,2C4,3D4,1E4,1C4,1D4,1C4,1A3,4G3")
+
+  music.parse(2, "1C3,1G3,1C4,1G3,1F3,1C4,1F4,1C4,1C3,1G3,1C4,1E4,1G3,1C4,1E4,1C4")
+  music.parse(2, "1C3,1G3,1C4,1G3,1F3,1C4,1F4,1C4,1C3,1G3,1C4,1E4,1G3,1C4,1E4,1C4")
+  music.parse(2, "1C3,1G3,1C4,1G3,1E3,1G3,1C4,1G3,1F3,1C4,1F4,1C4,1E3,1C4,1E4,1C4")
+  music.parse(2, "1C3,1G3,1E3,1G3,1D3,1F3,1A3,1F3,1C3,1G3,1E3,1G3,1C3,1G3,1E3,1G3")
+  music.parse(2, "1C3,1G3,1C4,1G3,1B3,1G3,1B3,1D4,1A2,1F3,1D3,1B3,1C3,1G3,1C4,1G3")
+  music.parse(2, "1D3,1G3,1B3,1D4,1B3,1F3,1A3,1F3,1G3,1B3,1F3,1D3,1E3,1G3,1C4,1G3")
+  music.parse(2, "1A2,1F3,1A3,1F3,1D3,1B3,1D4,1B3,1C4,2A3,1F3,4C3")
 End Sub
