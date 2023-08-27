@@ -245,7 +245,7 @@ End Sub
 '                   0 if the duration expired.
 Function show_title%(duration%)
   If sys.is_device%("pglcd") Then
-    Const platform$ = "PicoGAME LCD"
+    Const platform$ = "GameMite"
   ElseIf sys.is_device%("pm") Then
     Const platform$ = "PicoMite"
   ElseIf sys.is_device%("pmvga") Then
