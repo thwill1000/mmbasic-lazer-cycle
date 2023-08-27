@@ -32,7 +32,11 @@ ElseIf PLAY_MODE% = 2 Then
   SetPin GP6,PWM3A
 EndIf
 
+' Set true (1) to just process and not play the music data.
+Const PROCESS_ONLY% = 0
+
 Const FILENAME$ = "spmusic"
+Const OUTPUT_DIR$ = "output"
 Const SZ% = 256
 ' Const NUM_CHANNELS% = music.prompt_for_num_channels%()
 ' Const NUM_CHANNELS% = 1
@@ -51,23 +55,23 @@ If InStr(MM.Device$, "PicoMite") Then Save FILENAME$ + ".bas"
 
 music.init_globals()
 
-music.run("mo_li_hua", MUSIC_TICK_DURATION%)
-Pause 2000
-music.run("spring", MUSIC_TICK_DURATION%)
-Pause 2000
-music.run("entertainer", MUSIC_TICK_DURATION%)
-Pause 2000
+If Not Mm.Info(Exists Dir OUTPUT_DIR$) Then MkDir OUTPUT_DIR$
+
+' Music
+music.run("autumn_festival", MUSIC_TICK_DURATION%)
 music.run("black_white_rag", MUSIC_TICK_DURATION%)
-Pause 2000
+music.run("entertainer", MUSIC_TICK_DURATION%)
+music.run("mo_li_hua", MUSIC_TICK_DURATION%)
+music.run("spring", MUSIC_TICK_DURATION%)
+
+' Sound FX
+music.run("attack", FX_TICK_DURATION%)
 music.run("blart", FX_TICK_DURATION%)
-Pause 2000
-music.run("select", FX_TICK_DURATION%)
-Pause 2000
 music.run("die", FX_TICK_DURATION%)
-Pause 2000
-music.run("wipe", FX_TICK_DURATION%)
-Pause 2000
+music.run("flood", FX_TICK_DURATION%)
 music.run("ready_steady_go", FX_TICK_DURATION%)
+music.run("select", FX_TICK_DURATION%)
+music.run("wipe", FX_TICK_DURATION%)
 
 Print "Time in interrupt:" int_time!
 
@@ -129,11 +133,15 @@ End Sub
 
 ' Composes, processes, saves and plays the named tune.
 Sub music.run(name$, tick_duration%)
+  ? name$
   music.clear()
   Call "music.compose_" + name$
   music.process()
   music.write_data(name$)
-  music.play(tick_duration%)
+  If Not PROCESS_ONLY% Then
+    music.play(tick_duration%)
+    Pause 2000
+  EndIf
 End Sub
 
 ' Clears the tune data.
@@ -280,7 +288,7 @@ End Sub
 ' Writes music%() array into a file as DATA statements.
 Sub music.write_data(name$)
   Local count% = 0, i%, p% = Peek(VarAddr music%()) + 8
-  Open name$ + ".inc" For Output As #1
+  Open OUTPUT_DIR$ + "/" + name$ + ".inc" For Output As #1
   Print #1, name$ "_data:"
   Print #1, "Data " Format$(LLen(music%()), "%-6g") "' Number of bytes of music data."
   Print #1, "Data " Format$(NUM_CHANNELS%,"%-6g") "' Number of channels."
@@ -332,6 +340,14 @@ End Sub
 
 Sub music.compose_blart()
   music.parse(1, "qC5,qB4,qF#4,qF4")
+End Sub
+
+Sub music.compose_attack()
+  music.parse(1, "qD#4,q-,qD4,q-,qC#4,q-,1C4,q-")
+End Sub
+
+Sub music.compose_flood()
+  music.parse(1, "2C4,2C#4,2D4,2D#4,2E4,2F4,2F#4,2G4,2G#4,2A4,2Bb4,2B4,4C5")
 End Sub
 
 Sub music.compose_die()
@@ -653,9 +669,7 @@ Sub music.compose_black_white_rag()
   Next
 End Sub
 
-' Mo Li Hua
 Sub music.compose_mo_li_hua()
-
   music.parse(1, "1E4,qE4,q-,1E4,1G4,1A4,qC5,q-,qC5,q-,1A4,1G4,qG4,q-,1G4,1A4,4G4")
   music.parse(1, "1E4,qE4,q-,1E4,1G4,1A4,qC5,q-,qC5,q-,1A4,1G4,qG4,q-,1G4,1A4,3G4,qG4,q-")
   music.parse(1, "1G4,qG4,q-,1G4,qG4,q-,1G4,qG4,q-,1E4,1G4,1A4,qA4,q-,1A4,qA4,q-,4G4")
@@ -671,4 +685,25 @@ Sub music.compose_mo_li_hua()
   music.parse(2, "1C3,1G3,1C4,1G3,1B3,1G3,1B3,1D4,1A2,1F3,1D3,1B3,1C3,1G3,1C4,1G3")
   music.parse(2, "1D3,1G3,1B3,1D4,1B3,1F3,1A3,1F3,1G3,1B3,1F3,1D3,1E3,1G3,1C4,1G3")
   music.parse(2, "1A2,1F3,1A3,1F3,1D3,1B3,1D4,1B3,1C4,2A3,1F3,4C3")
+End Sub
+
+Sub music.compose_autumn_festival()
+  Local i%
+  For i% = 1 To 2
+    music.parse(1, "1C#5,1B4,2A4,1-,1E5,1D5,1C#5,2B4,2-,1A4,1G4,2F#4,1-,1E4,1F#4,1G4,2F#4,2A4,1C#5,1B4,2A4,1-,1E5,1D5,1C#5,2B4,2-,1C#5,1D5,2E5,2F#5,1D5,1C#5,2B4,2-")
+    music.parse(2, "2-,2F#4,2-,2-,2G4,2-,3-,3-,3-,3-,2-,2F#4,2-,2-,2G4,2-,2-,2A4,2-,3-,3-")
+    music.parse(3, "3F#3,3F#3,3G3,3G3,3A3,3A3,3B3,3B3,3F#3,3F#3,3G3,3G3,3A3,3A3,3B3,3B3")
+  Next
+
+  music.parse(1, "1C#5,1B4,1A4,1B4,1C#5,1A4,1E5,1D5,1C#5,1D5,2E5,1F#5,1E5,1D5,1F#5,1A5,1G5,1F#5,1E5,1D5,1E5,1C#5,qC#5,q-,1C#5,1B4,1A4,1B4,1C#5,1A4,1E5,1D5,1C#5,1D5,2E5,1F#5,1E5,1D5,1F#5,1A5,1G5,1F#5,1E5,1D5,1E5,1C#5,1D5")
+  music.parse(2, "3-,3-,3-,3-,3-,3-,3-,3-,3-,3-,3-,3-,3-,3-,3-,3-")
+  music.parse(3, "2F#3,1F#4,qF#4,q-,2F#4,2G3,1G4,qG4,q-,2G4,2A3,1A4,qA4,q-,2A4,2B3,4B4,2F#3,1F#4,qF#4,q-,2F#4,2G3,1G4,qG4,q-,2G4,2A3,1A4,qA4,q-,2A4,2B3,4B4")
+
+  music.parse(1, "1E5,2-,3-,1E5,2-,3-,3-,3-,3-,3-,3-,3-,3-,3-,2-,1Ab3,qAb3,q-,2Ab3,2-,1Ab3,qAb3,q-,2Ab3,3D3,3D3,3D3,3D3")
+  music.parse(2, "qC5,q-,1C5,1E5,1G5,1B5,1G5,qC5,q-,1C5,1E5,1G5,1B5,1G5,1E5,1C5")
+  music.parse(2, "1E5,1G5,1B5,1G5,1E5,1C5,1E5,1G5,1B5,1G5,1D5,1C5,1D5,1G5,1D5")
+  music.parse(2, "1C5,1D5,1C5,1D5,1G5,1D5,1C5,1D5,1C5,1D5,1G5,1D5,1C5,1D5,1C5")
+  music.parse(2, "1D5,1G5,1D5,1C5,1D5,1C5,1D5,1G5,1D5,1C5,1D5,1C5,1D5,1G5,1D5")
+  music.parse(2, "1C5,1-,1B2,1D3,1G3,1B3,1D4,1G4,1A4,1B4,1D5,1G5,1A5,2B5")
+  music.parse(3, "2C4,2G4,2C5,2C4,2G4,2C5,2A3,2E4,2A4,2A3,2E4,2A4,2Bb3,1Bb4,qBb4,q-,2Bb4,2Bb3,1Bb4,qBb4,q-,2Bb4,2Ab2,1Eb3,qEb3,q-,2Eb3,2Ab2,1Eb3,qEb3,q-,2Eb3,3G2,3G2,3G2,3G2,3G2,3G2,3G2,3G2,3G2")
 End Sub
