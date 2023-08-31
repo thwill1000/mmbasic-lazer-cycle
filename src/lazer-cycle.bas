@@ -40,7 +40,7 @@ Const VERSION = 10002 ' 1.0.2
 #Include "highscr.inc"
 #Include "menu.inc"
 '!if defined(PGLCD) || defined(PGLCD2)
-#Include "splib/pglcd.inc"
+#Include "splib/gamemite.inc"
 '!endif
 
 If sys.is_device%("pm*") Then
@@ -180,7 +180,7 @@ End Sub
 
 Sub end_program(break%)
   If sys.is_device%("pglcd") Then
-    pglcd.end(break%)
+    gamemite.end(break%)
   Else
     If sys.is_device%("pmvga") Then Mode 1
     Page Write 0
