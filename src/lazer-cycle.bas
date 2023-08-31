@@ -11,10 +11,6 @@ Const VERSION = 10002 ' 1.0.2
 
 '!define CTRL_NO_SNES
 
-'!ifdef PGLCD1
-  '!define SOUND_USE_PWM
-'!endif
-
 '!info defined NARROW_TRACES
 
 #Include "splib/system.inc"
@@ -39,7 +35,7 @@ Const VERSION = 10002 ' 1.0.2
 #Include "splib/msgbox.inc"
 #Include "highscr.inc"
 #Include "menu.inc"
-'!if defined(PGLCD) || defined(PGLCD2)
+'!if defined(GAMEMITE)
 #Include "splib/gamemite.inc"
 '!endif
 
