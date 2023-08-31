@@ -41,7 +41,7 @@ If sys.is_device%("cmm2*") Then
 ElseIf sys.is_device%("mmb4w") Then
   Dim CTRLS_TO_POLL$(1) = ("keys_cursor", "")
 ElseIf sys.is_device%("pglcd") Then
-  Dim CTRLS_TO_POLL$(1) = ("ctrl.pglcd2", "keys_cursor")
+  Dim CTRLS_TO_POLL$(1) = ("ctrl.gamemite", "keys_cursor")
 ElseIf sys.is_device%("pmvga") Then
   Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
 Else

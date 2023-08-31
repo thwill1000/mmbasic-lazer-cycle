@@ -56,7 +56,7 @@ ElseIf sys.is_device%("mmb4w") Then
   Const USE_CONTROLLERS$ = "controller_data_mmb4w"
   Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
 ElseIf sys.is_device%("pglcd") Then
-  Const USE_CONTROLLERS$ = "controller_data_pglcd"
+  Const USE_CONTROLLERS$ = "controller_data_gamemite"
   Const START_TEXT$ = str.centre$("Press START to play", 40)
 ElseIf sys.is_device%("pmvga") Then
   Const USE_CONTROLLERS$ = "controller_data_pmvga"
@@ -816,11 +816,11 @@ Data "KEYS: '/,.",     "keys_punc",   0
 Data "AI",             "ai_control",  0
 Data "NONE",           "no_control",  0
 
-controller_data_pglcd:
+controller_data_gamemite:
 Data 3, 1
-Data "GAMEPAD",      "ctrl.pglcd2", 1
-Data "AI",           "ai_control",  0
-Data "NONE",         "no_control",  0
+Data "GAMEPAD",      "ctrl.gamemite", 1
+Data "AI",           "ai_control",    0
+Data "NONE",         "no_control",    0
 
 controller_data_pmvga:
 
