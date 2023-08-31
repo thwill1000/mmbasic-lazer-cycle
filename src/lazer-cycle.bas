@@ -55,7 +55,7 @@ If sys.is_device%("cmm2*") Then
 ElseIf sys.is_device%("mmb4w") Then
   Const USE_CONTROLLERS$ = "controller_data_mmb4w"
   Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
-ElseIf sys.is_device%("pglcd") Then
+ElseIf sys.is_device%("gamemite") Then
   Const USE_CONTROLLERS$ = "controller_data_gamemite"
   Const START_TEXT$ = str.centre$("Press START to play", 40)
 ElseIf sys.is_device%("pmvga") Then
@@ -107,7 +107,7 @@ Dim MUSIC_BLACK_WHITE_RAG%(888 \ 8)
 Dim ui_ctrl$ ' Controller driver for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
-Dim difficulty% = Not sys.is_device%("pglcd")
+Dim difficulty% = Not sys.is_device%("gamemite")
 Dim frame_duration%
 Dim next_frame%
 Dim music_track% = 1 ' 1 = The Entertainer, 2 = The Black & White Rag.
@@ -179,7 +179,7 @@ Sub on_break()
 End Sub
 
 Sub end_program(break%)
-  If sys.is_device%("pglcd") Then
+  If sys.is_device%("gamemite") Then
     gamemite.end(break%)
   Else
     If sys.is_device%("pmvga") Then Mode 1
@@ -244,7 +244,7 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_title%(duration%)
-  If sys.is_device%("pglcd") Then
+  If sys.is_device%("gamemite") Then
     Const platform$ = "GameMite"
   ElseIf sys.is_device%("pm") Then
     Const platform$ = "PicoMite"
