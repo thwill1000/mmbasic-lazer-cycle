@@ -7,7 +7,7 @@ Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
-Const VERSION = 10002 ' 1.0.2
+Const VERSION = 10100 ' 1.1.0
 
 '!define CTRL_NO_SNES
 

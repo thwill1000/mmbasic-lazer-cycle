@@ -1,6 +1,9 @@
 ChangeLog
 ---------
 
+Version 1.1.0 - ??-???-????:
+  - Updated for GameMite 1.0.0 release.
+
 Version 1.0.0 - 6-Mar-2023:
   - Initial public release for:
     - CMM2          (lazer-cycle-cmm2-100.bas)
