@@ -35,7 +35,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Next
   If count% = 0 Then menu.ctrls$(0) = ui_ctrl$
 
-  Text X_OFFSET%, Y_OFFSET% + 90, "Game Version " + sys.format_version$(VERSION), "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 90, "Version " + sys.format_version$(VERSION), "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
   Call ui_ctrl$, ctrl.OPEN
@@ -62,6 +62,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
       Call ui_ctrl$, key%
       If Not key% Then keys_cursor(key%) ' Always respond to the cursor keys.
     Loop
+    If key% = ctrl.A Then key% = ctrl.SELECT
 
     Select Case key%
       Case ctrl.START
@@ -80,10 +81,10 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
         If item% > 7 Then item% = 0
         update% = 1
 
-      Case ctrl.LEFT, ctrl.RIGHT, ctrl.A
+      Case ctrl.LEFT, ctrl.RIGHT, ctrl.SELECT
         Select Case item%
           Case 0
-            If key% = ctrl.A Then menu.show% = 1 : Exit Do
+            If key% = ctrl.SELECT Then menu.show% = 1 : Exit Do
 
           Case 1,2,3,4
             menu.update_controller(item% - 1, Choice(key% = ctrl.LEFT, -1, +1), ui_ctrl$)
@@ -105,7 +106,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
             update% = 1
 
           Case 7 ' Quit
-            If key% = ctrl.A Then Exit Do
+            If key% = ctrl.SELECT Then Exit Do
 
         End Select
 

@@ -313,11 +313,11 @@ Function wait%(duration%)
   wait% = Len(ctrl$)
 End Function
 
-' Handler for the SELECT button that shows the Quit dialog.
+' Button handler that shows the Quit dialog.
 '
 ' @param   ctrl$  controller driver to query.
 ' @return  1      if the user selected the 'Quit' option, otherwise 0.
-Function on_select%(ctrl$)
+Function on_quit%(ctrl$)
   msgbox.beep(1)
   Local buttons$(1) Length 3 = ("Yes", "No")
   Const msg$ = Choice(num_alive%, "Return to game menu?", "    Quit game?")
@@ -332,7 +332,7 @@ Function on_select%(ctrl$)
   Const a% = msgbox.show%(x%, y%, 22, 9, msg$, buttons$(), 1, ctrl$, fg%, bg%, frame%, msgbox.NO_PAGES)
   If buttons$(a%) = "Yes" Then
     If num_alive% > 0 Then
-      on_select% = 1
+      on_quit% = 1
       num_alive% = 0
     Else
       end_program()
@@ -492,7 +492,7 @@ Function game_loop%()
       cycle.current% = i%
       Call cycle.ctrl$(i%), key%
       d% = cycle.dir%(i%)
-      If key% And ctrl.SELECT Then game_loop% = on_select%(cycle.ctrl$(i%))
+      If key% And ctrl.START Then game_loop% = on_quit%(cycle.ctrl$(i%))
       key% = key% And DIRECTION_MASK%
       If key% <> cycle.last_key%(i%) Then
         Select Case d%

@@ -146,12 +146,9 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
   Local footer$(1) Length 40
 
   ' Initialise footer text.
-  footer$(0) = "   Use * * * * and FIRE to select    "
-  footer$(1) = " Or, type name and ENTER to confirm  "
-  Poke Var footer$(0), 8, 146
-  Poke Var footer$(0), 10, 147
-  Poke Var footer$(0), 12, 148
-  Poke Var footer$(0), 14, 149
+  footer$(0) = str.decode$("Use \x95 \x94 \x92 \x93 and ")
+  Cat footer$(0), Choice(sys.is_device%("gamemite"), "SELECT", "FIRE to select")
+  footer$(1) = "Or, type name and ENTER to confirm"
 
   Cls
 
@@ -217,7 +214,8 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
       count% = (count% + 1) Mod 10
       t% = Timer
     EndIf
-    Text Mm.HRes \ 2, Y_FOOTER%, footer$(count% >= 5), "CT", 1, 1, Rgb(White), Rgb(Black)
+    s$ = str.centre$(footer$(count% >= 5), 38)
+    Text Mm.HRes \ 2, Y_FOOTER%, s$, "CT", 1, 1, Rgb(White), Rgb(Black)
 
     Page Copy 1 To 0, B
 
@@ -226,8 +224,10 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
     If key% > 0 Then
       If key% <> &h20 Then space_is_fire% = (key% > &h7F)
-      If key% = &h20 And space_is_fire% Then key% = ctrl.A << 8
-      If key% = ctrl.A << 8 Then key% = Asc(Mid$(grid$, x% + y% * 10 + 1, 1))
+      If (key% = &h20) And space_is_fire% Then key% = ctrl.A << 8
+      If (key% = ctrl.A << 8) Or (key% = ctrl.SELECT << 8) Then
+        key% = Asc(Mid$(grid$, x% + y% * 10 + 1, 1))
+      EndIf
 
       Select Case key%
         Case &h08, &h7F ' Backspace and Delete
