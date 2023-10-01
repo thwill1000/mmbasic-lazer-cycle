@@ -10,6 +10,7 @@ Option Explicit On
 Const VERSION = 10100 ' 1.1.0
 
 '!define CTRL_NO_SNES
+'!define NO_INCLUDE_GUARDS
 
 '!info defined NARROW_TRACES
 
