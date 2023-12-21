@@ -1,6 +1,6 @@
 ' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.06
+' For MMBasic 5.07
 
 Const highscr.MAX_NAME_LEN% = 8
 
@@ -73,11 +73,17 @@ End Sub
 
 ' Does the device have a file-system ?
 Function highscr.has_fs%()
-  If sys.is_device%("mmb4w", "pm*") Then
+'!if defined(GAMEMITE)
+  '!uncomment_if true
+  ' highscr.has_fs% = 1
+  '!endif
+'!else
+  If sys.is_platform%("mmb4w", "pm*") Then
     highscr.has_fs% = 1
   Else
     highscr.has_fs% = (UCase$(Mm.Info$(SdCard)) = "READY")
   EndIf
+'!endif
 End Function
 
 ' Assumes parent directory of filename$ already exists.
@@ -147,7 +153,7 @@ Sub highscr.edit(player%, idx%, colour_%, ctrl$)
 
   ' Initialise footer text.
   footer$(0) = str.decode$("Use \x95 \x94 \x92 \x93 and ")
-  Cat footer$(0), Choice(sys.is_device%("gamemite"), "SELECT", "FIRE to select")
+  Cat footer$(0), Choice(sys.PLATFORM$() = "Game*Mite", "SELECT", "FIRE to select")
   footer$(1) = "Or, type name and ENTER to confirm"
 
   Cls
@@ -294,8 +300,8 @@ Function highscr.get_input%(ctrl$)
 End Function
 
 Function highscr.get_directory$()
-  Const drive$ = Choice(sys.is_device%("pm*"), Mm.Info$(Drive), "A:")
-  Const root$ = Choice(sys.is_device%("pm*"), "A:/", Mm.Info$(Path))
+  Const drive$ = Choice(InStr(Mm.Device$, "PicoMite"), Mm.Info$(Drive), "A:")
+  Const root$ = Choice(InStr(Mm.Device$, "PicoMite"), "A:/", Mm.Info$(Path))
   highscr.get_directory$ = root$ + "high-scores"
   If drive$ <> "A:" Then Drive "A:"
   On Error Skip

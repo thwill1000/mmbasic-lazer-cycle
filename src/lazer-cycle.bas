@@ -7,16 +7,15 @@ Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
-Const VERSION = 10100 ' 1.1.0
+Const VERSION = 101301 ' 1.1.1
 
-'!define CTRL_NO_SNES
 '!define NO_INCLUDE_GUARDS
 
 '!info defined NARROW_TRACES
 
 #Include "splib/system.inc"
 
-'!if defined(PICOMITEVGA) || defined(PICOMITE)
+'!if defined(PICOMITEVGA) || defined(PICOMITE) || defined(GAMEMITE)
   '!replace { Page Copy 0 To 1 , B } { NOP }
   '!replace { Page Copy 1 To 0 , B } { NOP }
   '!replace { Page Copy 1 To 0 , I } { NOP }
@@ -26,7 +25,7 @@ Const VERSION = 10100 ' 1.1.0
 '!endif
 '!if defined(PICOMITEVGA)
   '!replace { Mode 7 } { Mode 2 }
-'!elif defined(PICOMITE)
+'!elif defined(PICOMITE) || defined(GAMEMITE)
   '!replace { Mode 7 } { }
 '!endif
 
@@ -36,42 +35,53 @@ Const VERSION = 10100 ' 1.1.0
 #Include "splib/msgbox.inc"
 #Include "highscr.inc"
 #Include "menu.inc"
+
 '!if defined(GAMEMITE)
 #Include "splib/gamemite.inc"
 '!endif
 
-If sys.is_device%("pm*") Then
+If InStr(Mm.Device$, "PicoMite") Then
   If Val(Mm.Info(CpuSpeed)) < 252000000 Then
     Error "Requires OPTION CPUSPEED 252000 or 378000"
   EndIf
 EndIf
 
-If sys.is_device%("cmm2*") Then
+'!if defined(GAMEMITE)
+  '!uncomment_if true
+  ' Const USE_CONTROLLERS$ = "controller_data_gamemite"
+  ' Const START_TEXT$ = str.centre$("Press START to play", 40)
+  ' Const VERSION_STRING$ = "Game*Mite Version " + sys.format_version$(VERSION)
+  '!endif
+'!else
+If sys.is_platform%("cmm2*") Then
   Const USE_CONTROLLERS$ = "controller_data_cmm2"
   Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
-ElseIf sys.is_device%("mmb4w") Then
+ElseIf sys.is_platform%("mmb4w") Then
   Const USE_CONTROLLERS$ = "controller_data_mmb4w"
   Const START_TEXT$ = str.centre$("Press SPACE to play", 40)
-ElseIf sys.is_device%("gamemite") Then
+ElseIf sys.is_platform%("gamemite") Then
   Const USE_CONTROLLERS$ = "controller_data_gamemite"
   Const START_TEXT$ = str.centre$("Press START to play", 40)
-ElseIf sys.is_device%("pmvga") Then
+ElseIf sys.is_platform%("pmvga") Then
   Const USE_CONTROLLERS$ = "controller_data_pmvga"
   Const START_TEXT$ = str.centre$("Press START, FIRE or SPACE", 40)
 Else
   Error "Unsupported device: " + Mm.Device$
 EndIf
+Const VERSION_STRING$ = "Version " + sys.format_version$(VERSION)
+'!endif
 
 Const HIGHSCORE_FILENAME$ = highscr.get_directory$() + "/lazer-cycle.csv"
 Const A_START_SELECT = ctrl.A Or ctrl.START Or ctrl.SELECT
 
 Mode 7
 Page Write 1
-'!uncomment_if NARROW_TRACES
-' Const WIDTH% = Mm.HRes \ 2
-' Const HEIGHT% = (Mm.VRes - 20) \ 2
-'!endif
-'!ifndef NARROW_TRACES
+'!if defined(NARROW_TRACES)
+  '!uncomment_if true
+  ' Const WIDTH% = Mm.HRes \ 2
+  ' Const HEIGHT% = (Mm.VRes - 20) \ 2
+  '!endif
+'!else
 Const WIDTH% = Mm.HRes \ 3
 Const HEIGHT% = (Mm.VRes - 20) \ 3
 '!endif
@@ -92,10 +102,11 @@ Dim NEXT_DIR%(7)        = (EAST%, NORTH%, WEST%, SOUTH%, EAST%, NORTH%, WEST%, S
 Dim SCORE_X%(3)         = (35, 105, 175, 245)
 Dim DIRECTIONS%(3)      = (-WIDTH%, 1, WIDTH%, -1)
 Dim COMPASS_TO_CTRL%(3) = (ctrl.UP, ctrl.RIGHT, ctrl.DOWN, ctrl.LEFT)
-'!uncomment_if NARROW_TRACES
-' Dim FRAME_DURATIONS%(5) = (33, 30, 27, 24, 21, 18)
-'!endif
-'!ifndef NARROW_TRACES
+'!if defined(NARROW_TRACES)
+  '!uncomment_if true
+  ' Dim FRAME_DURATIONS%(5) = (33, 30, 27, 24, 21, 18)
+  '!endif
+'!else
 Dim FRAME_DURATIONS%(5) = (42, 38, 34, 30, 26, 22)
 '!endif
 Dim MUSIC_ENTERTAINER%(792 \ 8)
@@ -104,7 +115,7 @@ Dim MUSIC_BLACK_WHITE_RAG%(888 \ 8)
 Dim ui_ctrl$ ' Controller driver for controlling the UI.
 Dim attract_mode% = 1
 Dim score%
-Dim difficulty% = Not sys.is_device%("gamemite")
+Dim difficulty% = sys.PLATFORM$() <> "Game*Mite"
 Dim frame_duration%
 Dim next_frame%
 Dim music_track% = 1 ' 1 = The Entertainer, 2 = The Black & White Rag.
@@ -131,12 +142,12 @@ Dim cycle.last_key%(MAX_CYCLE_IDX%)
 Dim num_alive%
 Dim num_humans%
 
-sys.override_break("on_break")
+sys.override_break("break_cb")
 
 init_globals()
 clear_display()
 sound.init()
-sound.play_music(MUSIC_ENTERTAINER%(), "on_music_done")
+sound.play_music(MUSIC_ENTERTAINER%(), "music_done_cb")
 outer_loop()
 End
 
@@ -171,15 +182,21 @@ Sub outer_loop()
   Loop
 End Sub
 
-Sub on_break()
+'!dynamic_call break_cb
+Sub break_cb()
   end_program(1)
 End Sub
 
 Sub end_program(break%)
-  If sys.is_device%("gamemite") Then
+'!if defined(GAMEMITE)
+  '!uncomment_if true
+  ' gamemite.end(break%)
+  '!endif
+'!else
+  If sys.is_platform%("gamemite") Then
     gamemite.end(break%)
   Else
-    If sys.is_device%("pmvga") Then Mode 1
+    If sys.is_platform%("pmvga") Then Mode 1
     Page Write 0
     Colour Rgb(White), Rgb(Black)
     Cls
@@ -188,14 +205,16 @@ Sub end_program(break%)
     ctrl.term()
     End
   EndIf
+'!endif
 End Sub
 
-Sub on_music_done()
+'!dynamic_call music_done_cb
+Sub music_done_cb()
   If music_track% = 1 Then
-    sound.play_music(MUSIC_BLACK_WHITE_RAG%(), "on_music_done")
+    sound.play_music(MUSIC_BLACK_WHITE_RAG%(), "music_done_cb")
     music_track% = 2
   Else
-    sound.play_music(MUSIC_ENTERTAINER%(), "on_music_done")
+    sound.play_music(MUSIC_ENTERTAINER%(), "music_done_cb")
     music_track% = 1
   EndIf
 End Sub
@@ -241,18 +260,8 @@ End Sub
 ' @return           1 if the user pressed button/key,
 '                   0 if the duration expired.
 Function show_title%(duration%)
-  If sys.is_device%("gamemite") Then
-    Const platform$ = "GameMite"
-  ElseIf sys.is_device%("pm") Then
-    Const platform$ = "PicoMite"
-  ElseIf sys.is_device%("pmvga") Then
-    Const platform$ = "PicoGAME VGA"
-  Else
-    Const platform$ = "Colour Maximite 2"
-  EndIf
-
   Text X_OFFSET%, Y_OFFSET% - 27, "LAZER CYCLE", "CM", 1, 2, Rgb(White) 
-  Text X_OFFSET%, Y_OFFSET% - 10, platform$ + " Version", "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% - 10, VERSION_STRING$, "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022-2023 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)
@@ -325,9 +334,9 @@ Function on_quit%(ctrl$)
   Const x% = 9, y% = 5, fg% = Rgb(White), bg% = Rgb(Black), frame% = Rgb(Cyan)
 
   Page Copy 0 To 1, B ' Store screen
-  If sys.is_device%("pm*") Then
+  If InStr(Mm.Device$, "PicoMite") Then
     FrameBuffer Create
-    If sys.is_device%("pmvga") Then FrameBuffer Copy N, F, B Else FrameBuffer Copy N, F
+    If Mm.Device$ = "PicoMiteVGA" Then FrameBuffer Copy N, F, B Else FrameBuffer Copy N, F
   EndIf
 
   Const a% = msgbox.show%(x%, y%, 22, 9, msg$, buttons$(), 1, ctrl$, fg%, bg%, frame%, msgbox.NO_PAGES)
@@ -341,8 +350,8 @@ Function on_quit%(ctrl$)
   EndIf
 
   Page Copy 1 To 0, B ' Restore screen.
-  If sys.is_device%("pm*") Then
-    If sys.is_device%("pmvga") Then FrameBuffer Copy F, N, B Else FrameBuffer Copy F, N
+  If InStr(Mm.Device$, "PicoMite") Then
+    If Mm.Device$ = "PicoMiteVGA" Then FrameBuffer Copy F, N, B Else FrameBuffer Copy F, N
     FrameBuffer Close F
   EndIf
 
@@ -694,6 +703,7 @@ Sub show_game_over()
   If new_highscore% Then highscr.save(HIGHSCORE_FILENAME$)
 End Sub
 
+'!dynamic_call ai_control
 Sub ai_control(x%)
   If x% < 0 Then Exit Sub
 
@@ -715,6 +725,7 @@ Sub ai_control(x%)
   x% = COMPASS_TO_CTRL%(d%)
 End Sub
 
+'!dynamic_call die_control
 Sub die_control(x%)
   If x% < 0 Then Exit Sub
   Local bits% = Peek(Var arena%(), cycle.pos%(cycle.current%)) >> 1
@@ -724,6 +735,7 @@ Sub die_control(x%)
   EndIf
 End Sub
 
+'!dynamic_call no_control
 Sub no_control(x%)
   x% = 0
 End Sub
@@ -788,8 +800,26 @@ Sub cycle.check_collision(idx%)
   sound.play_fx(sound.FX_DIE%())
 End Sub
 
+'!dynamic_call ctrl.gamemite
+controller_data_gamemite:
+Data 3, 1
+Data "GAMEPAD",      "ctrl.gamemite", 1
+Data "AI",           "ai_control",    0
+Data "NONE",         "no_control",    0
+
+'!if !defined(GAMEMITE)
+
 controller_data_cmm2:
 
+'!dynamic_call atari_dx
+'!dynamic_call keys_azxc
+'!dynamic_call keys_cegg
+'!dynamic_call keys_cursor
+'!dynamic_call keys_punc
+'!dynamic_call nes_dx
+'!dynamic_call wii_any_1
+'!dynamic_call wii_any_2
+'!dynamic_call wii_any_3
 Data 11, 6
 Data "KEYS: CURSOR",   "keys_cursor", 1
 Data "KEYS: AZ,.",     "keys_cegg",   0
@@ -805,6 +835,10 @@ Data "NONE",           "no_control",  0
 
 controller_data_mmb4w:
 
+'!dynamic_call keys_azxc
+'!dynamic_call keys_cegg
+'!dynamic_call keys_cursor
+'!dynamic_call keys_punc
 Data 6, 1
 Data "KEYS: CURSOR",   "keys_cursor", 1
 Data "KEYS: AZ,.",     "keys_cegg",   0
@@ -813,14 +847,16 @@ Data "KEYS: '/,.",     "keys_punc",   0
 Data "AI",             "ai_control",  0
 Data "NONE",           "no_control",  0
 
-controller_data_gamemite:
-Data 3, 1
-Data "GAMEPAD",      "ctrl.gamemite", 1
-Data "AI",           "ai_control",    0
-Data "NONE",         "no_control",    0
-
 controller_data_pmvga:
 
+'!dynamic_call atari_a
+'!dynamic_call atari_b
+'!dynamic_call keys_azxc
+'!dynamic_call keys_cegg
+'!dynamic_call keys_cursor
+'!dynamic_call keys_punc
+'!dynamic_call nes_a
+'!dynamic_call nes_b
 Data 10, 5
 Data "KEYS: CURSOR", "keys_cursor", 1
 Data "KEYS: AZ,.",   "keys_cegg",   0
@@ -832,6 +868,8 @@ Data "JOYSTICK A",   "atari_a",     1
 Data "JOYSTICK B",   "atari_b",     1
 Data "AI",           "ai_control",  0
 Data "NONE",         "no_control",  0
+
+'!endif ' !defined(GAMEMITE)
 
 highscore_data:
 

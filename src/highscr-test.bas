@@ -1,6 +1,6 @@
 ' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.06
+' For MMBasic 5.07
 
 Option Base 0
 Option Default None
@@ -36,13 +36,13 @@ Option Explicit On
 #Include "splib/sound.inc"
 #Include "highscr.inc"
 
-If sys.is_device%("cmm2*") Then
+If sys.is_platform%("cmm2*") Then
   Dim CTRLS_TO_POLL$(3) = ("atari_dx", "nes_dx", "wii_any_3", "keys_cursor")
-ElseIf sys.is_device%("mmb4w") Then
+ElseIf sys.is_platform%("mmb4w") Then
   Dim CTRLS_TO_POLL$(1) = ("keys_cursor", "")
-ElseIf sys.is_device%("gamemite") Then
+ElseIf sys.is_platform%("gamemite") Then
   Dim CTRLS_TO_POLL$(1) = ("ctrl.gamemite", "keys_cursor")
-ElseIf sys.is_device%("pmvga") Then
+ElseIf sys.is_platform%("pmvga") Then
   Dim CTRLS_TO_POLL$(2) = ("atari_a", "nes_a", "keys_cursor")
 Else
   Error "Unsupported device: " + Mm.Device$

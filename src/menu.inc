@@ -1,6 +1,6 @@
 ' Copyright (c) 2022-2023 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07.08
+' For MMBasic 5.07
 
 ' Shows the game settings menu.
 '
@@ -35,7 +35,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   Next
   If count% = 0 Then menu.ctrls$(0) = ui_ctrl$
 
-  Text X_OFFSET%, Y_OFFSET% + 90, "Version " + sys.format_version$(VERSION), "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 90, VERSION_STRING$, "CM", 7, 1, Rgb(Cyan)
 
   ctrl.init_keys()
   Call ui_ctrl$, ctrl.OPEN

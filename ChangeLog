@@ -1,6 +1,9 @@
 ChangeLog
 ---------
 
+Version 1.1.1 - 21-Dec-2023:
+  - Maintenance release to bring source inline with latest version of splib.
+
 Version 1.1.0 - 16-Sep-2023:
   - Updated for GameMite 1.0.0 release.
 
