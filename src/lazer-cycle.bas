@@ -1,6 +1,6 @@
-' Copyright (c) 2022-2023 Thomas Hugo Williams
+' Copyright (c) 2022-2024 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.07
+' For MMBasic 5.08
 
 Option Base 0
 Option Default None
@@ -8,6 +8,8 @@ Option Explicit On
 ' Option LcdPanel NoConsole
 
 Const VERSION = 101301 ' 1.1.1
+
+If Mm.Device$ = "MMB4L" Then Option Simulate "Colour Maximite 2"
 
 '!define NO_INCLUDE_GUARDS
 
