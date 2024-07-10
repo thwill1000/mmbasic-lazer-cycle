@@ -1,4 +1,4 @@
-' Copyright (c) 2022-2023 Thomas Hugo Williams
+' Copyright (c) 2022-2024 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07
 
@@ -54,10 +54,11 @@ Sub highscr.init(filename$, data_label$)
   Next
 
   ' Check file exists and is not a directory.
-  Select Case Mm.Info(FileSize filename$)
-    Case -2: Error "Expected file but found directory '" + parent$ + "'"
-    Case -1: Exit Sub ' File does not exist.
-  End Select
+  If Mm.Info(Exists Dir filename$) Then
+    Error "Expected file but found directory '" + filename$ + "'"
+  ElseIf Not Mm.Info(Exists File filename$) then
+    Exit Sub ' File does not exist.
+  EndIf
 
   ' Read the file.
   Open filename$ For Input As #1
