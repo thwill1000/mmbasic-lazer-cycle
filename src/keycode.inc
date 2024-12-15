@@ -18,6 +18,7 @@ Const keycode.END          = &h87
 Const keycode.PAGE_UP      = &h88
 Const keycode.PAGE_DOWN    = &h89
 Const keycode.ALT          = &h8B
+Const keycode.SCROLL_LOCK  = &h8C
 Const keycode.F1           = &h91
 Const keycode.F2           = &h92
 Const keycode.F3           = &h93
