@@ -1,4 +1,4 @@
-' Copyright (c) 2022-2023 Thomas Hugo Williams
+' Copyright (c) 2022-2024 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
 ' For MMBasic 5.07
 
@@ -31,7 +31,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
   ' Initialise menu.ctrls$(0) if all entries are currently "no" or "ai" control.
   Local count% = 0
   For i% = Bound(menu.ctrls$(), 0) To Bound(menu.ctrls$(), 1)
-    Inc count%, Not InStr("ai_control|no_control", menu.ctrls$(i%))
+    Inc count%, Not InStr("ai_control|ctrl.no_controller", menu.ctrls$(i%))
   Next
   If count% = 0 Then menu.ctrls$(0) = ui_ctrl$
 
@@ -129,7 +129,7 @@ Function menu.show%(ui_ctrl$, ctrls$(), colours%())
 
   ' Update ui_ctrl$ parameter to be controller chosen for first human player.
   For i% = Bound(ctrls$(), 0) To Bound(ctrls$(), 1)
-    If ctrls$(i%) <> "ai_control" And ctrls$(i%) <> "no_control" Then
+    If ctrls$(i%) <> "ai_control" And ctrls$(i%) <> "ctrl.no_controller" Then
       ui_ctrl$ = ctrls$(i%)
       Exit For
     EndIf
@@ -171,7 +171,7 @@ Sub menu.update_controller(idx%, delta%, ui_ctrl$)
     If i% > Bound(CTRL_DRIVER$(), 1) Then i% = 0
 
     ' Check there is no conflict with other player's controller choice.
-    If Not InStr("ai_control|no_control", CTRL_DRIVER$(i%)) Then
+    If Not InStr("ai_control|ctrl.no_controller", CTRL_DRIVER$(i%)) Then
       If menu.has_controller%(idx%, CTRL_DRIVER$(i%)) Then Continue Do
     EndIf
     Select Case CTRL_DRIVER$(i%)

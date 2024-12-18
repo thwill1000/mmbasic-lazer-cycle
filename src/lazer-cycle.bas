@@ -1,46 +1,45 @@
 ' Copyright (c) 2022-2024 Thomas Hugo Williams
 ' License MIT <https://opensource.org/licenses/MIT>
-' For MMBasic 5.08
+' For MMBasic 6.0
 
 Option Base 0
 Option Default None
 Option Explicit On
 ' Option LcdPanel NoConsole
 
-Const VERSION = 101301 ' 1.1.1
-
-If Mm.Device$ = "MMB4L" Then Option Simulate "Colour Maximite 2"
-
-'!define NO_INCLUDE_GUARDS
+Const VERSION = 101302 ' 1.1.2
 
 '!info defined NARROW_TRACES
 
-#Include "splib/system.inc"
-
-'!if defined(PICOMITEVGA) || defined(PICOMITE) || defined(GAMEMITE)
-  '!replace { Page Copy 0 To 1 , B } { NOP }
-  '!replace { Page Copy 1 To 0 , B } { NOP }
-  '!replace { Page Copy 1 To 0 , I } { NOP }
-  '!replace { Page Write 1 } { NOP }
-  '!replace { Page Write 0 } { NOP }
-  '!replace { NOP } { ? ; }
-'!endif
 '!if defined(PICOMITEVGA)
+  '!replace { Option Simulate "Colour Maximite 2" } { Option Simulate "PicoMiteVGA" }
   '!replace { Mode 7 } { Mode 2 }
-'!elif defined(PICOMITE) || defined(GAMEMITE)
+'!elif defined(GAMEMITE)
+  '!replace { Option Simulate "Colour Maximite 2" } { Option Simulate "Game*Mite" }
   '!replace { Mode 7 } { }
 '!endif
 
+'!if defined(PICOMITEVGA) || defined(PICOMITE) || defined(GAMEMITE)
+  '!replace { Page Copy 0 To 1 , B } { }
+  '!replace { Page Copy 1 To 0 , B } { }
+  '!replace { Page Copy 1 To 0 , I } { }
+  '!replace { Page Write 1 } { }
+  '!replace { Page Write 0 } { }
+'!endif
+
+If Mm.Device$ = "MMB4L" Then
+  Option Simulate "Colour Maximite 2"
+  Option CodePage CMM2
+EndIf
+
+#Include "splib/system.inc"
 #Include "splib/ctrl.inc"
 #Include "splib/sound.inc"
 #Include "splib/string.inc"
 #Include "splib/msgbox.inc"
+#Include "splib/game.inc"
 #Include "highscr.inc"
 #Include "menu.inc"
-
-'!if defined(GAMEMITE)
-#Include "splib/gamemite.inc"
-'!endif
 
 If InStr(Mm.Device$, "PicoMite") Then
   If Val(Mm.Info(CpuSpeed)) < 252000000 Then
@@ -73,8 +72,8 @@ EndIf
 Const VERSION_STRING$ = "Version " + sys.format_version$(VERSION)
 '!endif
 
-Const HIGHSCORE_FILENAME$ = highscr.get_directory$() + "/lazer-cycle.csv"
 Const A_START_SELECT = ctrl.A Or ctrl.START Or ctrl.SELECT
+Const HOME_START_SELECT = ctrl.HOME Or ctrl.START Or ctrl.SELECT
 
 Mode 7
 Page Write 1
@@ -144,7 +143,10 @@ Dim cycle.last_key%(MAX_CYCLE_IDX%)
 Dim num_alive%
 Dim num_humans%
 
-sys.override_break("break_cb")
+'!dynamic_call game.on_break
+sys.override_break("game.on_break")
+
+game.init_window("Lazer Cycle", VERSION)
 
 init_globals()
 clear_display()
@@ -162,7 +164,7 @@ Sub outer_loop()
     If attract_mode% Then wipe() : attract_mode% = Not show_highscore%(5000)
     If Not attract_mode% Then
       wipe()
-      If Not menu.show%(ui_ctrl$, cycle.ctrl_setting$(), cycle.colour%()) Then end_program()
+      If Not menu.show%(ui_ctrl$, cycle.ctrl_setting$(), cycle.colour%()) Then game.end()
     EndIf
 
     wipe()
@@ -182,32 +184,6 @@ Sub outer_loop()
 
     ctrl.term()
   Loop
-End Sub
-
-'!dynamic_call break_cb
-Sub break_cb()
-  end_program(1)
-End Sub
-
-Sub end_program(break%)
-'!if defined(GAMEMITE)
-  '!uncomment_if true
-  ' gamemite.end(break%)
-  '!endif
-'!else
-  If sys.is_platform%("gamemite") Then
-    gamemite.end(break%)
-  Else
-    If sys.is_platform%("pmvga") Then Mode 1
-    Page Write 0
-    Colour Rgb(White), Rgb(Black)
-    Cls
-    sys.restore_break()
-    sound.term()
-    ctrl.term()
-    End
-  EndIf
-'!endif
 End Sub
 
 '!dynamic_call music_done_cb
@@ -245,10 +221,10 @@ Sub init_globals()
   ' Initialise controller settings.
   cycle.ctrl_setting$(0) = "ai_control"
   cycle.ctrl_setting$(1) = "ai_control"
-  For i% = 2 To MAX_CYCLE_IDX% : cycle.ctrl_setting$(i%) = "no_control" : Next
+  For i% = 2 To MAX_CYCLE_IDX% : cycle.ctrl_setting$(i%) = "ctrl.no_controller" : Next
 
   ' Initialise high-scores.
-  highscr.init(HIGHSCORE_FILENAME$, "highscore_data")
+  highscr.init(game.highscore_file$(), "highscore_data")
 
   ' Initialise music data.
   sound.load_data("entertainer_music_data", MUSIC_ENTERTAINER%())
@@ -264,7 +240,7 @@ End Sub
 Function show_title%(duration%)
   Text X_OFFSET%, Y_OFFSET% - 27, "LAZER CYCLE", "CM", 1, 2, Rgb(White) 
   Text X_OFFSET%, Y_OFFSET% - 10, VERSION_STRING$, "CM", 7, 1, Rgb(Cyan)
-  Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022-2023 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
+  Text X_OFFSET%, Y_OFFSET% + 8, "(c) 2022-2024 Thomas Hugo Williams", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 20, "www.sockpuppetstudios.com", "CM", 7, 1, Rgb(Cyan)
   Text X_OFFSET%, Y_OFFSET% + 40, START_TEXT$, "CM", 1, 1, Rgb(White)
   Page Copy 1 To 0, B
@@ -333,28 +309,17 @@ Function on_quit%(ctrl$)
   msgbox.beep(1)
   Local buttons$(1) Length 3 = ("Yes", "No")
   Const msg$ = Choice(num_alive%, "Return to game menu?", "    Quit game?")
-  Const x% = 9, y% = 5, fg% = Rgb(White), bg% = Rgb(Black), frame% = Rgb(Cyan)
+  Const x% = 15, y% = 9, w% = 22, h% = 9, fg% = Rgb(White), bg% = Rgb(Black), frame% = Rgb(Cyan)
+  Const flags% = msgbox.NO_PAGES
 
-  Page Copy 0 To 1, B ' Store screen
-  If InStr(Mm.Device$, "PicoMite") Then
-    FrameBuffer Create
-    If Mm.Device$ = "PicoMiteVGA" Then FrameBuffer Copy N, F, B Else FrameBuffer Copy N, F
-  EndIf
-
-  Const a% = msgbox.show%(x%, y%, 22, 9, msg$, buttons$(), 1, ctrl$, fg%, bg%, frame%, msgbox.NO_PAGES)
+  Const a% = msgbox.show%(x%, y%, w%, h%, msg$, buttons$(), 1, ctrl$, fg%, bg%, frame%, flags%)
   If buttons$(a%) = "Yes" Then
     If num_alive% > 0 Then
       on_quit% = 1
       num_alive% = 0
     Else
-      end_program()
+      game.end()
     EndIf
-  EndIf
-
-  Page Copy 1 To 0, B ' Restore screen.
-  If InStr(Mm.Device$, "PicoMite") Then
-    If Mm.Device$ = "PicoMiteVGA" Then FrameBuffer Copy F, N, B Else FrameBuffer Copy F, N
-    FrameBuffer Close F
   EndIf
 
   ctrl.wait_until_idle(ctrl$)
@@ -381,10 +346,9 @@ Sub init_game(attract_mode%)
   Local i%
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.ctrl$(i%) = Choice(attract_mode%, "ai_control", cycle.ctrl_setting$(i%))
-    On Error Ignore
-    Call cycle.ctrl$(i%), ctrl.OPEN
-    If Mm.ErrNo <> 0 Then cycle.ctrl$(i%) = "no_control"
-    On Error Abort
+    If ctrl.open_no_error%(cycle.ctrl$(i%)) <> sys.SUCCESS Then
+      cycle.ctrl$(i%) = "ctrl.no_controller"
+    EndIf
   Next
   ctrl.init_keys()
 
@@ -402,7 +366,7 @@ Sub init_game(attract_mode%)
   For i% = 0 To MAX_CYCLE_IDX%
     cycle.score%(i%) = 0
     cycle.last_key%(i%) = 0
-    If cycle.ctrl$(i%) = "no_control" Then
+    If cycle.ctrl$(i%) = "ctrl.no_controller" Then
       cycle.pos%(i%) = -1
       cycle.nxt%(i%) = -1
       cycle.state%(i%) = STATE_DEAD%
@@ -504,7 +468,7 @@ Function game_loop%()
       cycle.current% = i%
       Call cycle.ctrl$(i%), key%
       d% = cycle.dir%(i%)
-      If key% And ctrl.START Then game_loop% = on_quit%(cycle.ctrl$(i%))
+      If key% And HOME_START_SELECT Then game_loop% = on_quit%(cycle.ctrl$(i%))
       key% = key% And DIRECTION_MASK%
       If key% <> cycle.last_key%(i%) Then
         Select Case d%
@@ -526,6 +490,16 @@ Function game_loop%()
       If cycle.state%(i%) <> STATE_DEAD% Then cycle.check_collision(i%)
 '      If i% = 0 Then draw_controller(i%, key%)
     Next
+
+    ' Has the [Escape] key been pressed.
+    If ctrl.keydown%(27) Then ' Escape
+      For i% = 0 To MAX_CYCLE_IDX%
+        If Not InStr("ai_control|ctrl.no_controller", cycle.ctrl$(i%)) Then
+          game_loop% = on_quit%(cycle.ctrl$(i%))
+          Exit For
+        EndIf
+      Next
+    EndIf
 
     ' Wait for next frame.
     Do While Timer < next_frame% : Loop
@@ -654,7 +628,7 @@ Sub show_game_over()
     ' Determine bonus.
     Local multiplier% = -30 + 10 * difficulty%
     For i% = 0 To MAX_CYCLE_IDX%
-      If cycle.ctrl_setting$(i%) <> "no_control" Then Inc multiplier%, 10
+      If cycle.ctrl_setting$(i%) <> "ctrl.no_controller" Then Inc multiplier%, 10
     Next
 
     If multiplier% > 1 Then
@@ -702,7 +676,7 @@ Sub show_game_over()
       EndIf
     Next
   Next
-  If new_highscore% Then highscr.save(HIGHSCORE_FILENAME$)
+  If new_highscore% Then highscr.save(game.highscore_file$())
 End Sub
 
 '!dynamic_call ai_control
@@ -737,18 +711,13 @@ Sub die_control(x%)
   EndIf
 End Sub
 
-'!dynamic_call no_control
-Sub no_control(x%)
-  x% = 0
-End Sub
-
 Sub keys_cegg(x%)
   If x% < 0 Then Exit Sub
   x% =    ctrl.keydown%(32)  * ctrl.A     ' Space
   Inc x%, ctrl.keydown%(97)  * ctrl.UP    ' A
   Inc x%, ctrl.keydown%(122) * ctrl.DOWN  ' Z
-  Inc x%, ctrl.keydown%(44)  * ctrl.LEFT  ' comma
-  Inc x%, ctrl.keydown%(46)  * ctrl.RIGHT ' full-stop
+  Inc x%, ctrl.keydown%(44)  * ctrl.LEFT  ' Comma
+  Inc x%, ctrl.keydown%(46)  * ctrl.RIGHT ' Full-stop
 End Sub
 
 Sub keys_azxc(x%)
@@ -763,10 +732,10 @@ End Sub
 Sub keys_punc(x%)
   If x% < 0 Then Exit Sub
   x% =    ctrl.keydown%(32) * ctrl.A     ' Space
-  Inc x%, ctrl.keydown%(39) * ctrl.UP    ' single-quote
-  Inc x%, ctrl.keydown%(47) * ctrl.DOWN  ' slash
-  Inc x%, ctrl.keydown%(44) * ctrl.LEFT  ' comma
-  Inc x%, ctrl.keydown%(46) * ctrl.RIGHT ' full-stop
+  Inc x%, ctrl.keydown%(39) * ctrl.UP    ' Single-quote
+  Inc x%, ctrl.keydown%(47) * ctrl.DOWN  ' Slash
+  Inc x%, ctrl.keydown%(44) * ctrl.LEFT  ' Comma
+  Inc x%, ctrl.keydown%(46) * ctrl.RIGHT ' Full-stop
 End Sub
 
 Sub cycle.check_collision(idx%)
@@ -775,7 +744,7 @@ Sub cycle.check_collision(idx%)
     Poke Var arena%(), cycle.pos%(idx%), 0
     Local mask% = (idx% << 1) + 1
     If (Peek(Var arena%(), cycle.nxt%(idx%)) And mask%) <> mask% Then
-      cycle.ctrl$(idx%) = "no_control"
+      cycle.ctrl$(idx%) = "ctrl.no_controller"
       cycle.state%(idx%) = STATE_DEAD%
       cycle.pos%(idx%) = -1
     EndIf
@@ -807,7 +776,7 @@ controller_data_gamemite:
 Data 3, 1
 Data "GAMEPAD",      "ctrl.gamemite", 1
 Data "AI",           "ai_control",    0
-Data "NONE",         "no_control",    0
+Data "NONE",         "ctrl.no_controller", 0
 
 '!if !defined(GAMEMITE)
 
@@ -833,7 +802,7 @@ Data "WII CTRL I2C1",  "wii_any_1",   1
 Data "WII CTRL I2C2",  "wii_any_2",   1
 Data "WII CTRL I2C3",  "wii_any_3",   1
 Data "AI",             "ai_control",  0
-Data "NONE",           "no_control",  0
+Data "NONE",           "ctrl.no_controller", 0
 
 controller_data_mmb4w:
 
@@ -847,7 +816,7 @@ Data "KEYS: AZ,.",     "keys_cegg",   0
 Data "KEYS: AZXC",     "keys_azxc",   0
 Data "KEYS: '/,.",     "keys_punc",   0
 Data "AI",             "ai_control",  0
-Data "NONE",           "no_control",  0
+Data "NONE",           "ctrl.no_controller", 0
 
 controller_data_pmvga:
 
@@ -869,7 +838,7 @@ Data "GAMEPAD B",    "nes_b",       1
 Data "JOYSTICK A",   "atari_a",     1
 Data "JOYSTICK B",   "atari_b",     1
 Data "AI",           "ai_control",  0
-Data "NONE",         "no_control",  0
+Data "NONE",         "ctrl.no_controller", 0
 
 '!endif ' !defined(GAMEMITE)
 
